@@ -120,7 +120,7 @@
 .ck-nz__reco { display: flex; gap: 10px; padding: 13px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--surface-card); cursor: pointer; transition: background var(--dur-fast), border-color var(--dur-fast); }
 .ck-nz__reco:hover { background: var(--surface-overlay); }
 .ck-nz__reco.is-sel { border-color: color-mix(in srgb, var(--success) 40%, transparent); background: var(--success-fill); }
-.ck-nz__reco.is-done { opacity: 0.55; cursor: default; }
+.ck-nz__reco.is-done { cursor: default; }
 .ck-nz__reco-b { flex: 1; min-width: 0; }
 .ck-nz__reco-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
 .ck-nz__op { font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-sm); }

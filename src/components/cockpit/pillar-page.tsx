@@ -1,6 +1,7 @@
 "use client";
 
 import { ADVE_STORAGE_KEYS } from "@/domain";
+import { inferredFieldPaths, inferredFieldVerification } from "@/domain/field-provenance";
 
 /**
  * PillarPage — Composant partagé pour les pages pilier du Cockpit
@@ -13,12 +14,14 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { resolvePillarPath } from "@/lib/pillar-path";
+import { projectFinancialPillar } from "@/domain/unit-economics";
+import { listEditableFields } from "@/lib/types/variable-bible";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
 import type { PillarKey } from "@/domain/pillars";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { computeRoadmapRoutes } from "@/lib/strategy/roadmap-routes";
+import { computeRoadmapRoutes, initiativeBudgetLabel, aggregateInitiativeSet } from "@/lib/strategy/roadmap-routes";
 import {
   AutoField, FocusModal, isInlineField, InlineBadge, getFieldLabel,
 } from "./field-renderers";
@@ -28,25 +31,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
-import { useCanOperate } from "@/components/cockpit/use-can-operate";
+import { useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
 import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
+import { CatalogueHistoryPanel } from "@/components/cockpit/catalogue-history-panel";
 import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
+import { Badge } from "@/components/primitives/badge";
+import { Button } from "@/components/primitives/button";
 
 // ── Pillar config ─────────────────────────────────────────────────────
-
-/**
- * Étapes de complétude en langage client — les enums bruts (EMPTY/INTAKE/
- * ENRICHED/COMPLETE) étaient rendus tels quels au founder (audit 2026-07-16,
- * `pillar-page-technical-statuses-founder`).
- */
-const STAGE_LABELS: Record<string, string> = {
-  EMPTY: "À compléter",
-  INTAKE: "Ébauche",
-  ENRICHED: "Suffisant",
-  COMPLETE: "Complet",
-};
-const stageLabel = (s: string | null | undefined) => (s ? STAGE_LABELS[s] ?? s : STAGE_LABELS.EMPTY!);
 
 const PILLAR_CONFIG: Record<string, {
   title: string;
@@ -185,9 +178,9 @@ function RecoValueFull({ value, depth = 0 }: { value: unknown; depth?: number })
 
 // ── Component ─────────────────────────────────────────────────────────
 
-interface PillarPageProps { pageKey: keyof typeof PILLAR_CONFIG }
+interface PillarPageProps { pageKey: keyof typeof PILLAR_CONFIG; focusPaths?: string[] }
 
-export function PillarPage({ pageKey }: PillarPageProps) {
+export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
   const config = PILLAR_CONFIG[pageKey]!;
   const strategyId = useCurrentStrategyId();
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -197,10 +190,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const utils = trpc.useUtils();
 
   const isAdve = config.type === "adve";
-  // Founders are not operators: OPERATOR_AMEND_PILLAR is operator-only. Route
-  // founders to their working editor (/cockpit/brand/edit) instead of the
-  // operator amend modal that would fail on open with FORBIDDEN.
-  const canOperate = useCanOperate();
+  // Manual amendment remains operator-only. A founder sees the same content
+  // without a misleading link to the operator-gated legacy entry point.
+  const { canWriteStrategy, canWriteCalendar, canOperateOnBrand: canOperate, canSyncActions } = useBrandWriteAccess(strategyId);
   const [amendOpen, setAmendOpen] = useState(false);
   const [amendField, setAmendField] = useState<string | null>(null);
   const adveKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
@@ -208,7 +200,15 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   // ── ADR-0030 — open amend modal pre-targeted on a specific field ──
   function openAmendOnField(fieldPath: string) {
-    setAmendField(fieldPath);
+    if (config.pillarKey === "v" && (fieldPath === "unitEconomics" || fieldPath.startsWith("unitEconomics."))
+      && (pillarQuery.data?.pillar?.content as Record<string, unknown> | null)?.financialModel != null) fieldPath = "financialModel";
+    const entry = listEditableFields(config.pillarKey).find(f =>
+      fieldPath === f.field || fieldPath.startsWith(`${f.field}.`) || fieldPath.startsWith(`${f.field}[`));
+    if (!entry) {
+      setEnrichResult({ type: "warning", message: "Ce champ est calculé ou non éditable. Révisez les informations de départ." });
+      return;
+    }
+    setAmendField(entry.field);
     setAmendOpen(true);
   }
   function openAmendBlank() {
@@ -226,9 +226,19 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     { enabled: !!strategyId },
   );
 
+  // Presence is measured by assess; the current state comes from the same
+  // readiness verdict used by downstream surfaces, including stale sources.
+  const readinessQuery = trpc.pillar.readiness.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId },
+  );
+  const refreshPillarState = () => Promise.all([
+    pillarQuery.refetch(), assessQuery.refetch(), readinessQuery.refetch(),
+  ]);
+
   // ── Notoria recommendations (replaces pillar.getRecos) ──
   const recosQuery = trpc.notoria.getRecosByPillar.useQuery(
-    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "PENDING" },
+    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "PENDING", shortlistedOnly: true },
     { enabled: !!strategyId && isAdve },
   );
 
@@ -240,7 +250,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   // premier temps était câblé côté UI : `applyRecos` était déclaré et jamais
   // appelé, donc « Tout accepter » ne changeait effectivement rien au pilier.
   const acceptedRecosQuery = trpc.notoria.getRecosByPillar.useQuery(
-    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "ACCEPTED" },
+    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "ACCEPTED", shortlistedOnly: true },
     { enabled: !!strategyId && isAdve },
   );
 
@@ -250,29 +260,28 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     { enabled: !!strategyId && !isAdve },
   );
 
-  const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
-  const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => pillarQuery.refetch() });
+  const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { void refreshPillarState(); recosQuery.refetch(); } });
+  const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => refreshPillarState() });
   const triggerMarketStudyMutation = trpc.pillar.triggerMarketStudy.useMutation({
     onSuccess: () => {
-      pillarQuery.refetch();
-      assessQuery.refetch();
+      void refreshPillarState();
     },
   });
-  // PR-C (ADR-0035) — confirm an LLM-inferred field as DECLARED. Triggers
-  // pillar refetch so the badge disappears immediately on success.
+  // La confirmation porte sur la valeur relue, pas sur une version concurrente.
   const confirmInferredMutation = trpc.pillar.confirmInferredField.useMutation({
-    onSuccess: () => pillarQuery.refetch(),
+    onSuccess: () => refreshPillarState(),
+    onError: () => refreshPillarState(),
   });
   const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
-    onSuccess: () => {
-      pillarQuery.refetch();
+    onSuccess: data => {
+      void refreshPillarState();
       recosQuery.refetch();
       // Rafraîchir la file des acceptées : c'est elle qui fait apparaître le
       // bouton « Appliquer au pilier », le geste qui écrit réellement.
       acceptedRecosQuery.refetch();
       setEnrichResult({
-        type: "success",
-        message: "Recommandations acceptées — reste à les appliquer au pilier.",
+        type: data.warnings.length ? "warning" : "success",
+        message: data.warnings[0] ?? (data.accepted + " proposition(s) acceptée(s). Vous pouvez les appliquer au pilier."),
       });
     },
     onError: (err: any) => {
@@ -283,10 +292,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   });
   const applyRecosMutation = trpc.notoria.applyRecos.useMutation({
     onSuccess: (res: { applied: number; warnings: string[] }) => {
-      pillarQuery.refetch();
+      void refreshPillarState();
       recosQuery.refetch();
       acceptedRecosQuery.refetch();
-      assessQuery.refetch();
       // Le gate de remplacement pondéré (ADR-0090) peut REFUSER une écriture :
       // rendre `applied` seul laisserait croire à un succès total alors qu'une
       // partie a été écartée. Les avertissements sont la moitié du résultat.
@@ -308,8 +316,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   // ADR-0089 — sélection d'ambition (pilier S) via Intent gouverné SELECT_ROADMAP_ROUTE.
   const selectRouteMutation = trpc.notoria.selectRoadmapRoute.useMutation({
     onSuccess: (res: { selectedRouteKey: string }) => {
-      pillarQuery.refetch();
-      assessQuery.refetch();
+      void refreshPillarState();
       setEnrichResult({ type: "success", message: `Ambition ${res.selectedRouteKey} retenue — dashboard S recalculé sur ce jeu de stratégie.` });
     },
     onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors de la sélection d'ambition" }); },
@@ -321,8 +328,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   if (pillarQuery.isLoading) return <SkeletonPage />;
 
   const pillar = pillarQuery.data?.pillar;
-  const content = (pillar?.content ?? {}) as Record<string, unknown>;
+  const rawContent = (pillar?.content ?? {}) as Record<string, unknown>;
+  const content = config.pillarKey === "v" ? projectFinancialPillar(rawContent) : rawContent;
   const isFilled = (v: unknown) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
+  const editableFields = listEditableFields(config.pillarKey);
+  const focusedPaths = focusPaths.filter(path => path.split(".")[0]?.toLowerCase() === config.pillarKey);
 
   // Schema keys = source of truth. Filter:
   //   1. dot-notation artifacts (LLM résidu de path imbriqués)
@@ -344,6 +354,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const completePct = assess?.completionPct ?? 0;  // Complet
   const rtConsolidated = assess?.rtConsolidated ?? false;
   const validationPct = completePct; // backward compat for progress bar
+  const stateReading = readinessQuery.isLoading || readinessQuery.isFetching;
+  const readiness = readinessQuery.isError || stateReading
+    ? undefined : readinessQuery.data?.byPillar[upperKey];
+  const stateLabel = stateReading ? "État en cours de lecture" : readiness?.displayLabel ?? "État à vérifier";
+  const stateTone = !readiness ? "neutral" : readiness.stale ? "warning"
+    : readiness.gates.DISPLAY_AS_COMPLETE.ok ? "success" : "info";
 
   // Split keys by category. Un inline field qui contient un texte trop long
   // (ex: brandNature avec un paragraphe LLM) bascule vers les fieldKeys pour
@@ -466,8 +482,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
         // Refresh query states after each chunk so the operator can see the fields populate in real-time
         await Promise.all([
-          pillarQuery.refetch(),
-          assessQuery.refetch(),
+          refreshPillarState(),
           recosQuery.refetch(),
         ]);
       }
@@ -496,8 +511,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   // « on a implémenté une logique de score pour éviter de recommander des choses
   // moins efficaces » restait invisible. On trie les meilleures d'abord.
   const recoScore = (r: Record<string, unknown>) => (typeof r.weightedScore === "number" ? r.weightedScore : -1);
+  const eligiblePending = pendingRecos.filter(r => r.eligibleForApplication === true);
   const sortedRecos = [...pendingRecos].sort((a, b) => recoScore(b) - recoScore(a));
-  const acceptedRecos = (acceptedRecosQuery.data ?? []) as Array<{ id: string }>;
+  const acceptedRecos = ((acceptedRecosQuery.data ?? []) as Array<{ id: string; eligibleForApplication?: boolean }>).filter(r => r.eligibleForApplication);
 
   // RTIS pages: pending counts from Notoria
   const pendingCounts = pendingCountsQuery?.data ?? {};
@@ -535,7 +551,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               type: "success",
               message: `Pilier amendé v${res.version}. ${res.stalePillars.length} pilier(s) stratégique(s) à rafraîchir, ${res.staleAssets} asset(s) à régénérer.`,
             });
-            assessQuery.refetch();
+            void refreshPillarState();
+            void utils.pillar.listEditableFields.invalidate({ strategyId, pillarKey: adveKey });
           }}
         />
       ) : null}
@@ -552,25 +569,36 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         {isAdve ? "Fondation" : "Stratégie"}
       </Link>
 
+      {focusedPaths.length ? (
+        <section aria-label="Champs à revoir" className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-4">
+          <h2 className="text-sm font-semibold text-warning">Champs à revoir</h2>
+          <p className="text-xs text-foreground-secondary">Une valeur présente reste à relire ; elle ne vaut pas validation de la marque.</p>
+          {focusedPaths.map(path => {
+            const fieldPath = path.slice(path.indexOf(".") + 1);
+            const entry = editableFields.find(f => fieldPath === f.field || fieldPath.startsWith(`${f.field}.`) || fieldPath.startsWith(`${f.field}[`));
+            const present = isFilled(resolvePillarPath(content, fieldPath));
+            return (
+              <div key={path} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-3">
+                <div className="min-w-0">
+                  <p className="break-words text-sm text-foreground">{getFieldLabel(fieldPath)}</p>
+                  <p className="text-xs text-foreground-secondary">{present ? "Valeur présente" : "Valeur absente"} · {entry ? "Révision manuelle" : "Champ calculé ou non éditable"}</p>
+                </div>
+                {entry && canOperate ? <Button size="sm" variant="outline" onClick={() => openAmendOnField(entry.field)}>Revoir {getFieldLabel(fieldPath)}</Button> : null}
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
+
       {/* ── Header — 3-level scoring ─────────────────────────────── */}
       <div className="rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex shrink-0 items-center gap-3 min-w-0">
             <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
-            {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
-              <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${
-                // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
-                pillar.validationStatus === "VALIDATED" ? "bg-success/15 text-success" :
-                pillar.validationStatus === "AI_PROPOSED" ? "bg-warning/15 text-warning" :
-                "bg-white/10 text-foreground-muted"
-              // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
-              }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
-            ) : null}
           </div>
-          <div className="flex items-center gap-2">
-            {/* ADR-0023 — manual amend (ADVE only). Operator-only Intent → for
-                founders, link to the founder editor instead of the amend modal. */}
-            {isAdve && strategyId ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+            {/* Both entry points use the same operator-only amendment. */}
+            {isAdve && strategyId && canWriteStrategy ? (
               canOperate ? (
                 <button
                   type="button"
@@ -582,14 +610,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   Modifier
                 </button>
               ) : (
-                <Link
-                  href="/cockpit/brand/edit"
-                  className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground"
-                  title="Modifier votre fiche de marque"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Modifier
-                </Link>
+                <span className="text-xs text-foreground-secondary">Révision prise en charge par votre équipe</span>
               )
             ) : null}
             {/* RTIS recalculation goes through ENRICH_*, never manual edit. */}
@@ -597,6 +618,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <RecalculateRtisButton
                 strategyId={strategyId}
                 pillarKey={config.pillarKey.toUpperCase() as "R" | "T" | "I" | "S"}
+                canRecalculate={canWriteStrategy && pillar?.validationStatus !== "LOCKED"}
+                onComplete={() => { void refreshPillarState(); }}
               />
             ) : null}
             {/* Enrichir/étude = pillar.autoFill (operatorProcedure) : masqué
@@ -661,12 +684,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             par Stage canonique, pas juste par %. Évite "88% vert + EMPTY"
             qui fait croire au user que tout va bien alors que le système
             refuse la cascade. */}
-        <div className="mt-2 flex items-center gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           {/* Suffisant (ENRICHED) */}
           {(() => {
             const stage = assess?.currentStage;
-            const enrichedReached = stage === "ENRICHED" || stage === "COMPLETE";
-            const completeReached = stage === "COMPLETE";
+            const displayReady = stateTone === "success";
+            const enrichedReached = displayReady && (stage === "ENRICHED" || stage === "COMPLETE");
+            const completeReached = displayReady && stage === "COMPLETE";
             // Couleurs : vert = stage atteint ; amber = % haut mais stage manqué (gap needsHuman) ; muted = bas
             const sufClass = enrichedReached
               ? "text-success"
@@ -683,14 +707,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             return (
               <>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-2xs font-semibold ${sufClass}`}>Suffisant</span>
+                  <span className={`text-2xs font-semibold ${sufClass}`}>Socle renseigné</span>
                   <div className="h-1.5 w-16 rounded-full bg-white/5">
                     <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: sufBg }} />
                   </div>
                   <span className={`text-2xs ${sufClass}`}>{enrichedPct}%</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-2xs font-semibold ${cplClass}`}>Complet</span>
+                  <span className={`text-2xs font-semibold ${cplClass}`}>Champs renseignés</span>
                   <div className="h-1.5 w-16 rounded-full bg-white/5">
                     <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: cplBg }} />
                   </div>
@@ -709,15 +733,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               R+T {rtConsolidated ? "✓" : "—"}
             </span>
           )}
-          {/* Stage badge */}
-          {assess?.currentStage && (
-            <span className={`ml-auto rounded-full px-2 py-0.5 text-2xs font-medium ${
-              assess.currentStage === "COMPLETE" ? "bg-success/15 text-success" :
-              assess.currentStage === "ENRICHED" ? "bg-info/15 text-info" :
-              assess.currentStage === "INTAKE" ? "bg-warning/15 text-warning" :
-              "bg-white/5 text-foreground-muted"
-            }`}>{stageLabel(assess.currentStage)}</span>
-          )}
+          <Badge role="status" tone={stateTone} className="ml-auto">{stateLabel}</Badge>
         </div>
       </div>
 
@@ -776,15 +792,15 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             <div className="mb-3">
               <div className="text-sm font-semibold text-foreground">Ambition stratégique</div>
               <p className="mt-1 text-2xs text-foreground-muted">
-                3 trajectoires calculées depuis le même backbone (initiatives + risques). Retenir une ambition recalcule le dashboard S sur son jeu de stratégie.
+                Trois sélections proposées depuis votre catalogue, vos préférences et vos risques. Retenir un scénario compose votre plan ; les budgets estimés restent à confirmer.
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid items-start gap-3 sm:grid-cols-3">
               {routes.map((r) => {
                 const key = String(r.key ?? "");
                 const isSelected = key === selectedKey;
-                const growth = typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : 0;
-                const cult = typeof r.targetCultIndex === "number" ? r.targetCultIndex : null;
+                const scenarioActions = Array.isArray(r.initiatives) ? r.initiatives as Array<Record<string, unknown>> : [];
+                const reasons = Array.isArray(r.selectionReasons) ? r.selectionReasons as Array<{ initiativeId: string; reasons: string[] }> : [];
                 const count = typeof r.initiativeCount === "number" ? r.initiativeCount : null;
                 const budget = typeof r.totalBudget === "number" ? r.totalBudget : null;
                 const coverage = typeof r.riskCoverage === "number" ? r.riskCoverage : null;
@@ -801,15 +817,25 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       </span>
                     ) : null}
                     <div className="text-xs font-semibold text-foreground">{String(r.label ?? key)}</div>
-                    <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>+{growth}%</div>
+                    <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>{count !== null ? `${count} action${count > 1 ? "s" : ""}` : "Scénario à recalculer"}</div>
                     <div className="mt-1 space-y-0.5 text-2xs text-foreground-muted">
-                      {cult != null ? <div>Indice d'attachement cible : <span className="font-bold text-foreground">{cult}/100</span></div> : null}
-                      {count != null ? <div>{count} initiative{count > 1 ? "s" : ""}{budget != null && budget > 0 ? ` · ${(budget / 1_000_000).toLocaleString()} M F` : ""}</div> : null}
-                      {coverage != null ? <div>{coverage}% des risques couverts</div> : null}
+                      {count != null ? <div>{count} initiative{count > 1 ? "s" : ""} · {initiativeBudgetLabel(budget, r.budgetSummary)}</div> : null}
+                      {coverage != null ? <div>{coverage}% des risques associés à une action proposée</div> : null}
+                      <p>{String(r.description ?? "")}</p>
                     </div>
+                    {scenarioActions.length ? <details className="mt-3 text-2xs text-foreground-secondary">
+                      <summary className="cursor-pointer text-accent">Voir les {scenarioActions.length} actions et leurs critères</summary>
+                      <ol className="mt-2 space-y-3">{scenarioActions.map(a => <li key={String(a.id)} className="border-t border-border-subtle pt-2">
+                        <p className="font-semibold text-foreground">{String(a.action)}</p>
+                        {a.objectif ? <p className="mt-1">{String(a.objectif)}</p> : null}
+                        <p className="mt-1">{String(a.channel ?? "Canal à préciser")} · {a.timeframe === "SPRINT_90" ? "Sprint 90 jours" : a.timeframe === "PHASE_1" ? "Phase 1" : a.timeframe === "PHASE_2" ? "Phase 2" : a.timeframe === "LONG_TERM" ? "Long terme" : "Échéance à préciser"}</p>
+                        <p>{initiativeBudgetLabel(undefined, aggregateInitiativeSet([a], []).budgetSummary)}{a.budgetBasis === "QUALITATIVE_ESTIMATE" ? " · Estimation indicative" : ""}</p>
+                        <p className="mt-1 text-foreground-muted">{reasons.find(x => x.initiativeId === a.id)?.reasons.join(" · ")}</p>
+                      </li>)}</ol>
+                    </details> : null}
                     <button
                       type="button"
-                      disabled={isSelected || selectRouteMutation.isPending}
+                      disabled={!canWriteStrategy || pillar?.validationStatus === "LOCKED" || isSelected || selectRouteMutation.isPending}
                       onClick={() => selectRouteMutation.mutate({ strategyId, routeKey: key as "CONSERVATIVE" | "TARGET" | "AMBITIOUS" })}
                       className={`mt-2 w-full rounded-md px-2.5 py-1.5 text-2xs font-medium transition-colors ${
                         isSelected
@@ -817,7 +843,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           : "bg-white/5 text-foreground-secondary hover:bg-accent/20 hover:text-accent"
                       } disabled:opacity-70`}
                     >
-                      {isSelected ? "Ambition retenue ✓" : selectRouteMutation.isPending ? "Sélection…" : "Retenir cette ambition"}
+                      {isSelected ? "Scénario courant ✓" : selectRouteMutation.isPending ? "Sélection…" : "Retenir cette ambition"}
                     </button>
                   </div>
                 );
@@ -836,7 +862,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-info" />
             <div className="flex-1">
               <div className="text-sm font-semibold text-info">
-                Pilier vierge — 0/{(assess.derivable?.length ?? 0) + (assess.satisfied?.length ?? 0)} champs renseignés
+                {allKeys.some((key) => isFilled(content[key])) ? "Pilier à compléter" : "Pilier à renseigner"}
               </div>
               {/* P1-5 (audit onboarding 2026-07-19) — la consigne pointait le
                   bouton « Enrichir », masqué hors opérateur : un founder lisait
@@ -844,11 +870,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <p className="mt-1 text-2xs text-foreground-muted">
                 {canOperate ? (
                   isAdve
-                    ? <>Clique sur <strong>Enrichir</strong> pour démarrer l&apos;auto-remplissage via vault, calculs et IA.</>
+                    ? <>Utilisez <strong>Modifier</strong> pour saisir les informations connues. <strong>Enrichir</strong> peut vous aider à compléter la marque à partir de vos sources.</>
                     : <>Les piliers stratégiques se dérivent de votre fondation. <strong>Enrichir</strong> ci-dessus pour générer ce pilier depuis ADVE (nécessite ADVE complété au préalable).</>
                 ) : (
                   isAdve
-                    ? <>Répondez aux champs ci-dessous — chaque réponse renforce votre socle de marque.</>
+                    ? <>Votre équipe vous accompagne pour compléter et réviser les informations de marque.</>
                     : <>Ce pilier se construit automatiquement à partir de votre fondation — complétez d&apos;abord vos 4 piliers de base.</>
                 )}
               </p>
@@ -879,9 +905,6 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   Ces champs forment le socle identitaire de la marque. L'IA pré-remplit un draft à l'activation (badge orange ci-dessous), à vous de le valider ou de le réécrire.
                 </p>
               </div>
-              <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
-                {stageLabel(assess.currentStage)}
-              </span>
             </div>
             <div className="space-y-1.5">
               {assess.needsHuman.map((path: string) => {
@@ -907,15 +930,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                         <Pencil className="h-3 w-3" />
                         Saisir
                       </button>
-                    ) : (
-                      <Link
-                        href="/cockpit/brand/edit"
-                        className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Compléter
-                      </Link>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
@@ -924,24 +939,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         );
       })() : null}
 
-      {/* ── PR-C (ADR-0035) — Inferred fields panel ─────────────────────
-            Lists the fields where the LLM inference pass at activateBrand
-            time pre-filled a value. The operator can: (a) keep the value
-            as-is and click "Valider" to flip the certainty marker to
-            DECLARED, or (b) edit/replace via the regular amend flow. The
-            content stays editable through the standard pillar form — this
-            panel is just the surfacing of the INFERRED state. ─ */}
+      {/* Revue des valeurs inférées : même provenance et même grain que le writer. */}
       {isAdve && pillarQuery.data?.pillar ? (() => {
         const fc = (pillarQuery.data.pillar.fieldCertainty as Record<string, string> | null) ?? {};
-        const pillarPrefix = `${upperKey.toLowerCase()}.`;
-        // Accept both qualified ("a.archetype") and bare ("archetype") keys.
-        const inferredPaths: string[] = Object.entries(fc)
-          .filter(([, level]) => level === "INFERRED")
-          .map(([path]) => path.startsWith(pillarPrefix) ? path.slice(pillarPrefix.length) : path)
-          .filter((p, i, arr) => arr.indexOf(p) === i);
+        const content = (pillarQuery.data.pillar.content as Record<string, unknown> | null) ?? {};
+        const inferredPaths = inferredFieldPaths(content, fc, upperKey);
         if (inferredPaths.length === 0) return null;
 
-        const content = (pillarQuery.data.pillar.content as Record<string, unknown> | null) ?? {};
         const renderPreview = (val: unknown): string => {
           if (val == null) return "—";
           if (typeof val === "string") return val.length > 80 ? `${val.slice(0, 80)}…` : val;
@@ -956,22 +960,25 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-warning">
                   <Sparkles className="h-4 w-4" />
-                  {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} par l&apos;IA — à valider
+                  {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} — à vérifier
                 </div>
                 <p className="mt-1 text-2xs text-foreground-muted">
-                  Draft initial pré-rempli au moment de l&apos;activation. Clique <strong>Valider tel quel</strong> si la valeur convient, ou utilise <strong>Saisir</strong> pour la réécrire (le badge disparaîtra dans les deux cas).
+                  Ces postulats alimentent déjà votre plan et vos livrables. Le responsable de marque vérifie chaque proposition, puis la confirme ou la corrige. <strong>Valider tel quel</strong> enregistre sa décision sur la version affichée ; cela ne déclare aucun résultat observé.
                 </p>
               </div>
               <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
                 Proposé par l’IA — à valider
               </span>
             </div>
+            {confirmInferredMutation.error ? <p role="alert" className="mb-3 text-xs text-error">{confirmInferredMutation.error.message}</p> : null}
             <div className="space-y-1.5">
               {inferredPaths.map((path) => {
-                const value = content[path];
+                const value = resolvePillarPath(content, path);
+                const nested = path.includes(".") || path.includes("[");
                 const pending = confirmInferredMutation.isPending;
+                const verification = inferredFieldVerification(upperKey, path);
                 return (
-                  <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
+                  <div key={path} className="flex flex-col items-start justify-between gap-3 rounded border border-white/5 bg-white/[0.02] px-3 py-3 lg:flex-row">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
@@ -980,6 +987,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       <div className="mt-0.5 truncate text-2xs italic text-foreground-muted/80">
                         {renderPreview(value)}
                       </div>
+                      <button type="button" onClick={() => setFocusedItem({ [getFieldLabel(path)]: value })}
+                        className="mt-1 text-2xs text-info underline underline-offset-2">
+                        Lire la valeur entière
+                      </button>
+                      <p className="mt-2 max-w-prose text-xs leading-relaxed text-foreground-muted">
+                        <strong className="text-foreground">À vérifier · {verification.responsable} : </strong>{verification.instruction}
+                      </p>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       {canOperate ? (
@@ -987,21 +1001,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           type="button"
                           onClick={() => openAmendOnField(path)}
                           className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
-                          title="Réécrire ce champ"
+                          title={nested ? "Revoir l’objet qui contient cette valeur" : "Réécrire ce champ"}
                         >
                           <Pencil className="h-3 w-3" />
-                          Saisir
+                          {nested ? "Revoir l’ensemble" : "Saisir"}
                         </button>
-                      ) : (
-                        <Link
-                          href="/cockpit/brand/edit"
-                          className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
-                          title="Réécrire ce champ dans votre éditeur"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          Compléter
-                        </Link>
-                      )}
+                      ) : null}
                       <button
                         type="button"
                         disabled={pending || !strategyId}
@@ -1011,10 +1016,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                             strategyId,
                             pillarKey: upperKey,
                             fieldPath: path,
+                            expectedVersion: pillarQuery.data!.pillar!.currentVersion,
                           });
                         }}
                         className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Garder cette valeur — passe la certitude à DECLARED"
+                        title="Confirmer cette prémisse pour le plan et enregistrer ta vérification à cette version"
                       >
                         <CheckCircle className="h-3 w-3" />
                         Valider tel quel
@@ -1067,17 +1073,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
-                const ids = pendingRecos.map(r => r.id);
+                const ids = eligiblePending.map(r => r.id);
                 if (ids.length === 0) return;
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
-              }} disabled={acceptRecosMutation.isPending || pendingRecos.length === 0}
+              }} disabled={acceptRecosMutation.isPending || eligiblePending.length === 0}
                 title="Enregistre la décision de revue. L'écriture dans le pilier se fait ensuite via « Appliquer au pilier »."
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40">
                 <CheckCircle className="h-3 w-3" /> Tout accepter
               </button>
               <button onClick={() => {
-                const ids = Array.from(selectedRecos);
+                const ids = eligiblePending.filter(r => selectedRecos.has(r.id)).map(r => r.id);
                 if (ids.length === 0) return;
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
@@ -1132,7 +1138,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               // `currentEmpty` prime : combler un vide ne peut pas être « inférieur à
               // l'existant ». Le drapeau ne s'allume que sur un champ NON vide.
               const flagged = !currentEmpty && op !== "ADD" && (inferiorToExisting || requiresReview);
-              const verdict = op === "ADD"
+              const verdict = !reco.eligibleForApplication ? { label: "Alternative", cls: "bg-info/15 text-info" } : op === "ADD"
                 ? { label: "Ajout", cls: "bg-success/15 text-success" }
                 : currentEmpty
                   ? { label: "Comble un vide", cls: "bg-info/15 text-info" }
@@ -1156,7 +1162,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       : null;
 
               return (
-                <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
+                <div key={recoId} onClick={() => { if (!reco.eligibleForApplication) return; const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
                   className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-success/30 bg-success/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -1181,6 +1187,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           écrit `explain: reco.justification`), pas `justification` : lire
                           `reco.justification` rendait une ligne VIDE pour chaque reco. */}
                       <p className="text-2xs text-foreground-muted mb-1">{String(reco.explain ?? reco.justification ?? "")}</p>
+                      {!!reco.comparison && <p className="text-xs text-foreground-secondary">{(reco.comparison as { reason: string }).reason}</p>}
                       {/* Warning : le gate signale un problème (ruler inférieur OU violation
                           Bible OU financier) sur un champ NON vide → surface la vraie raison. */}
                       {flagged ? (
@@ -1320,8 +1327,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             Remplace les collections d'actions hétérogènes du blob par une
             seule table requêtable (projection BrandAction). ─ */}
       {config.pillarKey === "i" && strategyId ? (
-        <ActionDatabasePanel strategyId={strategyId} />
+        <ActionDatabasePanel strategyId={strategyId} canWrite={canWriteCalendar} canSync={canSyncActions} />
       ) : null}
+
+      {config.pillarKey === "v" && canOperate && strategyId && <section aria-label="Préparer la vente" className="space-y-3 rounded-xl border border-border bg-background p-4">
+        <h2 className="font-medium">Préparer les offres de vos vendeurs</h2>
+        <p className="max-w-3xl text-sm text-foreground-muted">Transformez le catalogue de cette marque en offres que vos vendeurs peuvent présenter. Définissez les tarifs et les conditions autorisées, ou préparez le dossier de l’offre avec le générateur existant.</p>
+        <div className="flex flex-wrap gap-3">
+          <Link className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" href={`/console/socle/pipeline?strategy=${encodeURIComponent(strategyId)}`}>Préparer les offres des vendeurs</Link>
+          <Link className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" href={`/console/artemis/skill-tree?strategy=${encodeURIComponent(strategyId)}&sequence=OFFRE-V#sequence-OFFRE-V`}>Générer l’offre commerciale</Link>
+        </div>
+      </section>}
 
       {/* ── Field body — bespoke renderer (design handoff) ou grille générique ── */}
       {Bespoke ? (
@@ -1340,6 +1356,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           ))}
         </div>
       )}
+
+      {/* ── Historique du catalogue produit (ADR-0205, amendement 568) — lecture seule ── */}
+      {config.pillarKey === "v" && strategyId ? <CatalogueHistoryPanel strategyId={strategyId} /> : null}
     </div>
   );
 }

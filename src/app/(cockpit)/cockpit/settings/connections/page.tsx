@@ -7,6 +7,7 @@
  * honnête : réseaux sociaux (OAuth ADR-0128), boutique Shopify (OAuth
  * commerce), et les canaux à venir. Aucun secret ne descend jamais ici.
  */
+import Image from "next/image";
 import { useState } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { PageHeader } from "@/components/shared/page-header";
@@ -16,7 +17,9 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { trpc } from "@/lib/trpc/client";
 import { SocialHubCard } from "@/components/cockpit/social/social-hub-card";
 import { EmailProviderCard } from "@/components/cockpit/newsletter/email-provider-card";
-import { Button, Input } from "@/components/primitives";
+import { Button, Input, Textarea, Select } from "@/components/primitives";
+import { PublicBrandContent, PublicIdentityChoice } from "@/domain/public-brand";
+import { PublicIdentityReview } from "@/components/brand/public-identity-review";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Plug, Store, RefreshCw, Unlink, ArrowRight, Smartphone, Plug2, KeyRound, Trash2 } from "lucide-react";
 
@@ -345,47 +348,114 @@ function McpCard({ strategyId }: { strategyId: string }) {
 function PublicPageCard({ strategyId }: { strategyId: string }) {
   const toast = useToast();
   const utils = trpc.useUtils();
-  const strategy = trpc.strategy.get.useQuery({ id: strategyId }, { enabled: !!strategyId });
+  const preview = trpc.strategy.publicPage.useQuery({ id: strategyId });
+  const [draft, setDraft] = useState<{
+    revision: string; publishedId: string | null; content: PublicBrandContent;
+    logos: NonNullable<typeof preview.data>["logos"]; logoAssetId?: string;
+    identity: PublicIdentityChoice | null; identityChanged: boolean;
+    publishedContent: PublicBrandContent | null; publishedIdentity: PublicIdentityChoice | null; publishedLogoAssetId?: string;
+    reuseReceipt: NonNullable<NonNullable<typeof preview.data>["published"]>["reusePublishedIdentity"];
+    reuseOnlyLinks: boolean;
+  } | null>(null);
   const update = trpc.strategy.update.useMutation({
     onSuccess: () => {
+      utils.strategy.publicPage.invalidate({ id: strategyId });
       utils.strategy.get.invalidate({ id: strategyId });
-      toast.success("Page publique activée");
+      setDraft(null);
+      toast.success("Version publique publiée.");
     },
-    onError: () => toast.error("Activation impossible — réessayez ou contactez-nous."),
+    onError: (error) => toast.error(error.message || "Publication impossible."),
   });
-
-  const slug = strategy.data?.publicSlug ?? null;
-  const url = slug && typeof window !== "undefined" ? `${window.location.origin}/b/${slug}` : null;
-
+  const data = preview.data;
+  const url = data?.slug && typeof window !== "undefined" ? `${window.location.origin}/b/${data.slug}` : null;
+  const startReview = () => {
+    if (!data) return;
+    const content = data.published?.content ?? data.proposed;
+    const matches = data.logos.filter((logo) => logo.url === content.logoUrl);
+    setDraft({ revision: data.revision, publishedId: data.published?.id ?? null, content, logos: data.logos,
+      logoAssetId: data.published?.logoAssetId ?? (matches.length === 1 ? matches[0]!.id : undefined),
+      identity: data.published?.identityChoice ?? null, identityChanged: false,
+      publishedContent: data.published?.content ?? null, publishedIdentity: data.published?.identityChoice ?? null,
+      publishedLogoAssetId: data.published?.logoAssetId ?? undefined,
+      reuseReceipt: data.published?.reusePublishedIdentity ?? null, reuseOnlyLinks: false });
+  };
+  const edit = (patch: Partial<PublicBrandContent>) => setDraft((old) => old ? { ...old, content: { ...old.content, ...patch } } : old);
+  const keepsPublishedLogo = !!draft && data?.published?.id === draft.publishedId
+    && data.published.logoAssetId === draft.logoAssetId && data.published.content.logoUrl === draft.content.logoUrl;
+  const valid = draft ? PublicBrandContent.safeParse(draft.content).success && (!draft.identity || PublicIdentityChoice.safeParse(draft.identity).success) && (draft.reuseOnlyLinks || draft.content.logoUrl === null
+    || draft.logos.some((logo) => logo.id === draft.logoAssetId && (logo.url === draft.content.logoUrl || keepsPublishedLogo))) : false;
   return (
     <div className="ck-card">
       <p className="ck-card__eyebrow"><ArrowRight />Page publique</p>
-      {slug ? (
-        <div className="space-y-2">
-          <p className="ck-ops__note">
-            Votre marque a sa page publique — partagez-la, elle montre votre identité et vos
-            réseaux (données publiques uniquement).
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <a href={`/b/${slug}`} target="_blank" rel="noreferrer" className="text-sm text-accent underline-offset-2 hover:underline">
-              /b/{slug}
-            </a>
-            {url && <CopyButton value={url} />}
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="ck-ops__note">
-            Activez la page publique de votre marque : une URL propre à partager
-            (identité, logo, réseaux — données publiques uniquement).
-          </p>
-          <Button
-            size="sm"
-            disabled={update.isPending || strategy.isLoading}
-            onClick={() => update.mutate({ id: strategyId, enablePublicPage: true, recalculateScore: false })}
-          >
-            {update.isPending ? "Activation…" : "Activer ma page publique"}
-          </Button>
+      {preview.isLoading ? <p className="ck-ops__note">Chargement…</p> : preview.error ? (
+        <div className="space-y-2"><p className="ck-ops__note">La page publique ne peut pas être chargée.</p>
+          <Button size="sm" onClick={() => preview.refetch()}>Réessayer</Button></div>
+      ) : data && (
+        <div className="space-y-3">
+          <p className="ck-ops__note">{data.published
+            ? `Version ${data.published.version} en ligne. Les modifications de votre marque restent privées jusqu’à la prochaine publication.`
+            : "Préparez une version publique de votre marque. Seuls les textes, les liens et les éléments d’identité choisis dans cet aperçu seront publiés."}</p>
+          {data.published?.observed && <p className="ck-ops__note">Publication historique conservée. Aucune relecture humaine antérieure n’est présumée.</p>}
+          {url && <div className="flex flex-wrap items-center gap-2">
+            <a href={url} target="_blank" rel="noreferrer" className="text-sm text-accent hover:underline">Voir la page en ligne</a>
+            <CopyButton value={url} />
+            <a href={`/api/export/${data.slug}?format=public-brand-v2`} target="_blank" rel="noreferrer" className="text-sm text-accent hover:underline">Voir le fichier public</a>
+          </div>}
+          {!data.canPublish ? <p className="ck-ops__note">La publication est prise en charge par l’équipe de cette marque.</p> : !draft ? (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={startReview}>Relire et publier</Button>
+              {data.previous[0] && <Button size="sm" variant="outline" disabled={update.isPending} onClick={() => update.mutate({
+                id: strategyId, recalculateScore: false, publicPage: { expectedRevision: data.revision,
+                  expectedPublishedId: data.published?.id ?? null, content: data.published?.content ?? data.proposed,
+                  restoreId: data.previous[0]!.id },
+              })}>Revenir à la version {data.previous[0].version}</Button>}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-warning">{data.warning}</p>
+              {draft.reuseReceipt && <div className="space-y-2 rounded border border-border p-3">
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={draft.reuseOnlyLinks}
+                  onChange={event => setDraft(old => old ? { ...old, reuseOnlyLinks: event.target.checked,
+                    ...(event.target.checked && old.publishedContent ? { content: { ...old.publishedContent, links: old.content.links },
+                      identity: old.publishedIdentity, identityChanged: false, logoAssetId: old.publishedLogoAssetId } : {}) } : old)} />
+                  Conserver l’identité déjà publiée et modifier seulement les liens</label>
+                <p className="ck-ops__note">Ce choix conserve les textes, le logo, les polices, les couleurs et les illustrations en ligne. Leurs copies seront vérifiées avant publication. Les éventuelles demandes de révision de l’identité restent ouvertes.</p>
+              </div>}
+              <label className="block text-sm">Nom public<Input disabled={draft.reuseOnlyLinks} value={draft.content.name} maxLength={160} onChange={(e) => edit({ name: e.target.value })} /></label>
+              <label className="block text-sm">Titre<Input disabled={draft.reuseOnlyLinks} value={draft.content.title} maxLength={240} onChange={(e) => edit({ title: e.target.value })} /></label>
+              <label className="block text-sm">Promesse<Textarea disabled={draft.reuseOnlyLinks} value={draft.content.tagline} maxLength={600} onChange={(e) => edit({ tagline: e.target.value })} /></label>
+              <label className="block text-sm">Présentation<Textarea disabled={draft.reuseOnlyLinks} value={draft.content.description} maxLength={2400} onChange={(e) => edit({ description: e.target.value })} /></label>
+              <label className="block text-sm">Logo de cette publication
+                <Select disabled={draft.reuseOnlyLinks} value={draft.logoAssetId ?? ""} onChange={(event) => {
+                  const logo = draft.logos.find((candidate) => candidate.id === event.target.value);
+                  setDraft((old) => old ? { ...old, logoAssetId: logo?.id, content: { ...old.content, logoUrl: logo?.url ?? null } } : old);
+                }}>
+                  <option value="">Sans logo</option>
+                  {draft.logos.map((logo) => <option key={logo.id} value={logo.id}>{logo.name} — version {logo.version}</option>)}
+                </Select>
+              </label>
+              <p className="ck-ops__note">Choisissez une variante lisible sur le fond de votre site. Ce choix ne remplace pas les autres logos de votre marque.</p>
+              {draft.content.logoUrl && <Image src={draft.content.logoUrl} alt="Logo à publier" width={340} height={141} unoptimized referrerPolicy="no-referrer" className="max-h-36 w-auto object-contain" />}
+              {draft.content.logoUrl && !draft.logoAssetId && !draft.reuseOnlyLinks && <p className="text-sm text-warning">Le logo publié n’est plus disponible dans ce choix. Sélectionnez une variante actuelle ou publiez sans logo.</p>}
+              {draft.content.links.map((link, index) => <div className="flex flex-wrap gap-2" key={index}>
+                <Input aria-label={`Nom du lien ${index + 1}`} value={link.label} onChange={(e) => edit({ links: draft.content.links.map((l, i) => i === index ? { ...l, label: e.target.value } : l) })} />
+                <Input aria-label={`Adresse du lien ${index + 1}`} value={link.url} onChange={(e) => edit({ links: draft.content.links.map((l, i) => i === index ? { ...l, url: e.target.value } : l) })} />
+                <Button size="sm" variant="outline" onClick={() => edit({ links: draft.content.links.filter((_, i) => i !== index) })}>Retirer ce lien</Button>
+              </div>)}
+              <Button size="sm" variant="outline" disabled={draft.content.links.length >= 12} onClick={() => edit({ links: [...draft.content.links, { label: "", url: "" }] })}>Ajouter un lien</Button>
+              {!draft.reuseOnlyLinks && <PublicIdentityReview strategyId={strategyId} options={data.identityOptions} value={draft.identity}
+                onChange={identity => setDraft(old => old ? { ...old, identity, identityChanged: true } : old)} />}
+              {!valid && <p className="text-sm text-warning">Renseignez le nom, le titre, des liens publics https sans paramètres et un logo disponible si vous en incluez un.</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={!valid || update.isPending} onClick={() => update.mutate({ id: strategyId, recalculateScore: false,
+                  publicPage: { expectedRevision: draft.revision, expectedPublishedId: draft.publishedId, content: draft.content, logoAssetId: draft.logoAssetId,
+                    ...(draft.reuseOnlyLinks && draft.reuseReceipt ? { reusePublishedIdentity: draft.reuseReceipt } : {}),
+                    ...(draft.identityChanged ? { identity: draft.identity } : {}) } })}>
+                  {update.isPending ? "Publication…" : "Publier cette version"}</Button>
+                <Button size="sm" variant="outline" disabled={update.isPending} onClick={() => setDraft(null)}>Annuler</Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

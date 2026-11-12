@@ -4,6 +4,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { catalogueIdentityHistory, type CatalogueArchive, type CatalogueIdentityHistory, type CatalogueWrite } from "@/domain/product-catalog";
 
 interface VersionEntry {
   pillarId: string;
@@ -12,20 +13,22 @@ interface VersionEntry {
   reason?: string;
   /** G (ADR-0176) — IntentEmission qui produit cette écriture (rollback précis). */
   intentId?: string;
+  checkpoint?: Prisma.InputJsonValue;
+  compensatedFrom?: string;
 }
 
 /**
  * Snapshot the current pillar state before applying changes.
  * Called before each update to preserve the previous version.
  */
-export async function createVersion(entry: VersionEntry): Promise<string> {
-  const pillar = await db.pillar.findUnique({ where: { id: entry.pillarId } });
+export async function createVersion(entry: VersionEntry, client: Prisma.TransactionClient = db): Promise<string> {
+  const pillar = await client.pillar.findUnique({ where: { id: entry.pillarId } });
   if (!pillar) throw new Error(`Pillar ${entry.pillarId} not found`);
 
   const previousContent = (pillar.content as Record<string, unknown>) ?? {};
   const diff = computeDiff(previousContent, entry.content);
 
-  const version = await db.pillarVersion.create({
+  const version = await client.pillarVersion.create({
     data: {
       pillarId: entry.pillarId,
       version: pillar.currentVersion ?? 1,
@@ -34,20 +37,22 @@ export async function createVersion(entry: VersionEntry): Promise<string> {
       author: entry.author,
       reason: entry.reason,
       intentId: entry.intentId ?? null,
+      ...(entry.checkpoint ? { checkpoint: entry.checkpoint } : {}),
+      compensatedFrom: entry.compensatedFrom ?? null,
     },
   });
 
   // round-13a (CRITICAL) — createVersion ne bumpe PLUS `Pillar.currentVersion`.
-  // Il tourne sur le client `db` global (hors de la tx interactive du gateway, cf.
-  // pillar-gateway/index.ts:324-325). Bumper ici committait N→N+1 sur une connexion
+  // Historiquement exécuté sur le client global, il faisait alors N→N+1 sur une connexion
   // SÉPARÉE, AVANT le persist conditionnel du gateway (`updateMany where
   // currentVersion = N` — verrou optimiste posé round-12). Sous READ COMMITTED, ce
   // persist re-snapshottait la ligne à N+1 (déjà committée par ce bump), matchait
   // 0 ligne → `count !== 1` → throw PILLAR_VERSION_CONFLICT → TOUTE écriture pilier
   // gouvernée échouait sur un vrai Postgres (invisible en CI : DB stub + tx mockée).
   // Le bump du compteur appartient désormais au SEUL persist atomique du gateway,
-  // qui devient un verrou optimiste réel. Les callers hors gateway (rollback ci-dessous)
-  // bumpent explicitement. Invariant verrouillé par create-version-no-bump.test.ts.
+  // qui devient un verrou optimiste réel. La restauration utilise aussi ce gateway. Invariant verrouillé par create-version-no-bump.test.ts.
+  // ADR-0198 : le gateway passe maintenant sa transaction ; snapshot et contenu
+  // sont annulés ensemble si un pilier du lot est refusé.
   return version.id;
 }
 
@@ -63,33 +68,54 @@ export async function getHistory(pillarId: string, limit = 20) {
 }
 
 /**
- * Rollback to a specific version
+ * États archivés du catalogue produit (V) : seul le chemin `produitsCatalogue`
+ * est lu, avec l'écriture qui a remplacé chaque état. Lecture pure, utilisable
+ * dans la transaction du gateway (réservation des identifiants retirés).
  */
-export async function rollback(pillarId: string, versionId: string, author?: string): Promise<void> {
-  const version = await db.pillarVersion.findUniqueOrThrow({ where: { id: versionId } });
-  if (version.pillarId !== pillarId) throw new Error("Version does not belong to this pillar");
-
-  // Save current state before rolling back
-  await createVersion({
-    pillarId,
-    content: version.content as Record<string, unknown>,
-    author,
-    reason: `rollback_to_v${version.version}`,
-  });
-
-  // Apply the old content. round-13a : bump `currentVersion` explicitement ici —
-  // createVersion ne le fait plus, et ce chemin de rollback (LEGACY_PILLAR_ROLLBACK_VERSION,
-  // pillar.rollbackVersion) ne passe pas par le persist du gateway. Sans ce bump le
-  // compteur resterait figé (le snapshot pré-rollback et le suivant porteraient le
-  // même numéro). État final identique à `main` : contenu restauré + currentVersion +1.
-  await db.pillar.update({
-    where: { id: pillarId },
-    data: {
-      content: version.content as Prisma.InputJsonValue,
-      currentVersion: { increment: 1 },
-    },
-  });
+export async function readCatalogueArchives(
+  pillarId: string, client: Prisma.TransactionClient = db,
+): Promise<CatalogueArchive[]> {
+  const rows = await client.$queryRaw<Array<{
+    version: number; catalogue: unknown; author: string | null; reason: string | null;
+    intentId: string | null; compensatedFrom: string | null; createdAt: Date;
+  }>>`SELECT "version", "content"->'produitsCatalogue' AS "catalogue", "author", "reason", "intentId", "compensatedFrom", "createdAt"
+      FROM "PillarVersion" WHERE "pillarId" = ${pillarId} ORDER BY "version" ASC, "createdAt" ASC, "id" ASC`;
+  return rows.map(row => ({ version: row.version, catalogue: row.catalogue ?? undefined, write: {
+    at: row.createdAt.toISOString(), author: row.author, reason: row.reason,
+    intentId: row.intentId, compensatedFrom: row.compensatedFrom,
+  } }));
 }
+
+export type CatalogueHistoryWrite = CatalogueWrite & { intentKind: string | null };
+export type CatalogueHistory = CatalogueIdentityHistory<CatalogueHistoryWrite> & { currentVersion: number };
+
+/**
+ * Historique des retraits et réintroductions du catalogue d'une marque, dérivé
+ * des versions conservées (ADR-0205, amendement 568). L'intention de chaque
+ * écriture n'est lue que dans le journal de cette même marque.
+ */
+export async function getCatalogueHistory(strategyId: string, client: Prisma.TransactionClient = db): Promise<CatalogueHistory> {
+  const pillar = await client.pillar.findUnique({
+    where: { strategyId_key: { strategyId, key: "v" } }, select: { id: true, currentVersion: true, content: true },
+  });
+  if (!pillar) return { currentVersion: 0, ...catalogueIdentityHistory([], { version: 0, catalogue: undefined }) };
+  const archives = await readCatalogueArchives(pillar.id, client);
+  const intentIds = [...new Set(archives.flatMap(a => a.write.intentId ? [a.write.intentId] : []))];
+  const emissions = intentIds.length ? await client.intentEmission.findMany({
+    where: { id: { in: intentIds }, strategyId }, select: { id: true, intentKind: true },
+  }) : [];
+  const kinds = new Map(emissions.map(e => [e.id, e.intentKind]));
+  const content = (pillar.content ?? {}) as Record<string, unknown>;
+  const history = catalogueIdentityHistory(
+    archives.map(a => ({ ...a, write: { ...a.write, intentKind: a.write.intentId ? kinds.get(a.write.intentId) ?? null : null } })),
+    { version: pillar.currentVersion, catalogue: content.produitsCatalogue },
+  );
+  return { currentVersion: pillar.currentVersion, ...history };
+}
+
+// Restoration is not a versioning concern: the history action, the journal
+// compensation and the Notoria withdrawal all enter `pillar-gateway/rollback.ts`
+// (ADR-0207, amendement 562). This module only archives and reads history.
 
 /**
  * Compute a simple diff summary between two content objects

@@ -1,9 +1,9 @@
 /**
  * Anti-drift — `writePillar` bare hors pillar-gateway interdit.
  *
- * Contexte (RESIDUAL-DEBT v6.1.18) : `writePillar` direct écrit le contenu mais
- * **ne réconcilie pas** Pillar.completionLevel cache. Symptôme : la cascade
- * RTIS / les chips Notoria / la readiness gate divergent du contenu réel.
+ * Contexte historique (RESIDUAL-DEBT v6.1.18) : le cache divergeait du contenu.
+ * v6.27.549 persiste désormais ce cache dans writePillar lui-même. Les appels
+ * bare restent bornés : ils reportent encore le scoring et les événements.
  *
  * **Tous les callers DOIVENT passer par `writePillarAndScore`** (cf.
  * `src/server/services/pillar-gateway/index.ts`) qui wrappe writePillar +
@@ -35,24 +35,29 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 594,
+    line: 785,
+    reason: "Transaction atomique interne (batch et projection) — contenu et cache utilisent la transaction partagée ; scoring et événements suivent le commit (ADR-0198, reçu PostgreSQL).",
+  },
+  {
+    file: "src/server/services/pillar-gateway/index.ts",
+    line: 829,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
   {
     file: "src/server/services/ingestion-pipeline/ai-filler.ts",
-    line: 453,
+    line: 452,
     reason:
       "AI RTIS filler (ingestion) — bare writePillar VOLONTAIRE : draft AI_PROPOSED MERGE_DEEP mi-ingestion, scoré à l'activation comme C1/C2. Site historique qui échappait au test via l'alias `writePillarRTIS` (audit 2026-07-13, T5) — dé-aliasé et catalogué ; la cascade staleness Oracle s'applique désormais dans writePillar lui-même.",
   },
   {
     file: "src/server/trpc/routers/quick-intake.ts",
-    line: 83,
+    line: 94,
     reason:
-      "seedPillarFromIntake (reroute C1, P2-b) — bare writePillar VOLONTAIRE : préserve l'advertis_vector calculé à l'intake. writePillarAndScore recalculerait le score depuis le contenu brut partiel → régression du score affiché. Validation Zod + PillarVersion + cascade staleness + author trail sont appliqués (le gap C1) ; le reconcile completionLevel + le score se font sur la prochaine écriture réelle / l'activation.",
+      "seedPillarFromIntake (reroute C1, P2-b) — bare writePillar VOLONTAIRE : préserve l'advertis_vector calculé à l'intake. writePillarAndScore recalculerait le score depuis le contenu brut partiel → régression du score affiché. Validation Zod + PillarVersion + cache canonique atomique + cascade staleness + author trail sont appliqués ; le score est recalculé à l'activation.",
   },
   {
     file: "src/server/services/quick-intake/infer-needs-human-fields.ts",
-    line: 501,
+    line: 503,
     reason:
       "Inférence needs-human fields (reroute C2) — bare writePillar VOLONTAIRE : draft AI_PROPOSED mi-intake, scoré à l'activation comme le reste du flux. Validation + PillarVersion + cascade + author trail appliqués ; fieldCertainty (métadonnée) écrite séparément.",
   },

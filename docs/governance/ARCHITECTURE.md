@@ -17,6 +17,40 @@ Layer N peut importer ≤ N (sauf `import type` cross-layer). Enforced par
 [`eslint.config.mjs`](../../eslint.config.mjs)) +
 `madge --circular`.
 
+**Extension Guidance 437, livrée dans 438** : le gateway existant distingue collection
+source additive et plan S remplacé à toute profondeur. PillarVersion garde le
+contenu antérieur ; nouvelle version/restauration ou dépendance modifiée retire
+atomiquement les anciennes approbations S/Strategy. LOCKED reste une protection
+d’écriture lorsque S devient stale. PROTOCOLE_S/writer ne produit aucune décision
+humaine ; null n’est pas transformé en mesure. Les reçus documentaires prennent
+leurs verrous avant Strategy UPDATE puis les piliers, dans l’ordre de la revue.
+canon-sync importe/recalcule S par le gateway et remonte les erreurs ; vector
+reste projection de score hors des piliers métier. Pas de nouvelle couche/service/
+entité/kind/Neter. review-invalidation.ts est une primitive interne du gateway :
+gateway, invalidation documentaire et deux écrivains de staleness partagent
+retrait de revue/marquage stale. Strategy UPDATE triées avant piliers ; sourceUse
+prend UPDATE sans upgrade. Lookup d’âge S→s réparé ; true/false reçus sur
+propagateFromPillar, Process uniquement dans le mode auto existant. 21 S ciblés
+reçus dans le complet PG 309/seize ; HARD collections rouge/restauration exacte/
+vert reçu. Unitaire complet 4 190/400/cinq contrôles finaux verts ; premier rouge
+de délai conservé/recontrôlé sans changer le test. Autres modes et versions source
+du calcul non reçus ; build isolé exit 0 et native locale USER/TRIAL reçue sur
+S null v1 → écriture v2/rétraction → relecture/réapprobation v2/null. Stress
+compilé isolé vert borné (46 HTTP reçus/235 non reçus, sans fournisseur),
+canon-sync statique + writer PG sans import privilégié natif. Sept DEFERRED de
+la fenêtre stress bornée/estimation zéro/sans providerTaskId ; sept tâches et
+quatre marques synthétiques nettoyées/remaining=0, serveur isolé arrêté.
+CI 37992424716/image 37992697193/runtime 438 exact reçus sur source 912e481e.
+Lecture seule du plan et de la Forge SPAWT reçue, aucune mutation réelle : S v3
+AI_PROPOSED à 91,2 %, approbation désactivée. COMPLETE/100 par présence mais
+stale=true, displayLabel=Périmé et DISPLAY_AS_COMPLETE/ORACLE_EXPORT refusés ;
+le plan affiche pourtant Complet. Ce désaccord UX/contrats reste ouvert ; les
+80 diagnostics portent sur formes/types/références, pas 80 faits métier absents.
+Parcours réels complets et autres modes restent non reçus. La convergence
+de l’entrée manuelle vers le calcul gardera Notoria facultative.
+Décision architecturale acceptée et code livré ; sept chantiers/dix gates ouverts.
+[ADR-0215 Accepted](adr/0215-synthesis-writes-require-new-review.md).
+
 ## Panthéon Neteru — cascade Glory→Brief→Forge
 
 **7 Neteru actifs** (Mestor, Artemis, Seshat, Thot, Ptah, **Imhotep** Phase 14, **Anubis** Phase 15). Plafond APOGEE = 7 atteint. Source narrative : [PANTHEON.md](PANTHEON.md).
@@ -30,7 +64,7 @@ sequenceDiagram
   participant Artemis
   participant Ptah
   participant Bus as EventBus
-  participant DB as IntentEmission
+  participant DB as PostgreSQL
 
   Client->>Mestor: emitIntent(kind, payload)
   Mestor->>DB: INSERT IntentEmission (hash-chained)
@@ -42,7 +76,11 @@ sequenceDiagram
     opt asset matérialisation requise
       Mestor->>Mestor: emitIntent(PTAH_MATERIALIZE_BRIEF)
       Mestor->>Ptah: dispatch(forgeBrief)
-      Ptah->>Bus: ASSET_FORGED (post webhook reconcile)
+      Ptah->>Mestor: emitIntent(PTAH_RECONCILE_TASK, webhook ou sync)
+      Mestor->>Ptah: reconcileTask dans le scope de la marque
+      Ptah->>DB: checkpoint résultat fournisseur
+      Ptah->>DB: transaction versions + coffre + coût + COMPLETED
+      Ptah-->>Mestor: ids stables des versions admises
     end
     loop each step
       Artemis->>Bus: publish intent.progress
@@ -59,6 +97,104 @@ sequenceDiagram
     Mestor->>DB: UPDATE IntentEmission (status=VETOED|DOWNGRADED)
   end
 ```
+
+**Frontière Ptah, code 6.27.428 livré (réception 2026-10-09)** : le résultat
+checkpointé rejoint versions/coffre/coût déclaré/COMPLETED dans une transaction
+sous verrou partagé du coffre et de la tâche ; reprise stable, archives préservées.
+Le code 426 transmet les références métier existantes jusqu’à la tâche et relit
+leur portée avant fournisseur/admission, ainsi que la tâche historique en
+régénération. Le code 427 reconnaît le résultat racine ou enveloppé par Intent OK,
+avec DEFERRED admis ; les refus restent des refus. Aucun service ajouté.
+
+Suites finales : 4 167 unitaires/230 PostgreSQL/1 617 gouvernance, types/lints sans
+erreur, 24 warnings, zéro cycle. HTTP Oracle 200/DEFERRED, portée/émission et
+replay reçus localement sur fixtures synthétiques ; aucun fournisseur réel.
+Source cdd9f6c0, CI 37862693091/image 37862922982 et runtime 428 reçus le 9 octobre
+à 00:19:53 UTC, volume privé conservé ; aucune livraison 426 isolée. Production :
+lectures/refus, corpus et édition SPAWT inchangés, zéro tâche/version de forge
+avant/après. Ce reçu ne démontre aucun cycle réel.
+
+L’état du bouton et sa garde opérateur sont reçus localement dans le
+[code 428 livré](RECEPTION-PTAH-UX.md), gauntlet local vert :
+contexte courant relu par le chokepoint existant, aucun droit ajouté. Les
+acceptations C4/C5/C6, reprise DEFERRED/configuration, filiation upstream/
+documentaire, octets/CDN, facture, Canva/Figma et
+journal restent distincts : [reçu courant](RECEPTION-PTAH-UX.md),
+[reprise interrompue historique 425](RECEPTION-PTAH-ADMISSION.md).
+
+## Runtime 435, suivi vide SPAWT reçu — réception métier partielle
+
+**Extension 436 livrée — décision d’état dans Guidance** : la transition
+manuelle est partagée dans pillar-gateway/validation-status.ts par
+strategy.validateSynthesis et pillar.transitionStatus, sous
+LEGACY_PILLAR_TRANSITION_STATUS existant. Elle relit acteur/portée et verrouille
+Strategy et les lignes Pillar de ses sources ; composition S canonique
+ENRICHED/COMPLETE + schéma strict, version relue, fraîcheur et références
+déclarées requises. S.validationStatus et Strategy.status changent dans la même
+transaction, jamais confidence/content/provenance/version ; retry sans seconde
+écriture, retour DRAFT rétracte Strategy VALIDATED. cross-validator et
+staleness-propagator lisent la transaction existante. Aucun modèle/service/kind/
+Neter/droit supplémentaire, aucune production automatique par approbation S.
+La commande de projets issus des initiatives utilise une précondition S approuvé
+au début de ses effets ; atomicité du cycle de production non déduite.
+Quatorze PostgreSQL ciblés verts et cinq cas natifs synthétiques reçus ; autres
+écrivains/consommateurs globaux et audit final ouverts. Source 80e2122f/CI/image/
+runtime 436 reçus, lecture réelle SPAWT S existant/non approuvable reçue ;
+contrats de forme/historique/calcul à réconcilier, postmerge documentaire distinct :
+[ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
+[bornes](RECEPTION-VALIDATION-SYNTHESE.md).
+
+Runtime exact 434/source 24ddb3c8/CI 37907427545/image 37907430453 reçus ; native
+tracker réelle 403 pour compte non affecté, écran non reçu/trace tronquée.
+435 livré : listForges seulement résout le dossier explicitement choisi pour
+ADMIN effectif canonique, sans équipe par défaut ; canResume selon affectation
+actuelle. Mutations/autres lectures restent strictes, aucun droit ou rôle ajouté.
+Deux rouges/49 verts puis 51 PG ciblés verts. Native locale par URL connue : deux
+dossiers de deux équipes, chacun sa tâche, canResume=false/lecture seule, sans
+bouton ni secret ; Actualiser HTTP 200, fenêtre complète/zéro exception. Sélecteur
+local 0/0 historique, copie FR finale relue, fixture nettoyée. Gauntlet 435 cinq exit 0,
+gouvernance 1620/166/24 warnings préexistants ; PG complet seul 274/14, Ptah 51
+inclus. CI 435 reçue : 4 180/399 unitaires et 274/14 PG ; image/runtime exact 435 reçus, source
+d554276e. Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu ; fenêtre complète
+63 réponses/aucune ≥500/zéro exception/log. Liste du sélecteur reçue après chargement,
+passage par son lien vers le portefeuille groupe FrieslandCampina non pilotable
+reçu en lecture seule, portée/ambiguïtés rendues, sans métriques isolées.
+Production/reprise réelle non reçue ; reload local tronqué et timings production
+bornés, sans SLO déduit.
+
+ADR-0213 Proposed étend Ptah/Intent/tâche existants par une reprise manuelle
+sur brief original : portée/paramètres/sceau relus, gates actuelles puis
+réservation compare-and-set avant réseau. Deux formes tRPC strictes, mélange
+reprise/nouveau brief refusé avant effet ; reçu COMPLETED avec IDs AssetVersion
+existants/scopés non vides. Absence de configuration garde la
+même tâche ; envoi incertain interdit une réémission aveugle. Tracker et page
+existants, layout OperatorSurface conservé, aucun service/router/modèle/droit.
+Le spine commun utilise version existante pour un sceau v2 JSON canonique
+récursif et horodate après verrou ; v1/payloads historiques inchangés. Legacy
+non recalculable non vérifiable, pas altération prouvée. Sceau individuel hors
+ascendance et complétion mutable ; closeEmission best-effort reste distinct.
+Prérequis auth 433 séparé : callback session relit l’affectation en base, sans
+tenant JWT/rôle/droit ajouté, trois rouges/verts. Marque native retrouvée,
+reprise même tâche DEFERRED HTTP 200/refus reçu altéré HTTP 412 reçus ; dirigeant
+sans affectation sans montage du tracker/Reprendre. Anciens compteurs par mauvais
+sélecteurs écartés, nouvelle pagination native 20 puis 22 uniques reçue.
+validationStatus remplace le faux vert ACTIVE,
+pas les défauts confiance S absente à 0 %/validation à 1.0 sans S composé.
+Deux rouges émission/trois rouges reprise, PostgreSQL actuel 270/14/Ptah 47 cas ;
+types/lints/cycles/gouvernance finaux post-découplage exit 0 reçus,
+1620/166 gouvernance.
+CLI 1 002 lignes distingue fenêtre 1 000/--all. Horodatage = ordre logique si
+le prédécesseur est futur, pas preuve d’heure métier/fraîcheur historique.
+startedAt réel séparé après verrou ; horloge future 60 s, un rouge/quatre verts
+puis cinq PostgreSQL verts avec clôture/durée/hash relus, aucun SLO global reçu.
+Stress isolé exit 0 : 46 HTTP reçus/235 non reçus/0 échec, sans native protégée/
+Glory phase 3/fournisseur réel, fixtures nettoyées. Harnais général non réparé,
+heap local 8 192 MiB seulement ; stress antérieur aux dernières gardes et dates.
+Suite canonique 4 180/399 et PG 270/14 finaux post-découplage reçus ; timeout
+concurrent conservé/relance PG seule verte sans cause racine démontrée.
+Parcours restants non reçus, CI/runtime 434 reçus. Auth 433 committée séparément,
+incluse dans le bundle 434 sans runtime autonome. Production courante 435,
+sept chantiers/dix gates programme non acceptés : [réception partielle](RECEPTION-PTAH-REPRISE.md).
 
 ## Glory tools — outils intriqués
 

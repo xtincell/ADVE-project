@@ -145,14 +145,14 @@ export default function BrandBiblePage() {
           <span className="text-foreground">
             {doc.coverage.pct != null ? (
               <>
-                <span className="font-semibold">{doc.coverage.pct}%</span> complété
+                Maturité des piliers · <span className="font-semibold">{doc.coverage.pct}%</span>
               </>
             ) : (
               <span className="text-foreground-muted">Complétude non mesurée</span>
             )}
             <span className="text-foreground-muted">
               {" "}
-              ({doc.coverage.filled}/{doc.coverage.total} éléments renseignés)
+              · Champs du livre · {doc.coverage.filled}/{doc.coverage.total} renseignés
             </span>
           </span>
           <span className="text-foreground-muted">
@@ -196,6 +196,7 @@ export default function BrandBiblePage() {
                       >
                         {prov.label}
                       </span>
+                      {entry.sourceField && <span className="text-xs text-foreground-muted">Source · {entry.sourceField}</span>}
                     </div>
                     <Value value={entry.value} />
                   </div>
@@ -228,7 +229,7 @@ export default function BrandBiblePage() {
               {section.citations.map((c) => (
                 <div key={c.sourceId}>
                   <p className="text-2xs text-foreground-muted">
-                    {c.fileName} — {c.certainty}
+                    {c.fileName} — {c.certainty ?? "certitude non renseignée"}
                   </p>
                   <p className="whitespace-pre-wrap text-xs text-foreground-secondary">
                     {c.excerpt.slice(0, 700)}

@@ -9,7 +9,7 @@
  *  3. **KPIs Agency** — Header dashboard : compteurs cross-clients, RAG breakdown,
  *     Sentinels alertes, top urgentes.
  *
- * Les data sont scopées par operator (operatorId courant via session) avec
+ * Les données sont bornées par l’équipe accessible choisie au portefeuille, avec
  * filtres optionnels (countryCode IN AFRICA, clusterTag, status, rag).
  */
 
@@ -20,9 +20,15 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { Activity, AlertTriangle, CheckCircle2, Layers, Package, Ticket, ClipboardList } from "lucide-react";
 import { OperatorActionForm } from "@/components/portfolio/OperatorActionForm";
+import { Button } from "@/components/primitives/button";
+import { usePortfolioOperator } from "@/components/portfolio/use-portfolio-operator";
+import { PortfolioOperatorSelect } from "@/components/portfolio/PortfolioOperatorSelect";
 
 const TABS = ["KPIS", "PROJECTS", "DELIVERABLES", "ACTIONS", "TICKETS"] as const;
 type Tab = (typeof TABS)[number];
+const TAB_LABELS: Record<Tab, string> = { KPIS: "Indicateurs", PROJECTS: "Campagnes", DELIVERABLES: "Livrables", ACTIONS: "Actions du jour", TICKETS: "Reprises" };
+const RAG_LABELS: Record<string, string> = { GREEN: "Sans alerte", AMBER: "À surveiller", RED: "En alerte" };
+const STATUS_LABELS: Record<string, string> = { TODO: "À faire", IN_PROGRESS: "En cours", DELIVERED: "Livré", VALIDATED: "Validé" };
 
 const RAG_COLORS: Record<string, string> = {
   GREEN: "bg-emerald-500/15 text-emerald-300",
@@ -32,18 +38,27 @@ const RAG_COLORS: Record<string, string> = {
 
 export default function AfricaPortfolioPage() {
   const [tab, setTab] = useState<Tab>("KPIS");
-  const { data: operator } = trpc.operator.getOwn.useQuery();
-
-  if (!operator) return <div className="p-6 text-sm text-foreground-secondary">Loading…</div>;
+  const { operator, operators, isLoading, error, refetch } = usePortfolioOperator();
+  if (error) return <div role="alert" className="space-y-3 p-6">
+    <p>{error.message}</p>
+    <Button variant="outline" onClick={() => { void refetch(); }}>Réessayer la lecture</Button>
+  </div>;
+  if (isLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement de l’équipe…</div>;
+  if (!operator) return <div className="space-y-3 p-6">
+    <p>Aucune équipe rattachée à ce compte. Le suivi nécessite une équipe.</p>
+    <Link href="/console" className="text-accent hover:underline">Retour à la console</Link>
+  </div>;
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <header>
-        <h1 className="text-2xl font-semibold">Africa Portfolio — {operator.name}</h1>
+        <h1 className="text-2xl font-semibold">Suivi des campagnes — {operator.name}</h1>
         <p className="text-sm text-foreground-secondary">
-          Dashboard cross-clients : campagnes en vol, livrables matrice 6D, KPIs agrégés Afrique.
+          Campagnes reçues, livrables à produire, actions du jour et demandes de reprise de cette équipe.
         </p>
       </header>
+
+      <PortfolioOperatorSelect operatorId={operator.id} operators={operators} />
 
       <nav className="flex gap-1 border-b border-zinc-700">
         {TABS.map((t) => (
@@ -56,26 +71,24 @@ export default function AfricaPortfolioPage() {
                 : "border-b-2 border-transparent text-foreground-secondary hover:text-foreground"
             }`}
           >
-            {t === "KPIS" ? "KPIs Agency"
-              : t === "PROJECTS" ? "Projects (Project Tracker)"
-              : t === "DELIVERABLES" ? "Deliverables (Checklist)"
-              : t === "ACTIONS" ? "Actions du jour"
-              : "Tickets modifs"}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </nav>
 
-      {tab === "KPIS" && <KpisView operatorId={operator.id} />}
-      {tab === "PROJECTS" && <ProjectsView operatorId={operator.id} />}
-      {tab === "DELIVERABLES" && <DeliverablesView operatorId={operator.id} />}
-      {tab === "ACTIONS" && <ActionsView operatorId={operator.id} />}
-      {tab === "TICKETS" && <TicketsView operatorId={operator.id} />}
+      {tab === "KPIS" && <KpisView key={operator.id} operatorId={operator.id} />}
+      {tab === "PROJECTS" && <ProjectsView key={operator.id} operatorId={operator.id} />}
+      {tab === "DELIVERABLES" && <DeliverablesView key={operator.id} operatorId={operator.id} />}
+      {tab === "ACTIONS" && <ActionsView key={operator.id} operatorId={operator.id} />}
+      {tab === "TICKETS" && <TicketsView key={operator.id} operatorId={operator.id} />}
     </div>
   );
 }
 
 function KpisView({ operatorId }: { operatorId: string }) {
-  const { data: stats } = trpc.campaignDeliverable.statsForOperator.useQuery({ operatorId });
+  const { data: stats, error, isLoading, refetch } = trpc.campaignDeliverable.statsForOperator.useQuery({ operatorId });
+  if (error || isLoading || !stats) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des indicateurs…" />;
+  if (stats.total === 0) return <p className="rounded border border-border p-6 text-sm text-foreground-secondary">Aucun livrable enregistré pour cette équipe. Les indicateurs apparaîtront avec les premières tâches.</p>;
 
   const totalDeliverables = stats?.total ?? 0;
   const ragRed = stats?.byRag.RED ?? 0;
@@ -114,9 +127,13 @@ function KpisView({ operatorId }: { operatorId: string }) {
 }
 
 function ProjectsView({ operatorId }: { operatorId: string }) {
-  const { data: deliverables } = trpc.campaignDeliverable.listForOperator.useQuery({ operatorId });
-  // Group by campaignId
+  const { data: deliverables, error, isLoading, refetch } = trpc.campaignDeliverable.listForOperator.useQuery({ operatorId });
+  const campaigns = trpc.campaign.list.useQuery({ operatorId });
+  if (error || campaigns.error || isLoading || campaigns.isLoading || !deliverables || !campaigns.data) {
+    return <PortfolioReadState error={error ?? campaigns.error} onRetry={() => Promise.all([refetch(), campaigns.refetch()])} label="Chargement des campagnes…" />;
+  }
   const byCampaign = new Map<string, { campaign: { id: string; name: string; strategyId: string }; total: number; ragCounts: Record<string, number> }>();
+  for (const campaign of campaigns.data) byCampaign.set(campaign.id, { campaign, total: 0, ragCounts: { GREEN: 0, AMBER: 0, RED: 0 } });
   for (const d of deliverables ?? []) {
     const entry = byCampaign.get(d.campaignId) ?? {
       campaign: d.campaign,
@@ -134,7 +151,7 @@ function ProjectsView({ operatorId }: { operatorId: string }) {
   if (projects.length === 0) {
     return (
       <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
-        Aucune campagne avec des livrables. Crée des CampaignDeliverable depuis une page campagne pour les voir ici.
+        Aucune campagne enregistrée pour cette équipe. Les projets apparaîtront dès leur réception, avant les premiers livrables.
       </div>
     );
   }
@@ -146,9 +163,9 @@ function ProjectsView({ operatorId }: { operatorId: string }) {
           <tr>
             <th className="p-2 text-left">Campagne</th>
             <th className="p-2 text-right">Livrables</th>
-            <th className="p-2 text-right">🔴 RED</th>
-            <th className="p-2 text-right">🟡 AMBER</th>
-            <th className="p-2 text-right">🟢 GREEN</th>
+            <th className="p-2 text-right">En alerte</th>
+            <th className="p-2 text-right">À surveiller</th>
+            <th className="p-2 text-right">Sans alerte</th>
             <th className="p-2 text-left">Lien</th>
           </tr>
         </thead>
@@ -156,13 +173,13 @@ function ProjectsView({ operatorId }: { operatorId: string }) {
           {projects.map((p) => (
             <tr key={p.campaign.id} className="border-t border-zinc-800 hover:bg-zinc-900/50">
               <td className="p-2 font-medium">{p.campaign.name}</td>
-              <td className="p-2 text-right">{p.total}</td>
-              <td className="p-2 text-right">{p.ragCounts.RED ?? 0}</td>
-              <td className="p-2 text-right">{p.ragCounts.AMBER ?? 0}</td>
-              <td className="p-2 text-right">{p.ragCounts.GREEN ?? 0}</td>
+              <td className="p-2 text-right">{p.total === 0 ? "Aucun livrable" : p.total}</td>
+              <td className="p-2 text-right">{p.total ? p.ragCounts.RED ?? 0 : "—"}</td>
+              <td className="p-2 text-right">{p.total ? p.ragCounts.AMBER ?? 0 : "—"}</td>
+              <td className="p-2 text-right">{p.total ? p.ragCounts.GREEN ?? 0 : "—"}</td>
               <td className="p-2">
                 <Link
-                  href={`/cockpit/operate/campaigns/${p.campaign.id}`}
+                  href={`/cockpit/operate/campaigns/${p.campaign.id}?operator=${encodeURIComponent(operatorId)}`}
                   className="text-accent hover:underline"
                 >
                   Détail →
@@ -180,24 +197,25 @@ function DeliverablesView({ operatorId }: { operatorId: string }) {
   const [filterRag, setFilterRag] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
 
-  const { data: deliverables } = trpc.campaignDeliverable.listForOperator.useQuery({
+  const { data: deliverables, error, isLoading, refetch } = trpc.campaignDeliverable.listForOperator.useQuery({
     operatorId,
     rag: filterRag.length > 0 ? (filterRag as Array<"GREEN" | "AMBER" | "RED">) : undefined,
     status: filterStatus.length > 0 ? filterStatus : undefined,
   });
+  if (error || isLoading || !deliverables) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des livrables…" />;
 
   return (
     <section className="flex flex-col gap-3">
       {/* Filtres */}
       <div className="flex flex-wrap gap-3 rounded border border-zinc-800 p-3">
-        <FilterGroup label="RAG" options={["GREEN", "AMBER", "RED"]} selected={filterRag} onChange={setFilterRag} />
-        <FilterGroup label="Status" options={["TODO", "IN_PROGRESS", "DELIVERED", "VALIDATED"]} selected={filterStatus} onChange={setFilterStatus} />
+        <FilterGroup label="État" options={["GREEN", "AMBER", "RED"]} selected={filterRag} onChange={setFilterRag} labels={RAG_LABELS} />
+        <FilterGroup label="Avancement" options={["TODO", "IN_PROGRESS", "DELIVERED", "VALIDATED"]} selected={filterStatus} onChange={setFilterStatus} labels={STATUS_LABELS} />
       </div>
 
       {/* Table */}
       {!deliverables || deliverables.length === 0 ? (
         <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
-          Aucun livrable correspondant. Crée des CampaignDeliverable matrice 6D depuis une page campagne.
+          Aucun livrable correspondant. Ouvrez une campagne pour préparer ses premières tâches.
         </div>
       ) : (
         <div className="overflow-x-auto rounded border border-zinc-700">
@@ -221,7 +239,7 @@ function DeliverablesView({ operatorId }: { operatorId: string }) {
                 <tr key={d.id} className="border-t border-zinc-800 hover:bg-zinc-900/30">
                   <td className="p-2">
                     <Link
-                      href={`/console/operate/africa-portfolio/deliverable/${d.id}`}
+                      href={`/console/operate/africa-portfolio/deliverable/${d.id}?operator=${encodeURIComponent(operatorId)}`}
                       className="hover:text-accent hover:underline"
                     >
                       {d.campaign.name}
@@ -258,7 +276,7 @@ function ActionsView({ operatorId }: { operatorId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [showDone, setShowDone] = useState(false);
 
-  const { data: actions } = trpc.operatorAction.listForOperator.useQuery({
+  const { data: actions, error, isLoading, refetch } = trpc.operatorAction.listForOperator.useQuery({
     operatorId,
     done: showDone ? undefined : false,
   });
@@ -266,6 +284,7 @@ function ActionsView({ operatorId }: { operatorId: string }) {
   const toggleMutation = trpc.operatorAction.toggleDone.useMutation({
     onSuccess: () => utils.operatorAction.invalidate(),
   });
+  if (error || isLoading || !actions) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des actions…" />;
 
   const PRIO_COLORS: Record<string, string> = {
     CRITIQUE: "bg-error/15 text-error",
@@ -276,6 +295,7 @@ function ActionsView({ operatorId }: { operatorId: string }) {
 
   return (
     <section className="flex flex-col gap-3">
+      {toggleMutation.error && <p role="alert" className="text-sm text-error">{toggleMutation.error.message}</p>}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-4 w-4" />
@@ -303,7 +323,6 @@ function ActionsView({ operatorId }: { operatorId: string }) {
         <div className="rounded border border-zinc-700 bg-zinc-900/50">
           <OperatorActionForm
             operatorId={operatorId}
-            strategyId={`audit:${operatorId}`}
             onSuccess={() => setShowForm(false)}
             onCancel={() => setShowForm(false)}
           />
@@ -326,7 +345,6 @@ function ActionsView({ operatorId }: { operatorId: string }) {
                 checked={a.done}
                 onChange={(e) =>
                   toggleMutation.mutate({
-                    strategyId: `audit:${operatorId}`,
                     operatorId,
                     actionId: a.id,
                     done: e.target.checked,
@@ -369,7 +387,8 @@ function ActionsView({ operatorId }: { operatorId: string }) {
 // ──────────────────────────────────────────────────────────────────────
 
 function TicketsView({ operatorId }: { operatorId: string }) {
-  const { data: tickets } = trpc.campaignChangeRequest.listOpenForOperator.useQuery({ operatorId });
+  const { data: tickets, error, isLoading, refetch } = trpc.campaignChangeRequest.listOpenForOperator.useQuery({ operatorId });
+  if (error || isLoading || !tickets) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des reprises…" />;
 
   const IMPACT_COLORS: Record<string, string> = {
     COSMETIC: "bg-emerald-500/15 text-emerald-300",
@@ -389,13 +408,13 @@ function TicketsView({ operatorId }: { operatorId: string }) {
         <Ticket className="h-4 w-4" />
         <span className="text-sm text-foreground-secondary">{tickets?.length ?? 0} tickets ouverts</span>
         <span className="text-xs text-foreground-secondary ml-2">
-          (création depuis page CampaignDeliverable détail — workflow PROTOCOLE ABSENCE V4)
+          (demandes enregistrées depuis le détail d’un livrable)
         </span>
       </div>
 
       {!tickets || tickets.length === 0 ? (
         <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
-          Aucun ticket ouvert. Les tickets de modif sont créés depuis la page d'un CampaignDeliverable.
+          Aucune reprise ouverte. Les demandes de modification sont enregistrées depuis le détail d’un livrable.
         </div>
       ) : (
         <div className="overflow-x-auto rounded border border-zinc-700">
@@ -413,7 +432,7 @@ function TicketsView({ operatorId }: { operatorId: string }) {
             <tbody>
               {tickets.map((t) => (
                 <tr key={t.id} className="border-t border-zinc-800 hover:bg-zinc-900/30">
-                  <td className="p-2 font-mono text-[10px]">{t.ticketCode}</td>
+                  <td className="p-2 font-mono text-[10px]"><Link className="text-accent hover:underline" href={`/console/operate/africa-portfolio/deliverable/${t.campaignDeliverableId}?operator=${encodeURIComponent(operatorId)}`}>{t.ticketCode}</Link></td>
                   <td className="p-2">{t.requestedByName}</td>
                   <td className="p-2 max-w-md truncate" title={t.description}>{t.description}</td>
                   <td className="p-2">
@@ -437,6 +456,18 @@ function TicketsView({ operatorId }: { operatorId: string }) {
   );
 }
 
+function PortfolioReadState({ error, onRetry, label }: {
+  error?: { message: string } | null;
+  onRetry: () => unknown;
+  label: string;
+}) {
+  if (error) return <div role="alert" className="space-y-3 rounded border border-error/30 bg-error/10 p-4">
+    <p className="text-sm text-error">{error.message}</p>
+    <Button variant="outline" onClick={() => { void onRetry(); }}>Réessayer la lecture</Button>
+  </div>;
+  return <p role="status" className="p-6 text-sm text-foreground-secondary">{label}</p>;
+}
+
 function KpiCard({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value: string | number; highlight?: boolean }) {
   return (
     <div className={`rounded border p-4 ${highlight ? "border-error/40 bg-error/5" : "border-zinc-800 bg-zinc-900/30"}`}>
@@ -453,9 +484,11 @@ function FilterGroup({
   options,
   selected,
   onChange,
+  labels,
 }: {
   label: string;
   options: string[];
+  labels?: Record<string, string>;
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
@@ -474,7 +507,7 @@ function FilterGroup({
                 : "bg-zinc-800 text-foreground-secondary hover:bg-zinc-700"
             }`}
           >
-            {opt}
+            {labels?.[opt] ?? opt}
           </button>
         );
       })}

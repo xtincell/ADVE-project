@@ -41,7 +41,7 @@ interface XlsxWorksheet {
   getRow(n: number): XlsxRow;
 }
 interface XlsxWorkbookInstance {
-  xlsx: { load(buffer: Buffer): Promise<unknown> };
+  xlsx: { load(buffer: Buffer, options?: {ignoreNodes: string[]}): Promise<unknown> };
   worksheets: XlsxWorksheet[];
 }
 
@@ -93,8 +93,20 @@ export async function readXlsxWorkbook(
   const WorkbookCtor = mod.Workbook ?? mod.default?.Workbook;
   if (!WorkbookCtor) throw new Error("exceljs: constructeur Workbook introuvable");
 
-  const wb = new WorkbookCtor();
-  await wb.xlsx.load(buffer);
+  let wb = new WorkbookCtor();
+  try {
+    await wb.xlsx.load(buffer);
+    if (!wb.worksheets.length) throw new Error("Aucune feuille lisible dans le classeur.");
+  }
+  catch (error) {
+    const { normalizePrefixedSpreadsheet } = await import("./xlsx-namespaces");
+    const normalized = await normalizePrefixedSpreadsheet(buffer);
+    if (!normalized) throw error;
+    wb = new WorkbookCtor();
+    // Table/drawing metadata is not cell data and these relationships are not in the reading copy.
+    await wb.xlsx.load(normalized, {ignoreNodes: ["tableParts", "drawing", "picture", "legacyDrawing"]});
+    if (!wb.worksheets.length) throw new Error("Aucune feuille lisible dans le classeur.");
+  }
 
   const sheetNames = wb.worksheets.map((ws) => ws.name);
 
@@ -107,7 +119,9 @@ export async function readXlsxWorkbook(
     ws.getRow(1).eachCell({ includeEmpty: true }, (cell, col) => {
       headers[col] = String(cellToPrimitive(cell.value)).trim();
     });
-    const maxCol = Math.max(headers.length - 1, 0);
+    // A cover/guide may start with an empty row; keep its body in the readable CSV.
+    let maxCol = Math.max(headers.length - 1, 0);
+    for (let r = 2; r <= ws.rowCount; r++) ws.getRow(r).eachCell({ includeEmpty: false }, (_cell, col) => { maxCol = Math.max(maxCol, col); });
 
     const headerCells: string[] = [];
     for (let c = 1; c <= maxCol; c++) headerCells.push(escapeCsvField(headers[c] ?? "", sep));

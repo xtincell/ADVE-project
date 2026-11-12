@@ -10,6 +10,8 @@
  */
 
 import { db } from "@/lib/db";
+import { Prisma, type GenerativeTask } from "@prisma/client";
+import { timingSafeEqual } from "node:crypto";
 import {
   checkManipulationCoherence,
   ensurePillarSource,
@@ -24,7 +26,6 @@ import {
   findTaskById,
   findTaskByProviderTaskId,
   generateWebhookSecret,
-  markCompleted,
   markDeferred,
   markFailed,
   updateProviderHealth,
@@ -38,9 +39,13 @@ import type {
   MaterializeBriefPayload,
   ProviderName,
 } from "./types";
-import type { PillarKey } from "@/domain";
+import { PILLAR_KEYS, type PillarKey } from "@/domain";
+import { FORGE_KINDS, MANIPULATION_MODES } from "./types";
+import { assertCampaignHasBrief } from "../campaign-manager/brief-gate";
+import { resolveResumptionPayload, assertUnchangedResumption, hasSubmissionClaim, submissionParameters, providerParameters } from "./resumption";
 
 export { manifest } from "./manifest";
+export { resolveResumptionPayload } from "./resumption";
 
 const WEBHOOK_BASE = process.env.PTAH_WEBHOOK_BASE_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
@@ -60,6 +65,29 @@ export async function materializeBrief(
   payload: MaterializeBriefPayload,
   ctx: { operatorId: string; intentId: string },
 ): Promise<ForgeTaskCreated> {
+  if ("_ptahSubmission" in payload.brief.forgeSpec.parameters) {
+    throw new Error("Ces paramètres contiennent un champ réservé à la réception de production.");
+  }
+  let resumed: GenerativeTask | null = null;
+  if (payload.resumeTaskId) {
+    const original = await resolveResumptionPayload(payload.resumeTaskId, payload.strategyId, ctx.operatorId);
+    assertUnchangedResumption(payload, original.payload);
+    resumed = original.task;
+    await assertTaskScope(db, resumed, payload.strategyId);
+    if (resumed.status !== "DEFERRED") return taskReceipt(resumed);
+    if (hasSubmissionClaim(resumed) || resumed.providerTaskId || resumed.resultUrls !== null) {
+      throw new Error("Un envoi a déjà été réservé. Rapprochez son reçu avant toute nouvelle production.");
+    }
+  }
+  await assertBusinessScope(db, { ...payload, operatorId: ctx.operatorId });
+  if (payload.sourceBrandAssetId) {
+    const source = await db.brandAsset.findUnique({ where: { id: payload.sourceBrandAssetId },
+      select: { state: true, staleAt: true } });
+    if (!source || source.staleAt || ["ARCHIVED", "SUPERSEDED", "REJECTED"].includes(source.state)) {
+      throw new Error("La référence de production a été retirée ou corrigée. Relisez le brief avant de produire.");
+    }
+  }
+  if (payload.campaignId) await assertCampaignHasBrief(payload.campaignId);
   ensurePillarSource(payload.brief);
   await checkManipulationCoherence(
     payload.strategyId,
@@ -89,6 +117,7 @@ export async function materializeBrief(
     provider = await selectProvider(payload.brief);
   } catch (e) {
     if (e instanceof NoAvailableProviderError) {
+      if (resumed) return taskReceipt(resumed);
       const nominal: ProviderName = e.tried[0] ?? "magnific";
       const deferredSecret = generateWebhookSecret();
       const deferredTask = await createGenerativeTask({
@@ -96,6 +125,9 @@ export async function materializeBrief(
         sourceIntentId: payload.sourceIntentId,
         operatorId: ctx.operatorId,
         strategyId: payload.strategyId,
+        campaignId: payload.campaignId,
+        briefId: payload.briefId,
+        sourceBrandAssetId: payload.sourceBrandAssetId,
         brief: payload.brief,
         provider: nominal,
         providerModel: payload.brief.forgeSpec.modelHint ?? "default",
@@ -113,6 +145,7 @@ export async function materializeBrief(
         providerModel: payload.brief.forgeSpec.modelHint ?? "default",
         estimatedCostUsd: 0,
         status: "DEFERRED",
+        submissionReserved: false,
         webhookSecret: deferredSecret,
       };
     }
@@ -139,14 +172,41 @@ export async function materializeBrief(
   const promptHashKey = `${payload.brief.forgeSpec.kind}:${payload.brief.manipulationMode}:${payload.brief.pillarSource}:${payload.brief.briefText.slice(0, 100)}`;
   void promptHashKey; // Phase 2 : cache lookup avec proper hash. Phase 1 : skip.
 
-  const webhookSecret = generateWebhookSecret();
+  const webhookSecret = resumed?.webhookSecret ?? generateWebhookSecret();
 
   // Create DB row (status=CREATED)
-  const task = await createGenerativeTask({
+  let task: GenerativeTask;
+  if (resumed) {
+    // Compare-and-set commits the reservation before the external call. Concurrent
+    // retries observe this task; a stopped process never makes it safe to resend.
+    const claim = await db.generativeTask.updateMany({
+      where: { id: resumed.id, operatorId: ctx.operatorId, strategyId: payload.strategyId,
+        status: "DEFERRED", providerTaskId: null, resultUrls: { equals: Prisma.DbNull },
+        promptHash: resumed.promptHash, parameters: { equals: resumed.parameters as Prisma.InputJsonValue },
+        campaignId: resumed.campaignId, briefId: resumed.briefId, sourceBrandAssetId: resumed.sourceBrandAssetId },
+      data: { status: "CREATED", provider: provider.name,
+        providerModel: payload.brief.forgeSpec.modelHint ?? "default", estimatedCostUsd,
+        expectedSuperfans: budgetDecision.expectedSuperfans, errorMessage: null,
+        parameters: submissionParameters(resumed) },
+    });
+    task = await db.generativeTask.findUniqueOrThrow({ where: { id: resumed.id } });
+    if (task.operatorId !== ctx.operatorId || task.strategyId !== payload.strategyId) {
+      throw new Error("Cette production n’est plus accessible dans ce dossier.");
+    }
+    await assertTaskScope(db, task, payload.strategyId);
+    if (!claim.count) {
+      if (task.status === "DEFERRED") throw new Error("Cette production a changé. Relisez son état avant de reprendre.");
+      return taskReceipt(task);
+    }
+  } else {
+    task = await createGenerativeTask({
     intentId: ctx.intentId,
     sourceIntentId: payload.sourceIntentId,
     operatorId: ctx.operatorId,
     strategyId: payload.strategyId,
+    campaignId: payload.campaignId,
+    briefId: payload.briefId,
+    sourceBrandAssetId: payload.sourceBrandAssetId,
     brief: payload.brief,
     provider: provider.name,
     providerModel: payload.brief.forgeSpec.modelHint ?? "default",
@@ -154,6 +214,9 @@ export async function materializeBrief(
     expectedSuperfans: budgetDecision.expectedSuperfans,
     webhookSecret,
   });
+    task = await db.generativeTask.update({ where: { id: task.id },
+      data: { parameters: submissionParameters(task) } });
+  }
 
   // NB : le deferral « ship-able sans clés » (ADR-0021) est désormais traité EN
   // AMONT via le catch `NoAvailableProviderError` autour de `selectProvider`
@@ -161,13 +224,30 @@ export async function materializeBrief(
 
   const webhookUrl = `${WEBHOOK_BASE}/api/ptah/webhook?taskId=${task.id}&secret=${webhookSecret}`;
 
+  let sentToProvider = false;
   try {
-    const result = await provider.forge(payload.brief, webhookUrl);
+    const forgeBrief = payload.brief.forgeSpec.parameters.productionReferences === undefined ? payload.brief
+      : await (await import("./production-references")).briefForImageProvider(payload.brief, provider.name,
+        {strategyId:payload.strategyId, operatorId:ctx.operatorId, campaignId:payload.campaignId});
+    let artwork;
+    if (forgeBrief.forgeSpec.parameters.productionArtwork !== undefined) {
+      const {productionArtwork}=await import("@/domain/production-artwork");
+      const slot=productionArtwork.parse(forgeBrief.forgeSpec.parameters.productionArtwork);
+      const {readArtworkMaster}=await import("./artwork-master");
+      const master=await readArtworkMaster({strategyId:payload.strategyId,operatorId:ctx.operatorId,campaignId:payload.campaignId},slot);
+      if (!master.inspection.imageLayers.some(layer=>layer.id===slot.photoLayerId))
+        throw new Error("Ce calque du master n’est plus disponible. Reprenez l’aperçu.");
+      artwork={original:master.bytes,slot,taskId:task.id};
+    }
+    sentToProvider = true;
+    const result = await provider.forge(forgeBrief, webhookUrl, artwork);
     const expiresAt =
       provider.name === "magnific"
         ? new Date(Date.now() + 12 * 3600 * 1000) // Magnific 12h URL TTL
         : null;
-    await attachProviderTask(task.id, result.providerTaskId, expiresAt ?? undefined);
+    const synchronousResult = provider.sync && result.synchronousResult
+      ? validateReceipt(result.synchronousResult.resultUrls, result.synchronousResult.realisedCostUsd) : undefined;
+    await attachProviderTask(task.id, result.providerTaskId, expiresAt ?? undefined, synchronousResult);
     await db.generativeTask.update({
       where: { id: task.id },
       data: { providerModel: result.providerModel, estimatedCostUsd: result.estimatedCostUsd },
@@ -180,7 +260,11 @@ export async function materializeBrief(
     // Le forge ayant réussi, un échec de réconciliation n'est PAS fatal :
     // l'URL est stockée, la task reste réconciliable plus tard.
     if (provider.sync) {
-      await reconcileTask(task.id, null).catch((e) => {
+      const { emitIntent } = await import("../mestor/intents");
+      await emitIntent({ kind: "PTAH_RECONCILE_TASK", strategyId: payload.strategyId,
+        taskId: task.id, webhookPayload: null }, { caller: "ptah:sync", operatorId: ctx.operatorId }).then((receipt) => {
+        if (receipt.status !== "OK") throw new Error(receipt.reason ?? receipt.summary);
+      }).catch((e) => {
         console.warn(
           `[ptah] inline reconcile (sync provider ${provider.name}) failed:`,
           e instanceof Error ? e.message : e,
@@ -194,12 +278,13 @@ export async function materializeBrief(
       providerModel: result.providerModel,
       estimatedCostUsd: result.estimatedCostUsd,
       status: "IN_PROGRESS",
+      submissionReserved: true,
       webhookSecret,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await markFailed(task.id, message);
-    await updateProviderHealth(provider.name, { failure: true });
+    if (sentToProvider) await updateProviderHealth(provider.name, { failure: true });
     throw error;
   }
 }
@@ -211,130 +296,177 @@ export async function materializeBrief(
 export async function reconcileTask(
   taskId: string,
   webhookPayload: unknown,
+  scope?: { strategyId: string },
 ): Promise<ForgeReconciled> {
   const task = await findTaskById(taskId);
-  if (!task) {
-    throw new Error(`Ptah reconcile: GenerativeTask ${taskId} not found`);
-  }
-  if (task.status === "COMPLETED") {
-    // Idempotent : déjà reconcilié, on retourne les infos en l'état
-    return {
-      taskId: task.id,
-      assetVersionIds: [],
-      realisedCostUsd: task.realisedCostUsd ?? 0,
-      resultUrls: (task.resultUrls as string[]) ?? [],
-    };
-  }
+  if (!task) throw new Error("PTAH_TASK_NOT_FOUND");
+  await assertTaskScope(db, task, scope?.strategyId);
 
-  const provider = (await import("./providers")).getProvider(
-    task.provider as "magnific" | "adobe" | "figma" | "canva" | "openai",
-  );
-
-  let result;
-  try {
-    result = await provider.reconcile(task.providerTaskId ?? "", webhookPayload);
-  } catch (error) {
-    await markFailed(task.id, error instanceof Error ? error.message : String(error));
-    await updateProviderHealth(provider.name, { failure: true });
-    throw error;
-  }
-
-  await markCompleted(task.id, result.resultUrls, result.realisedCostUsd);
-  await updateProviderHealth(provider.name, { success: true, cost: result.realisedCostUsd });
-
-  // Track cost via ai-cost-tracker (best-effort)
-  try {
-    const costTracker = await import("../ai-cost-tracker");
-    // ai-cost-tracker.track() expects LLM-shaped data; here we use it as a generic cost log.
-    await (costTracker.track as unknown as (e: {
-      model: string;
-      provider: string;
-      inputTokens: number;
-      outputTokens: number;
-      context?: string;
-      strategyId?: string;
-    }) => Promise<string>)({
-      model: task.providerModel,
-      provider: task.provider,
-      inputTokens: 0,
-      outputTokens: 0,
-      context: `ptah:${task.forgeKind}:${taskId}`,
-      strategyId: task.strategyId ?? undefined,
+  // Provider results are checkpointed separately from admission. An interrupted
+  // admission retries from this receipt, never by launching another forge.
+  if (task.resultUrls === null) {
+    const provider = (await import("./providers")).getProvider(task.provider as ProviderName);
+    let receipt: ReturnType<typeof validateReceipt>;
+    try {
+      const result = await provider.reconcile(task.providerTaskId ?? "", webhookPayload);
+      receipt = validateReceipt(result.resultUrls, result.realisedCostUsd);
+    } catch (error) {
+      // A concurrent successful receipt wins over a later failed poll.
+      const failed = await db.generativeTask.updateMany({ where: { id: task.id,
+        resultUrls: { equals: Prisma.DbNull }, status: { in: ["CREATED", "IN_PROGRESS", "FAILED"] } },
+      data: { status: "FAILED", errorMessage: error instanceof Error ? error.message : String(error) } });
+      if (failed.count) await updateProviderHealth(task.provider as ProviderName, { failure: true });
+      throw error;
+    }
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "GenerativeTask" WHERE id=${task.id} FOR UPDATE`;
+      const current = await tx.generativeTask.findUniqueOrThrow({ where: { id: task.id } });
+      await assertTaskScope(tx, current, scope?.strategyId);
+      if (current.resultUrls !== null) {
+        const saved = validateReceipt(current.resultUrls, current.realisedCostUsd);
+        if (JSON.stringify(saved) !== JSON.stringify(receipt)) throw new Error("PTAH_RESULT_CONFLICT");
+        return;
+      }
+      await tx.generativeTask.update({ where: { id: task.id }, data: {
+        resultUrls: receipt.resultUrls, realisedCostUsd: receipt.realisedCostUsd,
+        status: "IN_PROGRESS", completedAt: null, errorMessage: null,
+      } });
     });
-  } catch {
-    /* best-effort */
   }
 
-  // Create AssetVersion rows
-  const assetVersions = await Promise.all(
-    result.resultUrls.map((url) =>
-      createAssetVersion({
-        parentAssetId: null,
-        generativeTaskId: task.id,
-        operatorId: task.operatorId,
-        strategyId: task.strategyId,
-        kind: forgeKindToAssetKind(task.forgeKind),
-        url,
-        metadata: { provider: task.provider, model: task.providerModel },
-      }),
-    ),
-  );
-
-  // Phase 10 (ADR-0012) — promote forge result en BrandAsset matériel.
-  // Le vault de la marque garde ainsi tous les actifs (intellectuels +
-  // matériels) au même endroit, avec lineage upstream vers le BrandAsset
-  // intellectuel source (KV brief, big idea active, etc.) si disponible.
-  try {
+  try { return await db.$transaction(async (tx) => {
+    // Vault mutations share this mutex; serialize one task's callbacks too.
+    await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id=${task.strategyId} FOR SHARE`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"brand-vault:" + task.strategyId}, 0))`;
+    await tx.$queryRaw`SELECT id FROM "GenerativeTask" WHERE id=${task.id} FOR UPDATE`;
+    const current = await tx.generativeTask.findUniqueOrThrow({ where: { id: task.id } });
+    if (current.strategyId !== task.strategyId || current.operatorId !== task.operatorId) throw new Error("PTAH_TASK_SCOPE_CHANGED");
+    await assertTaskScope(tx, current, scope?.strategyId);
+    const receipt = validateReceipt(current.resultUrls, current.realisedCostUsd);
+    const versions = await tx.assetVersion.findMany({ where: { generativeTaskId: task.id } });
+    if (versions.some((v) => v.strategyId !== current.strategyId || v.operatorId !== current.operatorId
+      || v.kind !== forgeKindToAssetKind(current.forgeKind) || !receipt.resultUrls.includes(v.url)) || new Set(versions.map((v) => v.url)).size !== versions.length) {
+      throw new Error("PTAH_VERSION_CONFLICT");
+    }
     const { createBrandAsset } = await import("../brand-vault/engine");
     const materialKindMap: Record<string, string> = {
-      image: "KV_VISUAL",
-      video: "VIDEO_SPOT",
-      audio: "AUDIO_JINGLE",
-      icon: "ICON",
-      refine: "KV_VISUAL",
-      transform: "KV_VISUAL",
-      design: "DESIGN_EXPORT",
-      stock: "STOCK_ASSET",
-      classify: "CLASSIFICATION_REPORT",
+      image: "KV_VISUAL", video: "VIDEO_SPOT", audio: "AUDIO_JINGLE", icon: "ICON",
+      refine: "KV_VISUAL", transform: "KV_VISUAL", design: "DESIGN_EXPORT",
+      stock: "STOCK_ASSET", classify: "CLASSIFICATION_REPORT",
     };
-    for (let i = 0; i < assetVersions.length; i++) {
-      const v = assetVersions[i]!;
-      await createBrandAsset({
-        strategyId: task.strategyId ?? "",
-        operatorId: task.operatorId,
-        name: `${task.forgeKind} forge — ${task.providerModel}`,
-        kind: materialKindMap[task.forgeKind] ?? "GENERIC",
-        format: task.forgeKind,
-        family: "MATERIAL",
-        fileUrl: v.url,
-        summary: `Forgé via ${task.provider}/${task.providerModel}`,
-        pillarSource: task.pillarSource as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined,
-        manipulationMode: task.manipulationMode as "peddler" | "dealer" | "facilitator" | "entertainer" | undefined,
-        state: "ACTIVE",
-        sourceIntentId: task.intentId,
-        sourceAssetVersionId: v.id,
-        campaignId: task.campaignId ?? undefined,
-        briefId: task.briefId ?? undefined,
-        metadata: {
-          provider: task.provider,
-          providerModel: task.providerModel,
-          realisedCostUsd: result.realisedCostUsd,
-        },
-      });
+    const assetVersionIds: string[] = [];
+    for (const url of receipt.resultUrls) {
+      const version = versions.find((v) => v.url === url) ?? await createAssetVersion({
+        parentAssetId: null, generativeTaskId: current.id, operatorId: current.operatorId,
+        strategyId: current.strategyId, kind: forgeKindToAssetKind(current.forgeKind), url,
+        metadata: { provider: current.provider, model: current.providerModel },
+      }, tx);
+      const assets = await tx.brandAsset.findMany({ where: { sourceAssetVersionId: version.id } });
+      if (assets.length > 1 || assets.some((asset) => asset.strategyId !== current.strategyId
+        || asset.operatorId !== current.operatorId || asset.campaignId !== current.campaignId
+        || asset.briefId !== current.briefId || asset.sourceIntentId !== current.intentId
+        || asset.kind !== (materialKindMap[current.forgeKind] ?? "GENERIC") || asset.family !== "MATERIAL")) {
+        throw new Error("PTAH_VAULT_CONFLICT");
+      }
+      // An admitted asset keeps its current lifecycle (including ARCHIVED).
+      const artworkParams=current.parameters && !Array.isArray(current.parameters) && typeof current.parameters==="object" ? current.parameters.productionArtwork : null;
+      const layer=artworkParams ? await tx.brandAsset.findFirst({where:{strategyId:current.strategyId!,sourceIntentId:current.intentId,format:"PRODUCTION_PHOTO_LAYER"},select:{id:true,version:true}}) : null;
+      if (!assets.length) await createBrandAsset({
+        strategyId: current.strategyId!, operatorId: current.operatorId,
+        name: `${current.forgeKind} forge — ${current.providerModel}`,
+        kind: materialKindMap[current.forgeKind] ?? "GENERIC", format: current.forgeKind,
+        family: "MATERIAL", fileUrl: version.cdnUrl ?? version.url,
+        summary: `Forgé via ${current.provider}/${current.providerModel}`,
+        pillarSource: current.pillarSource as PillarKey,
+        manipulationMode: current.manipulationMode as ManipulationMode,
+        state: artworkParams ? "CANDIDATE" : "ACTIVE", sourceIntentId: current.intentId, sourceAssetVersionId: version.id,
+        campaignId: current.campaignId ?? undefined, briefId: current.briefId ?? undefined,
+        metadata: { provider: current.provider, providerModel: current.providerModel,
+          realisedCostUsd: receipt.realisedCostUsd, sourceBrandAssetId: current.sourceBrandAssetId,
+          ...(artworkParams ? {artwork:artworkParams,photoLayer:layer,review:"REQUIRES_ART_DIRECTION_REVIEW"} : {}) },
+      }, tx);
+      assetVersionIds.push(version.id);
     }
-  } catch (err) {
-    console.warn(
-      `[ptah.reconcile] BrandVault material promote failed:`,
-      err instanceof Error ? err.message : err,
-    );
+    const context = `ptah:${current.forgeKind}:${current.id}`;
+    const logs = await tx.aICostLog.findMany({ where: { context } });
+    if (logs.length > 1 || logs.some((log) => log.strategyId !== current.strategyId)) {
+      throw new Error("PTAH_COST_RECEIPT_CONFLICT");
+    }
+    if (!logs.length) {
+      const { track } = await import("../ai-cost-tracker");
+      await track({ model: current.providerModel, provider: current.provider, inputTokens: 0,
+        outputTokens: 0, realisedCostUsd: receipt.realisedCostUsd, context, strategyId: current.strategyId! }, tx);
+    } else if (logs[0]!.provider !== current.provider || logs[0]!.cost !== receipt.realisedCostUsd) {
+      // Repair the old zero-token Anthropic-shaped receipt using the saved result,
+      // never an estimate or a fresh provider charge.
+      if (logs[0]!.provider !== "anthropic" || logs[0]!.inputTokens !== 0 || logs[0]!.outputTokens !== 0
+        || logs[0]!.cost !== 0) throw new Error("PTAH_COST_RECEIPT_CONFLICT");
+      await tx.aICostLog.update({ where: { id: logs[0]!.id }, data: {
+        provider: current.provider, model: current.providerModel, cost: receipt.realisedCostUsd,
+      } });
+    }
+    if (current.status !== "COMPLETED") await updateProviderHealth(current.provider as ProviderName,
+      { success: true, cost: receipt.realisedCostUsd }, tx);
+    // Terminal status, versions, vault entries and cost receipt commit together.
+    await tx.generativeTask.update({ where: { id: current.id }, data: {
+      status: "COMPLETED", completedAt: current.completedAt ?? new Date(), errorMessage: null,
+    } });
+    return { taskId: current.id, assetVersionIds, ...receipt };
+  }, { timeout: 15_000 });
+  } catch (error) {
+    await db.generativeTask.updateMany({ where: { id: task.id, status: { not: "COMPLETED" } },
+      data: { errorMessage: error instanceof Error ? error.message : String(error) } });
+    throw error;
   }
+}
 
-  return {
-    taskId: task.id,
-    assetVersionIds: assetVersions.map((v) => v.id),
-    realisedCostUsd: result.realisedCostUsd,
-    resultUrls: result.resultUrls,
-  };
+function validateReceipt(urls: unknown, cost: unknown): { resultUrls: string[]; realisedCostUsd: number } {
+  if (!Array.isArray(urls) || !urls.length || new Set(urls).size !== urls.length
+    || typeof cost !== "number" || !Number.isFinite(cost) || cost < 0) throw new Error("PTAH_INVALID_RESULT");
+  for (const url of urls) {
+    if (typeof url !== "string" || !url.length) throw new Error("PTAH_INVALID_RESULT");
+    // OpenAI's existing synchronous path can return an embedded image.
+    if (/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(url)) continue;
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { throw new Error("PTAH_INVALID_RESULT"); }
+    if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password) {
+      throw new Error("PTAH_INVALID_RESULT");
+    }
+  }
+  return { resultUrls: urls as string[], realisedCostUsd: cost };
+}
+
+async function assertTaskScope(client: Prisma.TransactionClient, task: GenerativeTask, strategyId?: string) {
+  if (!(FORGE_KINDS as readonly string[]).includes(task.forgeKind)
+    || !(PILLAR_KEYS as readonly string[]).includes(task.pillarSource)
+    || !(MANIPULATION_MODES as readonly string[]).includes(task.manipulationMode)) throw new Error("PTAH_TASK_PROVENANCE_INVALID");
+  if (["VETOED", "EXPIRED"].includes(task.status)) throw new Error("PTAH_TASK_NOT_RECONCILABLE");
+  if (!task.strategyId || (strategyId && task.strategyId !== strategyId)) throw new Error("PTAH_TASK_SCOPE_MISMATCH");
+  await assertBusinessScope(client, { ...task, strategyId: task.strategyId });
+}
+
+/** Shared entry/reconcile boundary; reject foreign references before provider work. */
+async function assertBusinessScope(client: Prisma.TransactionClient, task: {
+  strategyId: string; operatorId: string;
+  campaignId?: string | null; briefId?: string | null; sourceBrandAssetId?: string | null;
+}) {
+  const strategy = await client.strategy.findUnique({ where: { id: task.strategyId }, select: { operatorId: true } });
+  if (!strategy || strategy.operatorId !== task.operatorId) throw new Error("PTAH_TASK_SCOPE_MISMATCH");
+  if (task.campaignId) {
+    const campaign = await client.campaign.findUnique({ where: { id: task.campaignId }, select: { strategyId: true } });
+    if (campaign?.strategyId !== task.strategyId) throw new Error("PTAH_CAMPAIGN_SCOPE_MISMATCH");
+  }
+  if (task.briefId) {
+    const brief = await client.campaignBrief.findUnique({ where: { id: task.briefId }, include: { campaign: true } });
+    if (!brief || brief.campaign.strategyId !== task.strategyId || brief.campaignId !== task.campaignId) {
+      throw new Error("PTAH_BRIEF_SCOPE_MISMATCH");
+    }
+  }
+  if (task.sourceBrandAssetId) {
+    const source = await client.brandAsset.findUnique({ where: { id: task.sourceBrandAssetId } });
+    if (!source || source.strategyId !== task.strategyId || source.operatorId !== task.operatorId
+      || source.campaignId !== (task.campaignId ?? null) || source.briefId !== (task.briefId ?? null)) throw new Error("PTAH_SOURCE_SCOPE_MISMATCH");
+  }
 }
 
 /**
@@ -348,7 +480,7 @@ export async function regenerateFadingAsset(
   ctx: { operatorId: string; intentId: string },
 ): Promise<{ taskId: string }> {
   const original = await db.assetVersion.findFirst({
-    where: { id: payload.assetVersionId, operatorId: ctx.operatorId },
+    where: { id: payload.assetVersionId, operatorId: ctx.operatorId, strategyId: payload.strategyId },
     include: { generativeTask: true },
   });
   if (!original) {
@@ -357,6 +489,8 @@ export async function regenerateFadingAsset(
   if (!original.generativeTask) {
     throw new Error(`Ptah regenerate: AssetVersion has no source GenerativeTask`);
   }
+  if (original.generativeTask.operatorId !== ctx.operatorId) throw new Error("PTAH_TASK_SCOPE_MISMATCH");
+  await assertTaskScope(db, original.generativeTask, payload.strategyId);
   // Re-construire un brief depuis le task original (simplifié — Phase H raffinement)
   const brief: ForgeBrief = {
     briefText: `[REGEN] Asset fading detected — refresh narrative & visuals while preserving brand identity.`,
@@ -364,7 +498,7 @@ export async function regenerateFadingAsset(
       kind: original.kind as ForgeKind,
       providerHint: original.generativeTask.provider as ProviderName,
       modelHint: original.generativeTask.providerModel ?? undefined,
-      parameters: original.generativeTask.parameters as Record<string, unknown>,
+      parameters: providerParameters(original.generativeTask),
     },
     pillarSource: original.generativeTask.pillarSource as PillarKey,
     manipulationMode: original.generativeTask.manipulationMode as ManipulationMode,
@@ -373,6 +507,9 @@ export async function regenerateFadingAsset(
     {
       strategyId: payload.strategyId,
       sourceIntentId: original.generativeTask.intentId,
+      campaignId: original.generativeTask.campaignId,
+      briefId: original.generativeTask.briefId,
+      sourceBrandAssetId: original.generativeTask.sourceBrandAssetId,
       brief,
     },
     ctx,
@@ -381,6 +518,24 @@ export async function regenerateFadingAsset(
 }
 
 // ── helpers ─────────────────────────────────────────────────────────
+
+async function taskReceipt(task: GenerativeTask): Promise<ForgeTaskCreated> {
+  if (!["DEFERRED", "CREATED", "IN_PROGRESS", "COMPLETED"].includes(task.status)) {
+    throw new Error("Cette production nécessite une vérification du reçu ; aucun nouvel appel ne sera envoyé.");
+  }
+  const versions = task.status === "COMPLETED" ? await db.assetVersion.findMany({ where: {
+    generativeTaskId: task.id, operatorId: task.operatorId, strategyId: task.strategyId,
+  }, select: { id: true }, orderBy: { id: "asc" } }) : [];
+  if (task.status === "COMPLETED" && !versions.length) {
+    throw new Error("Le résultat de cette production n’est pas reçu. Aucun nouvel appel ne sera envoyé.");
+  }
+  return { taskId: task.id, provider: task.provider as ProviderName, providerModel: task.providerModel,
+    estimatedCostUsd: task.estimatedCostUsd, status: task.status as ForgeTaskCreated["status"],
+    webhookSecret: task.webhookSecret,
+    submissionReserved: false,
+    ...(task.status === "COMPLETED" ? { assetVersionIds: versions.map(version => version.id) } : {}),
+    submissionUnknown: task.status === "CREATED" && !task.providerTaskId && hasSubmissionClaim(task) };
+}
 
 function forgeKindToAssetKind(kind: string): "image" | "video" | "audio" | "icon" {
   switch (kind) {
@@ -402,7 +557,9 @@ export async function findTaskBySecretAndId(
   secret: string,
 ): Promise<{ ok: boolean; task: Awaited<ReturnType<typeof findTaskById>> | null }> {
   const task = await findTaskById(taskId);
-  if (!task || task.webhookSecret !== secret) {
+  const expected = Buffer.from(task?.webhookSecret ?? "");
+  const supplied = Buffer.from(secret);
+  if (!task || !expected.length || expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
     return { ok: false, task: null };
   }
   return { ok: true, task };

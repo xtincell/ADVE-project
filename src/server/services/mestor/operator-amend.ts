@@ -10,7 +10,7 @@
  *   1. Concurrency guard (expectedVersion vs Pillar.currentVersion).
  *   2. PILLAR_COHERENCE gate (LOCKED/destructive/cross-ADVE/financial).
  *   3. Cost gate Thot pre-flight if mode != PATCH_DIRECT.
- *   4. Recommendation row (status ACCEPTED, agent HUMAN, source USER_INTENT).
+ *   4. Recommendation row (ACCEPTED, auteur réel, source USER_INTENT).
  *   5. writePillarAndScore (author OPERATOR) — RTIS staleness propagated
  *      automatically by the gateway (LOI 1).
  *   6. Mark Recommendation APPLIED.
@@ -28,6 +28,12 @@ import type { Intent, IntentResult } from "./intents";
 import { applyPillarCoherenceGate } from "@/server/services/notoria/gates";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { db } from "@/lib/db";
+import { FinancialWorkingModelSchema, StrategyBudgetModelSchema } from "@/domain/financial-document";
+import { DevotionProjectionSchema } from "@/domain/devotion-ladder";
+import { documentEdition, sourceIsUsable } from "@/domain/source-document";
+import { resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
+import { SourceReceiptSchema } from "@/domain/source-certainty";
+import { resolvePillarPath } from "@/lib/pillar-path";
 
 type AmendIntent = Extract<Intent, { kind: "OPERATOR_AMEND_PILLAR" }>;
 
@@ -36,7 +42,7 @@ type HandlerResult = Pick<
   "status" | "summary" | "tool" | "output" | "reason" | "estimatedCost"
 >;
 
-export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerResult> {
+export async function operatorAmendPillar(intent: AmendIntent, context?: { intentId: string }): Promise<HandlerResult> {
   const startedAt = Date.now();
   const {
     strategyId,
@@ -48,9 +54,18 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
     reason,
     overrideLocked,
     expectedVersion,
+    sourceReceipts: providedSourceReceipts,
   } = intent;
+  let sourceReceipts = providedSourceReceipts;
+  let expectedPillarVersions: { d: number | null } | undefined;
 
   // ── 0. Argument coherence (cheap guards before any DB read) ─────────
+  if (sourceReceipts !== undefined && !SourceReceiptSchema.array().safeParse(sourceReceipts).success) {
+    return { status: "VETOED", summary: "Références documentaires invalides. Relire les sources.", reason: "SOURCE_RECEIPT_INVALID" };
+  }
+  if (sourceReceipts?.length && expectedVersion === undefined) {
+    return { status: "VETOED", summary: "Relire la version du pilier avant un amendement documentaire.", reason: "SOURCE_VERSION_REQUIRED" };
+  }
   if (mode === "STRATEGIC_REWRITE" && reason.trim().length < 20) {
     return {
       status: "VETOED",
@@ -87,6 +102,68 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
       summary: `Conflit de version : attendue ${expectedVersion}, courante ${pillar.currentVersion}. Recharge la page.`,
       reason: "CONCURRENCY_CONFLICT",
     };
+  }
+
+  const currentContent = (pillar.content ?? {}) as Record<string, unknown>;
+  const planningField = pillarKey === "v" ? "strategyBudgetModel" : pillarKey === "e" ? "devotionProjection" : null;
+  if (planningField && field.startsWith(`${planningField}.`)) return {
+    status: "VETOED", reason: "PLANNING_MODEL_WHOLE_REQUIRED", summary: "Amendez les hypothèses de planification ensemble pour conserver leurs références et dépendances." };
+  if (planningField && field === planningField) {
+    const parsed = planningField === "strategyBudgetModel"
+      ? StrategyBudgetModelSchema.safeParse(proposedValue) : DevotionProjectionSchema.safeParse(proposedValue);
+    if (!parsed.success || expectedVersion === undefined) return {
+      status: "VETOED", reason: "PLANNING_MODEL_INCOMPLETE", summary: "Relisez la version et complétez les hypothèses de planification justifiées." };
+    const model = parsed.data;
+    const amounts = "spectators" in model ? [model.spectators, ...Object.values(model.rates)] : [];
+    const receipts = [...(sourceReceipts ?? []), model.source, ...amounts.flatMap(a => a.sources)];
+    const hashes = new Map<string, string>();
+    for (const receipt of receipts) {
+      if (hashes.has(receipt.sourceId) && hashes.get(receipt.sourceId) !== receipt.contentHash) return {
+        status: "VETOED", reason: "SOURCE_RECEIPT_CONFLICT", summary: "Alignez les versions des pièces avant de modifier les hypothèses." };
+      hashes.set(receipt.sourceId, receipt.contentHash);
+    }
+    sourceReceipts = [...hashes].map(([sourceId, contentHash]) => ({ sourceId, contentHash }));
+    if ("cohortPersonaId" in model) {
+      const d = await db.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "d" } }, select: { content: true, currentVersion: true } });
+      const profiles = (d?.content as { personas?: Array<{ id?: string; actorRoles?: string[] }> } | null)?.personas;
+      if (!profiles?.some(p => p.id === model.cohortPersonaId && p.actorRoles?.includes("COMMUNICATION_AUDIENCE"))) return {
+        status: "VETOED", reason: "PLANNING_AUDIENCE_REQUIRED", summary: "Reliez ce parcours au persona audience défini dans la Distinction." };
+      expectedPillarVersions = { d: d!.currentVersion };
+    }
+  }
+  if (pillarKey === "v" && currentContent.financialModel != null && (field === "unitEconomics" || field.startsWith("unitEconomics."))) {
+    return { status: "VETOED", reason: "FINANCIAL_PREMISES_REQUIRED", summary: "Ces résultats sont calculés. Modifiez les hypothèses du modèle financier pour les réactualiser partout." };
+  }
+  if (pillarKey === "v" && field.startsWith("financialModel.")) {
+    return { status: "VETOED", reason: "FINANCIAL_MODEL_WHOLE_REQUIRED", summary: "Relisez puis amendez le modèle financier complet pour conserver ses dépendances et ses références." };
+  }
+  if (pillarKey === "v" && field === "financialModel") {
+    const parsed = FinancialWorkingModelSchema.safeParse(proposedValue);
+    if (!parsed.success || expectedVersion === undefined) return { status: "VETOED", reason: "FINANCIAL_MODEL_INCOMPLETE",
+      summary: "Relisez la version du dossier et complétez les hypothèses financières justifiées avant de les appliquer." };
+    const model = parsed.data;
+    const receipts = [...(sourceReceipts ?? []), model.source, ...[model.breakEven.price, ...model.breakEven.fixedCosts,
+      ...model.breakEven.variableCosts, ...model.projection.monthlyVolumes, model.projection.unitsPerPayerMonth,
+      model.projection.annualRetentionRate, model.projection.cashFlow.openingCash].flatMap(amount => amount.sources)];
+    const hashes = new Map<string, string>();
+    for (const receipt of receipts) {
+      if (hashes.has(receipt.sourceId) && hashes.get(receipt.sourceId) !== receipt.contentHash) return {
+        status: "VETOED", reason: "SOURCE_RECEIPT_CONFLICT", summary: "Deux versions différentes d’une pièce alimentent le même modèle. Relisez et alignez cette référence." };
+      hashes.set(receipt.sourceId, receipt.contentHash);
+    }
+    sourceReceipts = [...hashes].map(([sourceId, contentHash]) => ({ sourceId, contentHash }));
+    try {
+      const basis = await resolveBrandSource(model.source.sourceId, strategyId);
+      if (basis.contentHash !== model.source.contentHash || !sourceIsUsable(basis.source.rawData) || documentEdition(basis.source.rawData)?.kind !== "FINANCE")
+        return { status: "VETOED", reason: "FINANCIAL_REFERENCE_CHANGED", summary: "Choisissez la version actuelle d’un document financier accessible pour relier ces hypothèses." };
+    } catch {
+      return { status: "VETOED", reason: "FINANCIAL_REFERENCE_UNAVAILABLE", summary: "Le document financier n’est plus accessible dans ce dossier. Relisez ses références." };
+    }
+    const d = await db.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "d" } }, select: { content: true, currentVersion: true } });
+    const profiles = (d?.content as { personas?: Array<{ id?: string; actorRoles?: string[] }> } | null)?.personas;
+    if (!Array.isArray(profiles) || !profiles.some(p => p.id === model.breakEven.payerPersonaId && p.actorRoles?.includes("PAYER"))) return {
+      status: "VETOED", reason: "FINANCIAL_PAYER_REQUIRED", summary: "Reliez ce modèle au profil client payeur de la marque ; audience et partenaire ne constituent pas la cohorte facturée." };
+    expectedPillarVersions = { d: d!.currentVersion };
   }
 
   // ── 2. PILLAR_COHERENCE gate ────────────────────────────────────────
@@ -137,7 +214,7 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
     }
   }
 
-  // ── 4. Create Recommendation (ACCEPTED, agent HUMAN, USER_INTENT) ──
+  // ── 4. Create Recommendation (ACCEPTED, auteur réel, USER_INTENT) ──
   const reco = await db.recommendation.create({
     data: {
       strategyId,
@@ -149,7 +226,7 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
         field,
       ) as Prisma.InputJsonValue,
       proposedValue: proposedValue as Prisma.InputJsonValue,
-      agent: "HUMAN",
+      agent: intent.viaAgent ? "MESTOR" : "HUMAN",
       source: "USER_INTENT",
       confidence: 1.0,
       explain: reason,
@@ -158,8 +235,12 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
       applyPolicy:
         mode === "STRATEGIC_REWRITE" ? "requires_review" : "auto",
       status: "ACCEPTED",
-      reviewedBy: operatorId,
-      reviewedAt: new Date(),
+      reviewedBy: intent.viaAgent ? null : operatorId,
+      reviewedAt: intent.viaAgent ? null : new Date(),
+      ...(sourceReceipts?.length ? {
+        sourceReceipts,
+        citedSourceIds: [...new Set(sourceReceipts.map(r => r.sourceId))],
+      } : {}),
       missionType: "ADVE_UPDATE",
     },
   });
@@ -176,7 +257,15 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
     author: {
       system: intent.viaAgent ? "MESTOR" : "OPERATOR",
       userId: operatorId,
+      intentId: context?.intentId,
       reason: intent.viaAgent ? `${reason} (via agent MCP)` : reason,
+    },
+    options: {
+      expectedVersion: pillar.currentVersion,
+      expectedPillarVersions,
+      sourceReceipts,
+      requiredSourceIds: sourceReceipts?.map(r => r.sourceId),
+      rejectOnProvenanceRefusal: intent.viaAgent,
     },
   });
   if (!writeResult.success) {
@@ -259,14 +348,5 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function getNested(obj: Record<string, unknown>, path: string): unknown {
-  const segments = path.split(".");
-  let cur: unknown = obj;
-  for (const s of segments) {
-    if (cur && typeof cur === "object" && s in (cur as Record<string, unknown>)) {
-      cur = (cur as Record<string, unknown>)[s];
-    } else {
-      return undefined;
-    }
-  }
-  return cur;
+  return resolvePillarPath(obj, path);
 }

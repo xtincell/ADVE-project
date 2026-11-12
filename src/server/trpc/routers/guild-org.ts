@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -55,7 +56,7 @@ export const guildOrgRouter = createTRPCRouter({
   getMetrics: protectedProcedure
     .input(z.object({ orgId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const org = await ctx.db.guildOrganization.findUniqueOrThrow({ where: { id: input.orgId }, include: { members: true } });
+      const org = found(await ctx.db.guildOrganization.findUnique({ where: { id: input.orgId }, include: { members: true } }), "Organisation introuvable.");
       return { totalMembers: org.members.length, totalMissions: org.totalMissions, firstPassRate: org.firstPassRate, avgQcScore: org.avgQcScore };
     }),
 

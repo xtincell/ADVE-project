@@ -28,7 +28,7 @@ import type { GlorySequenceKey } from "./tools/sequences";
 
 // ── Public API ────────────────────────────────────────────────────────
 
-export async function execute(intent: Intent): Promise<IntentResult> {
+export async function execute(intent: Intent, context?: { intentId: string }): Promise<IntentResult> {
   const startedAt = new Date().toISOString();
   const base = {
     intentKind: intent.kind,
@@ -54,13 +54,13 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await generateIActions(intent)) });
 
       case "SYNTHESIZE_S":
-        return wrap({ ...base, ...(await synthesizeS(intent)) });
+        return wrap({ ...base, ...(await synthesizeS(intent, context)) });
 
       case "PROPOSE_BRAND_ACTIONS":
         return wrap({ ...base, ...(await proposeBrandActionsHandler(intent)) });
 
       case "SET_BRAND_ACTION_STATUS":
-        return wrap({ ...base, ...(await setBrandActionStatusHandler(intent)) });
+        return wrap({ ...base, ...(await setBrandActionStatusHandler(intent, context)) });
 
       case "CAPTURE_INTENTION":
         return wrap({ ...base, ...(await captureIntentionHandler(intent)) });
@@ -83,6 +83,27 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       case "PROPOSE_VAULT_FROM_SOURCE":
         return wrap({ ...base, ...(await proposeVaultFromSource(intent)) });
+
+      case "SELECT_BRAND_ASSET": {
+        const { selectFromBatch } = await import("@/server/services/brand-vault/engine");
+        const output = await selectFromBatch(intent);
+        return wrap({ ...base, status: "OK", summary: "Actif sélectionné.", tool: "brand-vault:selectFromBatch", output });
+      }
+      case "PROMOTE_BRAND_ASSET_TO_ACTIVE": {
+        const { promoteToActive } = await import("@/server/services/brand-vault/engine");
+        const output = await promoteToActive(intent);
+        return wrap({ ...base, status: "OK", summary: "Actif en usage.", tool: "brand-vault:promoteToActive", output });
+      }
+      case "SUPERSEDE_BRAND_ASSET": {
+        const { supersede } = await import("@/server/services/brand-vault/engine");
+        const output = await supersede({ ...intent, intentId: context?.intentId });
+        return wrap({ ...base, status: "OK", summary: "Version remplacée, historique conservé.", tool: "brand-vault:supersede", output });
+      }
+      case "ARCHIVE_BRAND_ASSET": {
+        const { archive } = await import("@/server/services/brand-vault/engine");
+        const output = await archive(intent);
+        return wrap({ ...base, status: "OK", summary: "Actif archivé.", tool: "brand-vault:archive", output });
+      }
 
       case "INGEST_MARKET_STUDY":
         return wrap({ ...base, ...(await ingestMarketStudyHandler(intent)) });
@@ -168,6 +189,7 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           strategyId: intent.strategyId,
           pillarKey: intent.key,
           compensatedFrom: intent.compensatedFrom,
+          intentId: context?.intentId,
           operatorId: intent.operatorId,
           reason: intent.reason,
         });
@@ -212,13 +234,13 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       // ── Phase 9 — Ptah Forge (ADR-0009) ──────────────────────────
       case "PTAH_MATERIALIZE_BRIEF":
-        return wrap({ ...base, ...(await ptahMaterialize(intent)) });
+        return wrap({ ...base, ...(await ptahMaterialize(intent, context?.intentId)) });
 
       case "PTAH_RECONCILE_TASK":
         return wrap({ ...base, ...(await ptahReconcile(intent)) });
 
       case "PTAH_REGENERATE_FADING_ASSET":
-        return wrap({ ...base, ...(await ptahRegenerate(intent)) });
+        return wrap({ ...base, ...(await ptahRegenerate(intent, context?.intentId)) });
 
       // ── Phase 14 — Imhotep full activation (ADR-0019, supersedes ADR-0017) ──
       case "IMHOTEP_DRAFT_CREW_PROGRAM":
@@ -490,16 +512,21 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           imageUrl: intent.imageUrl ?? null,
           scheduleAt: intent.scheduleAt ?? null,
           brandActionId: intent.brandActionId ?? null,
+          scheduledVersion: intent.scheduledVersion,
+          publicationPackageId: intent.publicationPackageId,
+          publicationPackageHash: intent.publicationPackageHash,
+          publicationTarget: intent.publicationTarget,
           brief: intent.brief ?? null,
           visualCopy: intent.visualCopy ?? null,
         });
         const okCount = out.results.filter((r) => r.state === "PUBLISHED").length;
         return wrap({
           ...base,
-          status: "OK",
+          status: out.mode === "FAILED" ? "FAILED" : ["PARTIAL", "UNCONFIRMED"].includes(out.mode) ? "DOWNGRADED" : "OK",
           summary:
             out.mode === "SCHEDULED"
               ? `Publication planifiée (action ${out.brandActionId})`
+              : out.mode === "SKIPPED" ? "Échéance déjà prise en charge ou modifiée."
               : `Publication : ${okCount}/${out.results.length} plateforme(s) OK`,
           output: out,
         });
@@ -510,6 +537,12 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "INGEST_EXTERNAL_METRIC": {
         const { ingestExternalMetric } = await import("@/server/services/anubis/metric-ingest");
         return wrap({ ...base, ...(await ingestExternalMetric(intent)) });
+      }
+
+      // ── Bilan de campagne La Barre (ADR-0244) — édition documentaire ──
+      case "INGEST_BARRE_CAMPAIGN_REVIEW": {
+        const { ingestBarreCampaignReview } = await import("@/server/services/ingestion-pipeline/barre-review");
+        return wrap({ ...base, ...(await ingestBarreCampaignReview(intent)) });
       }
 
       // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ─────────────
@@ -540,7 +573,7 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         const { operatorAmendPillar } = await import(
           "@/server/services/mestor/operator-amend"
         );
-        return wrap({ ...base, ...(await operatorAmendPillar(intent)) });
+        return wrap({ ...base, ...(await operatorAmendPillar(intent, context)) });
       }
 
       case "INGEST_BRAND_BOOK": {
@@ -707,6 +740,12 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       // Le dispatch full async (status=DISPATCHED) viendra avec le router
       // tRPC commit 4 ou ultérieur.
       case "COMPOSE_DELIVERABLE": {
+        if(intent.calendarPreparation){
+          if(intent.calendarPreparation.strategyId!==intent.strategyId || !intent.previewOnly)throw new Error("Périmètre de préparation du planning invalide.");
+          const {prepareCalendarBriefRows}=await import("@/server/services/deliverable-orchestrator/calendar-production");
+          const output=await prepareCalendarBriefRows(intent.calendarPreparation,intent.operatorId,context?.intentId);
+          return wrap({...base,status:"OK",summary:"Préparation des briefs du calendrier ; aucune génération lancée.",output});
+        }
         const { composeDeliverable } = await import(
           "@/server/services/deliverable-orchestrator"
         );
@@ -716,7 +755,8 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           targetKind: intent.targetKind,
           campaignId: intent.campaignId,
           overrideManipulationMode: intent.overrideManipulationMode,
-          previewOnly: intent.previewOnly,
+          previewOnly: intent.previewOnly, previewIntentId: intent.previewIntentId, pins: intent.pins,
+          creativeProposalId: intent.creativeProposalId, calendarBrief:intent.calendarBrief, sourceIntentId: context?.intentId,
         });
         return wrap({
           ...base,
@@ -726,9 +766,20 @@ export async function execute(intent: Intent): Promise<IntentResult> {
             status: result.status,
             sequenceExecutionId: result.sequenceExecutionId,
             targetKind: result.composition.targetKind,
+            missingPreconditions: result.composition.missingPreconditions,
+            vaultMatches: result.composition.vaultMatches,
+            ...(result.previewIntentId ? {previewIntentId: result.previewIntentId} : {}),
+            ...(result.sourceManifest ? {sourceManifest: result.sourceManifest} : {}),
+            ...(result.materialBlock ? {materialBlock: result.materialBlock} : {}),
+            ...(result.materialStatus ? {materialStatus: result.materialStatus} : {}),
+            ...(result.generativeTaskId !== undefined ? {generativeTaskId: result.generativeTaskId} : {}),
+            ...(result.briefOutputId ? {briefOutputId: result.briefOutputId} : {}),
           },
         });
       }
+      default:
+        return wrap({ ...base, status: "FAILED", reason: "UNSUPPORTED_INTENT",
+          summary: `Commande non prise en charge : ${base.intentKind}.` });
     }
   } catch (err) {
     return {
@@ -769,16 +820,17 @@ async function fillAdve(
 
   // Spawned downstream intents:
   //   - INDEX_BRAND_CONTEXT (always — Seshat indexing async)
-  //   - PRODUCE_DELIVERABLE × 4 PILLAR sequences (only at INTAKE for previews)
+  //   - optional PRODUCE_DELIVERABLE × 4 previews (legacy/default INTAKE only)
   const spawned: Intent[] = [
     {
       kind: "INDEX_BRAND_CONTEXT",
       strategyId: intent.strategyId,
       scope: intent.phase === "INTAKE" ? "INTAKE_ONLY" : "FULL",
+      prepareEmbeddings: intent.phase !== "INTAKE",
     },
   ];
 
-  if (intent.phase === "INTAKE") {
+  if (intent.phase === "INTAKE" && intent.prepareDeliverables !== false) {
     for (const target of ["MANIFESTE-A", "BRANDBOOK-D", "OFFRE-V", "PLAYBOOK-E"]) {
       spawned.push({
         kind: "PRODUCE_DELIVERABLE",
@@ -924,63 +976,19 @@ async function generateIActions(
   };
 }
 
-// ── SYNTHESIZE_S — pulls selected BrandActions when available ────────
+// ── SYNTHESIZE_S — same saved calculation as the individual refresh ──
 
 async function synthesizeS(
   intent: Extract<Intent, { kind: "SYNTHESIZE_S" }>,
+  context?: { intentId: string },
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
-  // Read selected BrandActions to ground the synthesis in real planned moves.
-  const { db } = await import("@/lib/db");
-  const selectedActions = await db.brandAction.findMany({
-    where: {
-      strategyId: intent.strategyId,
-      OR: [
-        { selected: true },
-        ...(intent.selectedActionIds && intent.selectedActionIds.length > 0
-          ? [{ id: { in: intent.selectedActionIds } }]
-          : []),
-      ],
-    },
-    take: 50,
-    orderBy: { priority: "asc" },
+  const { recalculateSynthesis } = await import("@/server/services/mestor/rtis-cascade");
+  const result = await recalculateSynthesis(intent.strategyId, {
+    intentId: context?.intentId, selectedActionIds: intent.selectedActionIds,
   });
-
-  // ADR-0159 amendement (lecture inverse du pont RTIS→registre) : la synthèse
-  // S lit le registre des paris — track record résolu + engagements ouverts —
-  // comme intrant de stratégie. Lecture pure, best-effort (le registre absent
-  // n'empêche jamais la synthèse).
-  let pledgeTrackRecord: { open: number; hit: number; miss: number; statements: string[] } | null = null;
-  try {
-    const pledges = await db.predictionRecord.findMany({
-      where: { strategyId: intent.strategyId, kind: { in: ["PLEDGE", "ACTION_EFFECT"] } },
-      select: { status: true, statement: true },
-      orderBy: { horizonAt: "asc" },
-      take: 30,
-    });
-    if (pledges.length > 0) {
-      pledgeTrackRecord = {
-        open: pledges.filter((p) => p.status === "OPEN").length,
-        hit: pledges.filter((p) => p.status === "HIT").length,
-        miss: pledges.filter((p) => p.status === "MISS").length,
-        statements: pledges.filter((p) => p.status === "OPEN").map((p) => p.statement).slice(0, 5),
-      };
-    }
-  } catch {
-    /* registre indisponible → synthèse inchangée */
-  }
-
-  const { generateBatch } = await import("@/server/services/notoria/engine");
-  const batch = await generateBatch({
-    strategyId: intent.strategyId,
-    missionType: "S_SYNTHESIS",
-  });
-
-  return {
-    status: "OK",
-    summary: `S synthesized from ${selectedActions.length} selected actions: ${batch.totalRecos} recos${pledgeTrackRecord ? ` · paris: ${pledgeTrackRecord.hit} tenus / ${pledgeTrackRecord.miss} ratés / ${pledgeTrackRecord.open} ouverts` : ""}`,
-    tool: "notoria:S_SYNTHESIS",
-    output: { batch, selectedActionsCount: selectedActions.length, pledgeTrackRecord },
-  };
+  return { status: result.updated ? "OK" : "FAILED",
+    summary: result.updated ? `Plan recalculé : version ${result.version}, ${result.selectedFromICount} choix conservés. Revue nécessaire.` : result.error ?? "Recalcul refusé.",
+    tool: "protocole:S", output: result };
 }
 
 // ── PROPOSE_BRAND_ACTIONS — additive brand-aware action proposal ─────
@@ -1019,15 +1027,25 @@ async function proposeBrandActionsHandler(
 // ── B2 (audit 2026-07-22) — décision opérateur sur le rétroplanning ──
 async function setBrandActionStatusHandler(
   intent: Extract<Intent, { kind: "SET_BRAND_ACTION_STATUS" }>,
+  context?: { intentId: string },
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { setBrandActionStatus } = await import("./action-db/set-status");
-  const res = await setBrandActionStatus({ strategyId: intent.strategyId, op: intent.op });
+  const res = await setBrandActionStatus({ strategyId: intent.strategyId, op: intent.op, userId: intent.operatorId, intentId: context?.intentId });
   const summary =
     res.op === "AUTOSCHEDULE"
       ? `${res.updated} action(s) planifiée(s) (${res.protectedPublications ?? 0} publication(s) armée(s) préservée(s))`
+      : res.op === "PREFERENCE" ? `${res.updated} préférence(s) de catalogue enregistrée(s)`
       : res.op === "SELECT"
         ? `${res.updated} action(s) ${intent.op.type === "SELECT" && intent.op.selected ? "retenue(s)" : "retirée(s)"}`
         : `${res.updated} échéance(s) ajustée(s)`;
+  if (intent.op.type === "PREFERENCE") {
+    // Reuse the governed deterministic S writer after the I transaction commits.
+    // A refused recompute never makes the preference itself disappear.
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    const derived = await emitIntent({ kind: "SYNTHESIZE_S", strategyId: intent.strategyId }, { caller: "artemis:catalogue-preference" });
+    return { status: "OK", summary: `${summary}. ${derived.status === "OK" ? "Scénarios recalculés." : "Le plan doit être recalculé."}`,
+      tool: "artemis:set-brand-action-status", output: { ...res, synthesisUpdated: derived.status === "OK", synthesisReason: derived.reason } };
+  }
   return { status: "OK", summary, tool: "artemis:set-brand-action-status", output: res };
 }
 
@@ -1137,7 +1155,7 @@ async function indexBrandContext(
     const { indexBrandContext: runIndex } = await import(
       "@/server/services/seshat/context-store"
     );
-    const result = await runIndex(intent.strategyId, intent.scope);
+    const result = await runIndex(intent.strategyId, intent.scope, { prepareEmbeddings: intent.prepareEmbeddings });
     return {
       status: "OK",
       summary: `Brand context indexed: ${result.totalNodes} nodes (${intent.scope}) in ${result.durationMs}ms`,
@@ -1163,7 +1181,9 @@ async function indexBrandSource(
     const { indexBrandSource: runIndex } = await import(
       "@/server/services/seshat/context-store"
     );
-    const result = await runIndex(intent.sourceId);
+    const result = await runIndex(intent.sourceId, intent.strategyId, {
+      prepareEmbeddings: intent.prepareEmbeddings,
+    });
     return {
       status: "OK",
       summary: `Brand source ${intent.sourceId} indexed: ${result.chunks} chunks in ${result.durationMs}ms`,
@@ -1189,7 +1209,7 @@ async function classifyBrandSource(
     const { classifySource } = await import(
       "@/server/services/source-classifier"
     );
-    const result = await classifySource(intent.sourceId);
+    const result = await classifySource(intent.sourceId, intent.strategyId);
     return {
       status: "OK",
       summary: `Source ${intent.sourceId} classified: ${result.proposals.length} proposals in ${result.durationMs}ms`,
@@ -1215,12 +1235,12 @@ async function proposeVaultFromSource(
     const { proposeBrandAssetsFromSource } = await import(
       "@/server/services/source-classifier"
     );
-    const result = await proposeBrandAssetsFromSource(intent.sourceId, intent.operatorId);
+    const result = await proposeBrandAssetsFromSource(intent.sourceId, intent.operatorId, intent.strategyId);
     return {
       status: "OK",
-      summary: `Vault proposals persisted: ${result.brandAssetIds.length} BrandAsset DRAFTs from source ${intent.sourceId}`,
+      summary: `${result.alreadyFresh ? "Current vault batch reused" : "Vault proposals persisted"}: ${result.brandAssetIds.length} assets from source ${intent.sourceId}`,
       tool: "source-classifier:propose",
-      output: { brandAssetIds: result.brandAssetIds, durationMs: result.durationMs },
+      output: { brandAssetIds: result.brandAssetIds, durationMs: result.durationMs, alreadyFresh: result.alreadyFresh },
     };
   } catch (err) {
     return {
@@ -1614,13 +1634,18 @@ async function updateModelPolicy(
 
 async function ptahMaterialize(
   intent: Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>,
+  intentId?: string,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { materializeBrief } = await import("@/server/services/ptah");
-  const intentId = `intent-ptah-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  if (!intentId) throw new Error("PTAH_EMISSION_REQUIRED");
   const result = await materializeBrief(
     {
       strategyId: intent.strategyId,
       sourceIntentId: intent.sourceIntentId,
+      resumeTaskId: intent.resumeTaskId,
+      campaignId: intent.campaignId,
+      briefId: intent.briefId,
+      sourceBrandAssetId: intent.sourceBrandAssetId,
       brief: intent.brief,
       overrideMixViolation: intent.overrideMixViolation,
     },
@@ -1628,10 +1653,10 @@ async function ptahMaterialize(
   );
   return {
     status: "OK",
-    summary: `Ptah ${intent.brief.forgeSpec.kind} forge created → task=${result.taskId} provider=${result.provider} model=${result.providerModel} estCost=$${result.estimatedCostUsd.toFixed(3)}`,
+    summary: `Ptah task=${result.taskId} status=${result.status} submission=${result.submissionReserved ? "reserved" : "existing or deferred"}`,
     tool: "ptah",
     output: result,
-    estimatedCost: { amount: result.estimatedCostUsd, currency: "USD" },
+    estimatedCost: result.submissionReserved ? { amount: result.estimatedCostUsd, currency: "USD" } : undefined,
   };
 }
 
@@ -1641,7 +1666,7 @@ async function ptahReconcile(
   intent: Extract<Intent, { kind: "PTAH_RECONCILE_TASK" }>,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { reconcileTask } = await import("@/server/services/ptah");
-  const result = await reconcileTask(intent.taskId, intent.webhookPayload);
+  const result = await reconcileTask(intent.taskId, intent.webhookPayload, { strategyId: intent.strategyId });
   return {
     status: "OK",
     summary: `Ptah task ${intent.taskId} reconciled — ${result.assetVersionIds.length} asset(s) created realCost=$${result.realisedCostUsd.toFixed(3)}`,
@@ -1655,9 +1680,10 @@ async function ptahReconcile(
 
 async function ptahRegenerate(
   intent: Extract<Intent, { kind: "PTAH_REGENERATE_FADING_ASSET" }>,
+  intentId?: string,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { regenerateFadingAsset } = await import("@/server/services/ptah");
-  const intentId = `intent-ptah-regen-${Date.now()}`;
+  if (!intentId) throw new Error("PTAH_EMISSION_REQUIRED");
   const result = await regenerateFadingAsset(
     { strategyId: intent.strategyId, assetVersionId: intent.assetVersionId },
     { operatorId: intent.operatorId, intentId },

@@ -736,6 +736,13 @@ model ClientAllocation {
   @@index([scopeNodeId])
 }
 
+enum ClientOrganizationKind {
+  UNSPECIFIED
+  INTERNATIONAL_GROUP
+  REGIONAL_OFFICE
+  GROUP_SUBSIDIARY
+}
+
 model Client {
   id           String  @id @default(cuid())
   name         String
@@ -749,6 +756,13 @@ model Client {
   operatorId   String
   status       String  @default("ACTIVE")
 
+  organizationKind ClientOrganizationKind @default(UNSPECIFIED)
+  organizationKey String?
+  organizationSourceRefs Json?
+  parentClientId String?
+  parentClient Client? @relation("ClientOrganization", fields: [parentClientId], references: [id], onDelete: Restrict)
+  childClients Client[] @relation("ClientOrganization")
+
   operator    Operator           @relation(fields: [operatorId], references: [id])
   strategies  Strategy[]
   allocations ClientAllocation[] // Chantier 5 — multi-agence
@@ -759,9 +773,14 @@ model Client {
 
   @@index([operatorId])
   @@index([contactEmail])
+  @@index([parentClientId])
+  @@unique([operatorId, organizationKey])
 }
 
 model Strategy {
+  contentSpecimens ContentSpecimen[]
+  recipeApplications RecipeApplication[]
+  competitorObservations CompetitorSnapshot[]
   id                String         @id @default(cuid())
   name              String
   description       String?
@@ -837,6 +856,7 @@ model Strategy {
   cohortSnapshots    CohortSnapshot[]
   scoreSnapshots     ScoreSnapshot[]
   dataSources        BrandDataSource[]
+  sourceUses         BrandSourceUse[]
   orchestrationPlans OrchestrationPlan[]
   recommendations    Recommendation[]
   recoBatches        RecommendationBatch[]
@@ -984,14 +1004,16 @@ model Campaign {
   // backward compat. Les deux statuts ci-dessous capturent la granularité opérationnelle agence.
   creativeState     CreativeProductionStatus @default(BRIEF_RECU)
   clientState       ClientReviewStatus       @default(PENDING)
-  /// GREEN | AMBER | RED — calculé via helper computeRAG(campaign) à partir de deadline_proximity + creativeState + clientState + delivered_ratio + isCritical + blockers
+  /// GREEN | AMBER | RED | UNKNOWN — en mode automatique, computeCampaignHealth agrège computeRAG des tâches
+  /// (reprises ouvertes = blocages), isCritical et creativeState BLOQUE ; UNKNOWN = non calculable (ADR-0202).
+  /// Recalculé dans la transaction de chaque commande tâche/reprise ; défaut historique GREEN (RESIDUAL-DEBT).
   healthSignal      String                   @default("GREEN")
   /// Si non-null : override manuel par opérateur (computeRAG ignoré). Audit conservé via Mestor Intent OPERATOR_OVERRIDE_RAG.
   manualRagOverride String?
   /// Dernier commentaire libre (pour vue Project Tracker dashboard agence).
   commentsLatest    String?
-  // Phase 18-A1 — Flag orthogonal "🔴 CRITIQUE" V4. computeRAG → AMBER min si TRUE,
-  // RED si TRUE + deadline_proximity < 3j ou status BLOQUE. Indépendant de creativeState
+  // Phase 18-A1 — Flag orthogonal "🔴 CRITIQUE" V4. Santé de campagne → AMBER min si TRUE,
+  // RED si TRUE + creativeState BLOQUE (computeCampaignHealth). Indépendant de creativeState
   // (un projet EN_PRODUCTION peut devenir CRITIQUE sans changer de statut).
   isCritical        Boolean                  @default(false)
   // Phase 18-A1 — Priorité opérationnelle (V4 sheet ACTIONS column PRIORITÉ).
@@ -1285,7 +1307,8 @@ model CrmContact {
 /// Message CRM (email transactionnel sortant ou note entrante consignée).
 model CrmMessage {
   id          String  @id @default(cuid())
-  contactId   String
+  contactId   String?
+  salesDealId String?
   direction   String // OUT | IN
   channel     String  @default("EMAIL")
   subject     String?
@@ -1297,10 +1320,12 @@ model CrmMessage {
   sentBy      String? // User.id opérateur
   campaignId  String? // NewsletterCampaign si envoi de masse
 
-  contact CrmContact @relation(fields: [contactId], references: [id])
+  contact CrmContact? @relation(fields: [contactId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
 
+  @@unique([salesDealId, providerRef, direction])
+  @@index([salesDealId, createdAt])
   @@index([contactId, createdAt])
   @@index([campaignId])
   @@index([status])
@@ -1768,6 +1793,10 @@ model PillarVersion {
   /// (au lieu de deviner « la dernière version »). Additif nullable — les
   /// versions antérieures au suivi ne sont pas restaurables avec précision.
   intentId String?
+  /// ADR-0207 — applied delta + before/after metadata, immutable and nullable for legacy.
+  checkpoint Json?
+  /// One effect per compensated write. NULL for ordinary writes; no historical backfill.
+  compensatedFrom String?
 
   pillar Pillar @relation(fields: [pillarId], references: [id], onDelete: Cascade)
 
@@ -1776,6 +1805,7 @@ model PillarVersion {
   @@index([pillarId])
   @@index([createdAt])
   @@index([intentId])
+  @@unique([pillarId, compensatedFrom])
 }
 
 model BrandDataSource {
@@ -1807,6 +1837,9 @@ model BrandDataSource {
   origin String?
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
+  /// Original immutable du dépôt ; le texte de travail peut ensuite être corrigé.
+  originalUpload FileUpload?
+  uses BrandSourceUse[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1815,6 +1848,27 @@ model BrandDataSource {
   @@index([processingStatus])
   @@index([certainty])
   @@index([origin])
+}
+
+/// ADR-0198 — an explicit document use, never a copy of its text or original.
+model BrandSourceUse {
+  id String @id @default(cuid())
+  sourceId String
+  strategyId String
+  /// Both strategies must still belong to this operator on every read.
+  operatorId String
+  createdById String
+  updatedById String
+  revokedAt DateTime?
+  analysisStatus String @default("EXTRACTED")
+  pillarMapping Json?
+  analyzedSourceHash String?
+  source BrandDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([sourceId, strategyId])
+  @@index([strategyId, revokedAt])
 }
 
 model Invoice {
@@ -2029,6 +2083,8 @@ model DevotionSnapshot {
 }
 
 model KnowledgeEntry {
+  patternEvidence PatternEvidence[]
+  recipeApplications RecipeApplication[]
   id            String        @id @default(cuid())
   entryType     KnowledgeType
   sector        String?
@@ -3156,6 +3212,7 @@ model OvertonZoneTransition {
 /// canon). PAS un `Strategy` (brief §5.1) — registre léger pour les adversaires
 /// d'épreuve. `fixedTheta` = θ jaugé pour les ancres/items (la seule main humaine).
 model BrandRef {
+  competitorSnapshots CompetitorSnapshot[]
   id          String       @id @default(cuid())
   kind        String // RIVAL | ANCHOR | ITEM
   slug        String       @unique
@@ -3663,6 +3720,8 @@ model IntakePayment {
   providerRef     String?
   /// Tier purchased (INTAKE_PDF | ORACLE_FULL etc.).
   tierKey         String?
+  /// SHA-256 of the per-payment CinetPay notification proof; never the raw token.
+  notificationTokenHash String?
   /// Cycle d'abonnement manuel (FCFA) : Subscription étendue à l'encaissement.
   subscriptionId  String?
   /// Webhook event id for idempotency.
@@ -3713,7 +3772,7 @@ model Deal {
   strategyId   String?
   userId       String?
   contactName  String
-  contactEmail String
+  contactEmail String?
   companyName  String
   stage        DealStage @default(LEAD)
   value        Float?
@@ -3723,6 +3782,15 @@ model Deal {
   notes        String?
   wonAt        DateTime?
   lostReason   String?
+  /// Owner of the selling portfolio, independent of the buyer strategy.
+  operatorId String?
+  sellerStrategyId String?
+  contactPhone String?
+  commercial Json?
+  paymentReference String? @unique
+  revision Int @default(0)
+  customerAccessTokenHash String? @unique
+  customerAccessTokenEncrypted String?
 
   strategy Strategy? @relation(fields: [strategyId], references: [id])
   user     User?     @relation(fields: [userId], references: [id])
@@ -3730,6 +3798,8 @@ model Deal {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([operatorId])
+  @@index([sellerStrategyId])
   @@index([stage])
   @@index([strategyId])
 }
@@ -3858,6 +3928,13 @@ model MarketSynthesis {
 }
 
 model CompetitorSnapshot {
+  brandRefId String?
+  brandRef BrandRef? @relation(fields: [brandRefId], references: [id], onDelete: SetNull)
+  // Unknown legacy provenance is quarantined, never shared by default.
+  visibility String @default("QUARANTINE")
+  strategyId String?
+  countryCode String? @db.VarChar(2)
+  strategy Strategy? @relation(fields: [strategyId], references: [id], onDelete: Cascade)
   id             String   @id @default(cuid())
   sector         String
   market         String
@@ -3873,9 +3950,11 @@ model CompetitorSnapshot {
 
   study MarketStudy? @relation(fields: [studyId], references: [id])
 
+  @@index([brandRefId, measuredAt])
   @@index([sector])
   @@index([market])
   @@index([studyId])
+  @@index([strategyId, visibility])
 }
 
 model InsightReport {
@@ -4609,6 +4688,10 @@ model FileUpload {
   entityType String?
   entityId   String?
   pillarTags Json?
+  /// Raccord du registre de fichiers à une source, sans dupliquer son contenu.
+  sourceId String? @unique
+  source BrandDataSource? @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  storageReceipt Json?
 
   createdAt DateTime @default(now())
 
@@ -4788,6 +4871,8 @@ model Recommendation {
   groundingScore     Float? // 0..1 — recouvrement avec l'union des extraits
   groundingBand      String? // GROUNDED|WEAK|UNGROUNDED|NO_SOURCE
   groundedSourceIds  String[] @default([]) // BrandDataSource.id réellement recouvrants
+  /// ADR-0198 — fingerprints of documents actually supplied to the generator.
+  sourceReceipts Json?
   citedSourceIds     String[] @default([]) // `source:<id>` revendiqués dans la justification
   unverifiedCitations String[] @default([]) // revendiqués SANS recouvrement — signal de fabrication
 
@@ -4796,6 +4881,10 @@ model Recommendation {
   reviewedBy   String? // userId
   reviewedAt   DateTime?
   appliedAt    DateTime?
+  /// ADR-0207 (amendement 562) — IntentEmission de l'écriture qui a appliqué
+  /// cette proposition ; son retrait compense exactement cette écriture. Null pour
+  /// les applications antérieures : aucune archive n'est devinée par la date.
+  appliedIntentId String?
   revertedAt   DateTime?
   revertReason String?
 
@@ -6176,6 +6265,10 @@ model BrandNode {
   /// LOCAL_VARIANT, PROMO_RAMADAN_2026, PROMO_BACK_TO_SCHOOL_2025, etc.
   nodeRole   String[]    @default([])
 
+  /// ADR-0193 — identités dans les outils sources. Références typées, sans copie
+  /// de statut, de brief ou de décision. La source conserve son autorité.
+  sourceRefs Json?
+
   // Inheritance & overrides (Phase 18 noyau cabling — Phase 18-A0 stocke seulement, ne résout pas encore)
   /// JSON des champs ADVE/RTIS overridés au niveau de ce nœud (vs hérités du parent)
   pillarOverrides   Json?
@@ -6981,4 +7074,204 @@ model Referral {
   @@index([referrerUserId])
   @@index([referrerProfileId])
   @@index([refereeEmail])
+}
+
+
+// ADR-0194: content identity is scoped; measurements and annotations are append-only.
+model ContentSpecimen {
+  id           String                  @id @default(cuid())
+  identityKey  String                  @unique
+  strategyId   String?
+  visibility   String
+  platform     String
+  accountId    String
+  externalId   String
+  sourceUrl    String
+  mediaUrl     String?
+  mediaArchive Json?
+  mediaRetentionUntil DateTime?
+  caption      String?
+  format       String
+  sector       String
+  countryCode  String                  @db.VarChar(2)
+  publishedAt  DateTime
+  source       String
+  socialPostId String?
+  createdAt    DateTime                @default(now())
+  strategy     Strategy?               @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  metrics      ContentMetricSnapshot[]
+  analyses     CreativeAnalysis[]
+  evidence     PatternEvidence[]
+  applications RecipeApplication[]
+
+  @@index([strategyId, visibility])
+  @@index([platform, accountId, publishedAt])
+  @@index([sector, countryCode, publishedAt])
+  @@index([mediaRetentionUntil])
+}
+
+model ContentMetricSnapshot {
+  id                     String            @id @default(cuid())
+  specimenId             String
+  observationKey         String            @unique
+  observedAt             DateTime
+  views                  Float?
+  reach                  Float?
+  likes                  Float?
+  comments               Float?
+  shares                 Float?
+  followersAtObservation Float?
+  paidStatus             String            @default("UNKNOWN")
+  source                 String
+  sourceUrl              String
+  createdAt              DateTime          @default(now())
+  specimen               ContentSpecimen   @relation(fields: [specimenId], references: [id], onDelete: Cascade)
+  evidence               PatternEvidence[]
+
+  @@index([specimenId, observedAt])
+}
+
+model CreativeAnalysis {
+  id              String            @id @default(cuid())
+  specimenId      String
+  analysisKey     String            @unique
+  taxonomyVersion String
+  method          String
+  modelVersion    String?
+  contentHash     String
+  annotation      Json
+  createdBy       String
+  createdAt       DateTime          @default(now())
+  specimen        ContentSpecimen   @relation(fields: [specimenId], references: [id], onDelete: Cascade)
+  evidence        PatternEvidence[]
+
+  @@index([specimenId, createdAt])
+}
+
+model PatternEvidence {
+  id            String                @id @default(cuid())
+  recipeId      String
+  specimenId    String
+  analysisId    String
+  metricId      String
+  role          String
+  observedRatio Float?
+  baseline      Json
+  recipe        KnowledgeEntry        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  specimen      ContentSpecimen       @relation(fields: [specimenId], references: [id], onDelete: Cascade)
+  analysis      CreativeAnalysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  metric        ContentMetricSnapshot @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, specimenId])
+}
+
+model RecipeApplication {
+  publicationBinding Json?
+  id               String           @id @default(cuid())
+  strategyId       String
+  applicationKey   String           @unique
+  recipeId         String
+  frozenRecipe     Json
+  hypothesis       String
+  variant          String
+  primaryMetric    String
+  baselineValue    Float
+  targetValue      Float
+  deadline         DateTime
+  actionId         String?
+  assetId          String?
+  resultSpecimenId String?
+  outcome          Json?
+  createdAt        DateTime         @default(now())
+  resolvedAt       DateTime?
+  specimen         ContentSpecimen? @relation(fields: [resultSpecimenId], references: [id])
+  strategy         Strategy         @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  recipe           KnowledgeEntry   @relation(fields: [recipeId], references: [id])
+
+  @@index([strategyId, createdAt])
+}
+
+/// Human or AI holder of one brand sales portfolio; credentials are server-only.
+model SalesRepresentative {
+  id String @id @default(cuid())
+  strategyId String
+  operatorId String?
+  name String
+  mode String
+  status String @default("DRAFT")
+  humanUserId String?
+  mcpKeyId String? @unique
+  encryptedApiKey String?
+  conversationId String? @unique
+  maxTurns Int @default(12)
+  maxTokens Int @default(60000)
+  dailyTokenBudget Int @default(150000)
+  dailyRunLimit Int @default(10)
+  lastWorkerSeenAt DateTime?
+  budgetDay String?
+  dailyTokensReserved Int @default(0)
+  dailyRunsClaimed Int @default(0)
+  revision Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  runs SalesRun[]
+  @@index([strategyId, status])
+  @@index([operatorId])
+  @@unique([strategyId, humanUserId])
+}
+
+/// Bounded invocation receipt consumed by the existing Galahad sales role.
+model SalesRun {
+  id String @id @default(cuid())
+  representativeId String
+  representative SalesRepresentative @relation(fields: [representativeId], references: [id])
+  dealId String?
+  requestId String @unique
+  instruction String @db.Text
+  status String @default("QUEUED")
+  leaseToken String?
+  claimRequestId String? @unique
+  claimedAt DateTime?
+  completedAt DateTime?
+  result String? @db.Text
+  tokensUsed Int?
+  reservedTokens Int @default(0)
+  createdAt DateTime @default(now())
+  @@index([representativeId, status, createdAt])
+  @@index([dealId])
+}
+
+/// Owner-approved inbound door; private mandate templates are never the public projection.
+model SalesPublicEntry {
+  id String @id @default(cuid())
+  strategyId String @unique
+  publicId String @unique
+  representativeId String
+  enabled Boolean @default(false)
+  revision Int @default(1)
+  authorizedBy String
+  intentId String
+  config Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions SalesPublicSession[]
+  @@index([representativeId])
+}
+
+/// Idempotency and quota receipt for one anonymous inbound conversation.
+model SalesPublicSession {
+  id String @id @default(cuid())
+  entryId String
+  entry SalesPublicEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  requestId String
+  secretHash String
+  fingerprint String
+  dealId String @unique
+  approvedOffers Json @default("[]")
+  ipHash String?
+  createdAt DateTime @default(now())
+  @@unique([entryId, requestId])
+  @@unique([entryId, secretHash])
+  @@index([entryId, createdAt])
+  @@index([entryId, ipHash, createdAt])
 }

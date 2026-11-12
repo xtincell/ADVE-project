@@ -23,8 +23,14 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 // ============================================================================
 
 import { z } from "zod";
+import { IntakeWebUrlSchema, OptionalIntakeWebUrlSchema } from "@/lib/intake-input";
+import { EntryOvertonClaimSchema } from "@/domain/overton-positioning";
+import { listIntakeDocuments, retainIntakeDocuments, readRetainedIntakeDocuments } from "@/server/services/quick-intake/document-input";
+import { readIntakeReportAccess } from "@/server/services/quick-intake/paid-fulfillment";
+import { previewIntakeDiagnostic, intakePillarFields, intakeEvidenceEntries, intakeReportContent } from "@/server/services/quick-intake/report-composer";
 import type { Prisma } from "@prisma/client";
-import { callLLM, extractJSON, isTextLLMAvailable } from "@/server/services/llm-gateway";
+import { callLLM, extractJSON, isTextLLMAvailable, withIntakeCostContext, describeTextRouting, FALLBACK_POLICY } from "@/server/services/llm-gateway";
+import { resolveRatePolicy } from "@/server/services/llm-gateway/rate-policy";
 import * as mestor from "@/server/services/mestor";
 import { emitIntent as mestorEmitIntent } from "@/server/services/mestor/intents";
 import { TRPCError } from "@trpc/server";
@@ -38,7 +44,11 @@ import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { accessible, found } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un diagnostic inconnu et un diagnostic hors d'atteinte reçoivent le même 404. */
+const INTAKE_NOT_FOUND = "Diagnostic introuvable.";
 
 /**
  * IDOR round-10 (Agent D) — `quickIntake.get`/`updateIntake` sont keyés sur l'id
@@ -49,17 +59,18 @@ import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/servic
  * converti est un prospect → réservé au staff.
  */
 async function assertIntakeAccess(userId: string, intakeId: string): Promise<void> {
-  const intake = await db.quickIntake.findUniqueOrThrow({
+  await accessible(db.quickIntake.findUnique({
     where: { id: intakeId },
     select: { convertedToId: true },
+  }), INTAKE_NOT_FOUND, async (intake) => {
+    if (intake.convertedToId) {
+      await assertStrategyRead(userId, intake.convertedToId);
+      return;
+    }
+    const opCtx = await getOperatorContext(userId);
+    if (opCtx.role === "ADMIN" || opCtx.operatorId) return;
+    throw new TRPCError({ code: "FORBIDDEN", message: "Intake non accessible" });
   });
-  if (intake.convertedToId) {
-    await assertStrategyRead(userId, intake.convertedToId);
-    return;
-  }
-  const opCtx = await getOperatorContext(userId);
-  if (opCtx.role === "ADMIN" || opCtx.operatorId) return;
-  throw new TRPCError({ code: "FORBIDDEN", message: "Intake non accessible" });
 }
 
 /**
@@ -311,24 +322,42 @@ async function fetchUrlAsText(
 // ── F1 async (fix prod 2026-07-19) — mécanique commune des 3 chemins lourds ──
 
 /**
- * Réserve la row pour un traitement asynchrone. Claim ATOMIQUE : seuls
- * IN_PROGRESS (premier passage) et FAILED (retry) sont réservables — un
- * double-submit concurrent perd la course et reçoit une erreur explicite au
- * lieu d'un double traitement.
+ * Durable admission shared by every public completion path. Capacity comes
+ * from the existing model policy/limiter, never a second independent quota.
+ * The lock serializes only the claim, not provider work. Manual completions
+ * without an eligible model retain their existing deterministic path.
  */
 async function claimIntakeForProcessing(db: import("@prisma/client").PrismaClient, intakeId: string): Promise<void> {
-  const claimed = await db.quickIntake.updateMany({
-    where: { id: intakeId, status: { in: ["IN_PROGRESS", "FAILED"] } },
-    // `processingStage` remis à zéro comme `failureReason` : un retry ne doit
-    // jamais afficher l'étape de la tentative précédente.
-    data: { status: "PROCESSING", failureReason: null, processingStage: null },
-  });
-  if (claimed.count === 0) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: "L'analyse est déjà en cours pour ce diagnostic. Patientez quelques instants, la page suit l'avancement.",
+  const { resolvePolicy } = await import("@/server/services/model-policy");
+  const policy = await resolvePolicy("extraction").catch(() => ({ ...FALLBACK_POLICY.extraction, version: 0 }));
+  const model = describeTextRouting(policy).attempts.find(attempt => attempt.eligible)?.model;
+  const capacity = model ? resolveRatePolicy(model).policy.maxConcurrent : null;
+  await db.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('quick-intake-admission'))`;
+    const current = await tx.quickIntake.findUnique({ where: { id: intakeId }, select: { status: true } });
+    if (current?.status === "PROCESSING") {
+      throw new TRPCError({ code: "CONFLICT",
+        message: "L'analyse est déjà en cours pour ce diagnostic. Patientez quelques instants, la page suit l'avancement." });
+    }
+    if (!current || !["IN_PROGRESS", "FAILED"].includes(current.status)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Ce diagnostic ne peut pas être relancé dans son état actuel." });
+    }
+    if (capacity !== null) {
+      // Same recovery window as getByToken: a killed worker cannot occupy
+      // capacity forever. This is admission, not a provider quota guarantee.
+      const active = await tx.quickIntake.count({ where: { status: "PROCESSING",
+        updatedAt: { gt: new Date(Date.now() - 10 * 60_000) } } });
+      if (active >= capacity) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS",
+          message: "Les analyses sont momentanément occupées. Vos informations sont conservées ; réessayez dans quelques instants." });
+      }
+    }
+    const claimed = await tx.quickIntake.updateMany({
+      where: { id: intakeId, status: { in: ["IN_PROGRESS", "FAILED"] } },
+      data: { status: "PROCESSING", failureReason: null, processingStage: null },
     });
-  }
+    if (!claimed.count) throw new TRPCError({ code: "CONFLICT", message: "Ce diagnostic est déjà pris en charge." });
+  });
 }
 
 /**
@@ -379,22 +408,25 @@ async function mergeIntakeResponses(
  * est rattrapé par la garde paresseuse de getByToken (> 10 min → FAILED
  * "timeout").
  */
-function runIntakeProcessing(
+function runIntakeProcessing<T extends { failed: "extraction" | "llm_unavailable" | null }>(
   db: import("@prisma/client").PrismaClient,
   intakeId: string,
-  token: string,
   caller: string,
-  work: () => Promise<{ failed: "extraction" | "llm_unavailable" | null }>,
-): Promise<void> {
-  return (async () => {
+  work: () => Promise<T>,
+  rethrow = false,
+): Promise<T | null> {
+  return withIntakeCostContext(intakeId, async () => {
     let reason: "extraction" | "llm_unavailable" | "internal" | null = null;
+    let outcome: T | null = null;
+    let failure: unknown;
     try {
-      const outcome = await work();
+      outcome = await work();
       reason = outcome.failed;
     } catch (err) {
+      failure = err;
       reason = err instanceof quickIntakeService.IncompleteIntakeError ? "extraction" : "internal";
       console.error(
-        `[quick-intake:${caller}] traitement de fond échoué (token ${token}):`,
+        `[quick-intake:${caller}] traitement de fond échoué (intake ${intakeId}):`,
         err instanceof Error ? err.message : err,
       );
     }
@@ -408,7 +440,9 @@ function runIntakeProcessing(
           console.error(`[quick-intake:${caller}] transition FAILED impossible:`, err instanceof Error ? err.message : err);
         });
     }
-  })();
+    if (rethrow && reason !== null) throw failure ?? new Error("INTAKE_PROCESSING_FAILED");
+    return outcome;
+  });
 }
 
 export const quickIntakeRouter = createTRPCRouter({
@@ -423,13 +457,14 @@ export const quickIntakeRouter = createTRPCRouter({
       businessModel: z.string().optional(),
       economicModel: z.string().optional(),
       positioning: z.string().optional(),
+      overtonClaim: EntryOvertonClaimSchema.optional(),
       source: z.string().optional(),
       // Attribution funnel (vague E) : UTM/referrer/click-ids structurés,
       // bornés (12 clés max côté client, valeurs ≤ 300 chars).
       attribution: z.record(z.string().max(40), z.string().max(300)).optional(),
       method: z.enum(["GUIDED", "IMPORT", "LONG", "SHORT", "INGEST", "INGEST_PLUS"]).optional(),
       // Vague 10 — empreinte web publique (alimente le pilier E)
-      websiteUrl: z.string().max(300).optional(),
+      websiteUrl: OptionalIntakeWebUrlSchema,
       socialLinksRaw: z.string().max(2000).optional(),
       // ADR-0157 — parrainage : « recommandé par » (code LF-XXXXXX). Optionnel,
       // best-effort — un code invalide n'affecte jamais l'intake.
@@ -470,8 +505,24 @@ export const quickIntakeRouter = createTRPCRouter({
 
   complete: publicProcedure
     .input(z.object({ token: z.string() }))
-    .mutation(async ({ input }) => {
-      return quickIntakeService.complete(input.token);
+    .mutation(async ({ ctx, input }) => {
+      const saved = await ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      if (saved && (saved.status === "COMPLETED" || saved.status === "CONVERTED")) {
+        // A lost response/reopen must not regenerate a finished audit or another Deal.
+        const deal = await ctx.db.deal.findFirst({ where: { intakeId: saved.id }, select: { id: true } });
+        return { token: input.token, vector: saved.advertis_vector, classification: saved.classification,
+          diagnostic: access.unlocked ? saved.diagnostic : previewIntakeDiagnostic(saved.diagnostic),
+          strategyId: saved.convertedToId, dealId: deal?.id ?? null };
+      }
+      if (!saved) throw new TRPCError({ code: "NOT_FOUND", message: "Diagnostic introuvable." });
+      await claimIntakeForProcessing(ctx.db, saved.id);
+      const outcome = await runIntakeProcessing(ctx.db, saved.id, "complete", async () => ({
+        failed: null, result: await quickIntakeService.complete(input.token),
+      }), true);
+      if (!outcome) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "L'analyse n'a pas abouti. Vos informations sont conservées." });
+      const result = outcome.result;
+      return { ...result, diagnostic: access.unlocked ? result.diagnostic : previewIntakeDiagnostic(result.diagnostic) };
     }),
 
   /**
@@ -491,7 +542,7 @@ export const quickIntakeRouter = createTRPCRouter({
   getByToken: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ ctx, input }) => {
-      const intake = await ctx.db.quickIntake.findUnique({
+      let intake = await ctx.db.quickIntake.findUnique({
         where: { shareToken: input.token },
       });
       // Garde de sécurité F1 : un traitement de fond tué net (redeploy, OOM)
@@ -506,10 +557,13 @@ export const quickIntakeRouter = createTRPCRouter({
           data: { status: "FAILED", failureReason: "timeout" },
         });
         if (repaired.count > 0) {
-          return ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
+          intake = await ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
         }
       }
-      return intake;
+      if (!intake) return null;
+      const reportAccess = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      return { ...intake, diagnostic: reportAccess.unlocked ? intake.diagnostic : previewIntakeDiagnostic(intake.diagnostic),
+        reportAccess, documents: await listIntakeDocuments(input.token, ctx.db) };
     }),
 
   /**
@@ -534,12 +588,13 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { strategyId: intake.convertedToId, status: "PENDING" },
         orderBy: [{ impact: "desc" }, { confidence: "desc" }],
       });
-      // Free preview: 2 recos. Paid: all.
-      const recos = input.paid ? allRecos : allRecos.slice(0, 2);
+      // Keep accepting legacy `paid`, but only persisted rights authorize the full list.
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      const recos = access.unlocked ? allRecos : allRecos.slice(0, 2);
       return {
         recos,
         totalCount: allRecos.length,
-        isPreview: !input.paid,
+        isPreview: !access.unlocked,
       };
     }),
 
@@ -553,21 +608,27 @@ export const quickIntakeRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUnique({
         where: { shareToken: input.token },
-        select: { convertedToId: true },
+        select: { convertedToId: true, diagnostic: true },
       });
       if (!intake?.convertedToId) {
-        return { pillars: [] as Array<{ key: string; content: Record<string, unknown> }> };
+        return { pillars: [] as Array<{ key: string; content: Record<string, unknown>; totalFields: number; origins: Record<string, string> }> };
       }
       const rows = await ctx.db.pillar.findMany({
         where: { strategyId: intake.convertedToId, key: { in: [...ADVE_STORAGE_KEYS] } },
         select: { key: true, content: true },
       });
-      return {
-        pillars: rows.map((r) => ({
-          key: r.key,
-          content: (r.content as Record<string, unknown> | null) ?? {},
-        })),
-      };
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      return { pillars: rows.map(r => {
+        const entries = intakePillarFields((r.content as Record<string, unknown> | null) ?? {});
+        const visible = access.unlocked ? entries : entries.slice(0, 2);
+        const origins = intakeEvidenceEntries(intakeReportContent((r.content as Record<string, unknown> | null) ?? {}, r.key,
+          (intake.diagnostic as { reportEvidenceVersion?: number } | null)?.reportEvidenceVersion), r.key);
+        return { key: r.key, totalFields: entries.length,
+          content: Object.fromEntries(visible),
+          origins: Object.fromEntries(origins.filter(entry => visible.some(([key]) => key === entry.field))
+            .map(entry => [entry.field, entry.origin])) };
+
+      }) };
     }),
 
   /**
@@ -584,7 +645,10 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { shareToken: input.token },
         select: { convertedToId: true },
       });
-      if (!intake?.convertedToId) return { status: "PENDING" as const };
+      if (!intake?.convertedToId) return { status: "PENDING" as const, overton: null };
+      const { readOvertonPositioning } = await import("@/domain/overton-positioning");
+      const pillars = await ctx.db.pillar.findMany({ where: { strategyId: intake.convertedToId, key: { in: ["a", "d"] } }, select: { key: true, content: true } });
+      const overton = readOvertonPositioning(Object.fromEntries(pillars.map(p => [p.key, p.content])));
       try {
         const { scoreBrand } = await import("@/server/services/seshat/scoreur");
         const { ARENA_LABELS } = await import("@/domain/scoreur");
@@ -592,6 +656,7 @@ export const quickIntakeRouter = createTRPCRouter({
         const measured = verdict.arenas.filter((a) => a.epreuveCount > 0).length;
         return {
           status: "OK" as const,
+          overton,
           force: Math.round(verdict.force * 10) / 10,
           outOf: 200,
           tier: verdict.tier,
@@ -610,7 +675,7 @@ export const quickIntakeRouter = createTRPCRouter({
           cappedReason: verdict.cappedReason,
         };
       } catch {
-        return { status: "PENDING" as const };
+        return { status: "PENDING" as const, overton };
       }
     }),
 
@@ -655,10 +720,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
       const questions = targetPillar === "biz"
         ? getBusinessContextQuestions()
-        : await getAdaptiveQuestions(targetPillar, responses, {
+        : await withIntakeCostContext(intake.id, () => getAdaptiveQuestions(targetPillar, responses, {
             sector: intake.sector ?? undefined,
             positioning: intake.positioning ?? undefined,
-          });
+          }));
 
       const answeredCount = Object.keys(responses).length;
       const progress = answeredCount / allSteps.length;
@@ -723,7 +788,7 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   activateBrand: publicProcedure
-    .input(z.object({ token: z.string().min(1) }))
+    .input(z.object({ token: z.string().min(1), inferMissingFields: z.boolean().default(false) }))
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUnique({
         where: { shareToken: input.token },
@@ -739,13 +804,32 @@ export const quickIntakeRouter = createTRPCRouter({
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Intake non finalise" });
       }
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      if (!access.unlocked) throw new TRPCError({ code: "FORBIDDEN", message: "Le rapport doit être déverrouillé avant l’activation." });
 
       // Defense (ADR-0029): convertedToId can dangle after Strategy archive+purge
       // (cf. ADR-0028). If the pointer is null OR the referenced Strategy was
       // purged, re-materialize the temp strategy from intake data.
-      const tempStrategyExists = intake.convertedToId
-        ? Boolean(await ctx.db.strategy.findUnique({ where: { id: intake.convertedToId }, select: { id: true } }))
-        : false;
+      const tempStrategy = intake.convertedToId
+        ? await ctx.db.strategy.findUnique({ where: { id: intake.convertedToId },
+            select: { id: true, status: true, countryCode: true, currencyCode: true, businessContext: true } })
+        : null;
+      const tempStrategyExists = Boolean(tempStrategy);
+
+      // Initialize routing from the declared intake only on first activation.
+      // A replay must preserve market choices made later in the cockpit.
+      const market: { countryCode?: string; currencyCode?: string; businessContext?: Prisma.InputJsonValue } = {};
+      if (!tempStrategy || tempStrategy.status === "QUICK_INTAKE") {
+        const { lookupCountry } = await import("@/server/services/country-registry");
+        const countryInput = tempStrategy?.countryCode || intake.country;
+        const declaredCountry = countryInput ? await lookupCountry(countryInput) : null;
+        if (!tempStrategy?.countryCode && declaredCountry) market.countryCode = declaredCountry.code;
+        if (!tempStrategy?.currencyCode && declaredCountry) market.currencyCode = declaredCountry.currencyCode;
+        const previousContext = (tempStrategy?.businessContext as Record<string, unknown> | null) ?? {};
+        if (!("sector" in previousContext) && intake.sector) {
+          market.businessContext = { ...previousContext, sector: intake.sector } as Prisma.InputJsonValue;
+        }
+      }
 
       const email = intake.contactEmail.toLowerCase();
 
@@ -763,7 +847,9 @@ export const quickIntakeRouter = createTRPCRouter({
         },
       });
 
-      // Find or stub the prospect User (no password — claimed via auth.register).
+      // A founder owns this strategy without becoming an operator of every
+      // self-serve company. Existing agency memberships are never changed here.
+      // Passwordless users prove control through the existing emailed reset link.
       const stubUser = await ctx.db.user.upsert({
         where: { email },
         update: {},
@@ -771,14 +857,15 @@ export const quickIntakeRouter = createTRPCRouter({
           email,
           name: intake.contactName,
           role: "USER",
-          operatorId: operator.id,
         },
       });
       const alreadyClaimed = !!stubUser.hashedPassword;
 
-      // Find or create the Client (one Client per (operator, name) — idempotent).
+      // A matching company name is not proof of ownership. Replay can reuse
+      // only a client already attached to a strategy owned by this same user.
       const existingClient = await ctx.db.client.findFirst({
-        where: { name: intake.companyName, operatorId: operator.id },
+        where: { name: intake.companyName, operatorId: operator.id,
+          strategies: { some: { userId: stubUser.id } } },
       });
       const client = existingClient ?? await ctx.db.client.create({
         data: {
@@ -799,6 +886,7 @@ export const quickIntakeRouter = createTRPCRouter({
         strategy = await ctx.db.strategy.update({
           where: { id: intake.convertedToId },
           data: {
+            ...market,
             userId: stubUser.id,
             operatorId: operator.id,
             clientId: client.id,
@@ -810,6 +898,7 @@ export const quickIntakeRouter = createTRPCRouter({
       } else {
         strategy = await ctx.db.strategy.create({
           data: {
+            ...market,
             name: intake.companyName,
             description: `Activé self-serve depuis Quick Intake le ${new Date().toLocaleDateString("fr-FR")}`,
             userId: stubUser.id,
@@ -922,13 +1011,9 @@ export const quickIntakeRouter = createTRPCRouter({
         }).catch(() => undefined); // Non-fatal — l'activation prime.
       }
 
-      // ── PR-C (ADR-0035) — LLM inference of the 7 needsHuman ADVE fields ──
-      // Fire-and-forget: never block activation on a slow LLM call. The
-      // operator can refresh the cockpit pillar pages a few seconds after
-      // landing on them and see the inferred values populated. Failures are
-      // logged server-side; the operator just sees the original empty fields
-      // and can fill them manually as before.
-      void (async () => {
+      // Activation preserves the dossier without requiring model assistance.
+      // Only an explicit choice starts the existing non-blocking inference.
+      if (input.inferMissingFields) void (async () => {
         try {
           const { inferNeedsHumanFields } = await import("@/server/services/quick-intake/infer-needs-human-fields");
           const result = await inferNeedsHumanFields(intake.id);
@@ -978,9 +1063,9 @@ export const quickIntakeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const intake = await ctx.db.quickIntake.findUniqueOrThrow({
+      const intake = found(await ctx.db.quickIntake.findUnique({
         where: { id: input.intakeId },
-      });
+      }), INTAKE_NOT_FOUND);
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new Error("Intake must be completed before conversion");
       }
@@ -1244,7 +1329,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
       await claimIntakeForProcessing(ctx.db, intake.id);
 
-      void runIntakeProcessing(ctx.db, intake.id, input.token, "processShort", async () => {
+      void runIntakeProcessing(ctx.db, intake.id, "processShort", async () => {
         const extraction = await extractFromText(input.text, intake.companyName, intake.sector);
         if (extraction === null) return { failed: "llm_unavailable" as const };
         await mergeIntakeResponses(ctx.db, intake.id, extraction.responses);
@@ -1267,7 +1352,8 @@ export const quickIntakeRouter = createTRPCRouter({
     .input(z.object({
       token: z.string(),
       rawText: z.string().optional(),
-      websiteUrl: z.string().url().optional(),
+      prepareOnly: z.boolean().default(false),
+      websiteUrl: OptionalIntakeWebUrlSchema,
       files: z.array(z.object({
         name: z.string(),
         content: z.string(), // base64
@@ -1286,28 +1372,22 @@ export const quickIntakeRouter = createTRPCRouter({
       // Le site déclaré à l'étape contact (landing) reste la source par défaut :
       // le champ de la page ingest est pré-rempli côté UI, mais s'il revient
       // vide on ne DÉTRUIT pas la déclaration initiale — on la réutilise.
-      const effectiveWebsiteUrl = input.websiteUrl ?? intake.websiteUrl?.trim() ?? undefined;
+      const effectiveWebsiteUrl = OptionalIntakeWebUrlSchema.parse(input.websiteUrl ?? intake.websiteUrl ?? undefined);
 
-      // Persist source info FIRST — même si l'extraction échoue ensuite, rien
-      // de ce que l'utilisateur a fourni n'est perdu. `undefined` = champ non
-      // touché : on n'écrase JAMAIS une valeur déclarée par null.
-      const sourceNames = [
-        input.rawText ? "texte" : null,
-        effectiveWebsiteUrl ?? null,
-        ...input.files.map((f) => f.name),
-      ].filter(Boolean);
-
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: {
-          rawText: input.rawText ?? undefined,
-          websiteUrl: input.websiteUrl ?? undefined,
-          documentUrl: sourceNames.join(", "),
-        },
-      });
+      const documents = await retainIntakeDocuments(input.token, input.files, {
+        rawText: input.rawText ?? undefined, websiteUrl: effectiveWebsiteUrl,
+      }, ctx.db);
+      if (input.prepareOnly) return { status: "SAVED" as const, token: input.token, documents };
+      if (documents.some(document => document.original?.state !== "STORED")) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Un fichier reste à recevoir. Redéposez-le avant de lancer l’analyse." });
+      }
+      const effectiveRawText = input.rawText ?? intake.rawText ?? "";
+      if (!effectiveRawText.trim() && !effectiveWebsiteUrl && documents.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Ajoutez un texte, un site ou un fichier à analyser." });
+      }
 
       // Pré-flight LLM : providers texte down (clés absentes, crédits épuisés,
-      // circuit ouvert) → on n'entame ni scrape ni décodage, on route tout de
+      // circuit ouvert) → les sources sont reçues ; sans scrape ni extraction on route tout de
       // suite vers le questionnaire pré-rempli avec une raison explicite.
       // JAMAIS de bascule muette.
       if (!isTextLLMAvailable()) {
@@ -1316,13 +1396,13 @@ export const quickIntakeRouter = createTRPCRouter({
 
       await claimIntakeForProcessing(ctx.db, intake.id);
 
-      void runIntakeProcessing(ctx.db, intake.id, input.token, "processIngest", async () => {
+      void runIntakeProcessing(ctx.db, intake.id, "processIngest", async () => {
         // Collect all text sources
         const textParts: string[] = [];
 
         // 1. Raw text input
-        if (input.rawText) {
-          textParts.push(`[TEXTE FOURNI]\n${input.rawText}`);
+        if (effectiveRawText) {
+          textParts.push(`[TEXTE FOURNI]\n${effectiveRawText}`);
         }
 
         // 2. Scrape du site déclaré (SSRF-gardé) — bounded best-effort, never
@@ -1333,35 +1413,8 @@ export const quickIntakeRouter = createTRPCRouter({
           ? fetchUrlAsText(effectiveWebsiteUrl, { maxChars: 15_000 })
           : Promise.resolve(null);
 
-        // 3. Decode base64 files and extract text robustly (CPU-bound — runs
-        //    while the network calls above are in flight).
-        for (const f of input.files) {
-          try {
-            const buffer = Buffer.from(f.content, "base64");
-
-            if (f.type === "text/plain" || f.name.endsWith(".txt")) {
-              textParts.push(`[DOCUMENT: ${f.name}]\n${buffer.toString("utf-8")}`);
-            } else if (f.type === "application/pdf" || f.name.endsWith(".pdf")) {
-              const pdfParseRaw = await import("pdf-parse");
-              const pdfParse = (pdfParseRaw as any).default || pdfParseRaw;
-              const pdfData = await pdfParse(buffer);
-              const text = pdfData.text.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
-              if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
-            } else if (f.name.endsWith(".docx") || f.type.includes("wordprocessingml")) {
-              const mammoth = (await import("mammoth")).default;
-              const result = await mammoth.extractRawText({ buffer });
-              const text = result.value.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
-              if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
-            } else {
-              // Fallback for unknown text-like formats
-              const decoded = buffer.toString("utf-8");
-              const cleaned = decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim();
-              if (cleaned.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${cleaned}`);
-            }
-          } catch {
-            textParts.push(`[Fichier non lisible ou format non supporté: ${f.name}]`);
-          }
-        }
+        // Originals are already private and durable; reopening needs no re-upload.
+        textParts.push(...await readRetainedIntakeDocuments(input.token, ctx.db));
 
         // Await the concurrent network I/O kicked off above and append in a
         // stable order.
@@ -1403,12 +1456,14 @@ export const quickIntakeRouter = createTRPCRouter({
   processIngestPlus: publicProcedure
     .input(z.object({
       token: z.string(),
+      prepareOnly: z.boolean().default(false),
+      websiteUrl: OptionalIntakeWebUrlSchema,
       files: z.array(z.object({
         name: z.string(),
         content: z.string(),
         type: z.string(),
       })).max(5).optional(),
-      urls: z.array(z.string().url()).max(5).optional(),
+      urls: z.array(IntakeWebUrlSchema).max(5).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUnique({
@@ -1419,15 +1474,20 @@ export const quickIntakeRouter = createTRPCRouter({
         throw new Error("Intake already completed");
       }
 
-      // Persist source info FIRST (parité processIngest) — `undefined` = champ
-      // non touché, jamais d'écrasement d'une déclaration antérieure par null.
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: {
-          documentUrl: input.files?.map((f) => f.name).join(", ") ?? undefined,
-          websiteUrl: input.urls?.[0] ?? undefined,
-        },
-      });
+      const effectiveWebsiteUrl = OptionalIntakeWebUrlSchema.parse(input.websiteUrl ?? intake.websiteUrl ?? (input.prepareOnly ? undefined : input.urls?.[0]));
+      const effectiveSocialUrls = (input.urls ?? intake.socialLinksRaw?.split(/\r?\n/).filter(Boolean) ?? [])
+        .map(url => IntakeWebUrlSchema.parse(url));
+      const effectiveUrls = [...new Set([effectiveWebsiteUrl, ...effectiveSocialUrls].filter((url): url is string => Boolean(url)))];
+      const documents = await retainIntakeDocuments(input.token, input.files ?? [], {
+        websiteUrl: effectiveWebsiteUrl ?? undefined, socialLinksRaw: effectiveSocialUrls.join("\n"),
+      }, ctx.db);
+      if (input.prepareOnly) return { status: "SAVED" as const, token: input.token, documents };
+      if (documents.some(document => document.original?.state !== "STORED")) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Un fichier reste à recevoir. Redéposez-le avant de lancer l’analyse." });
+      }
+      if (documents.length === 0 && effectiveUrls.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Ajoutez un lien ou un fichier à analyser." });
+      }
 
       // Pré-flight LLM synchrone : dégradation honnête immédiate, rien réservé.
       if (!isTextLLMAvailable()) {
@@ -1440,30 +1500,17 @@ export const quickIntakeRouter = createTRPCRouter({
 
       await claimIntakeForProcessing(ctx.db, intake.id);
 
-      void runIntakeProcessing(ctx.db, intake.id, input.token, "processIngestPlus", async () => {
+      void runIntakeProcessing(ctx.db, intake.id, "processIngestPlus", async () => {
         const textParts: string[] = [];
+        if (intake.rawText) textParts.push(`[TEXTE FOURNI]\n${intake.rawText}`);
 
-        // Process files
-        if (input.files?.length) {
-          for (const f of input.files) {
-            try {
-              if (f.type === "text/plain") {
-                textParts.push(Buffer.from(f.content, "base64").toString("utf-8"));
-              } else {
-                const decoded = Buffer.from(f.content, "base64").toString("utf-8");
-                textParts.push(decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim());
-              }
-            } catch {
-              textParts.push(`[Fichier: ${f.name}]`);
-            }
-          }
-        }
+        textParts.push(...await readRetainedIntakeDocuments(input.token, ctx.db));
 
         // Fetch URLs CONCURRENTLY (bounded best-effort) — same canonical
         // web-fetch helper as processIngest.
-        if (input.urls?.length) {
+        if (effectiveUrls.length) {
           const fetched = await Promise.all(
-            input.urls.map(async (url) => {
+            effectiveUrls.map(async (url) => {
               const text = await fetchUrlAsText(url, { maxChars: 10_000 });
               return text ? `[Source: ${url}]\n${text}` : `[URL inaccessible: ${url}]`;
             }),
@@ -1499,7 +1546,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const intake = await ctx.db.quickIntake.findUniqueOrThrow({ where: { id: input.intakeId } });
+      const intake = found(await ctx.db.quickIntake.findUnique({ where: { id: input.intakeId } }), INTAKE_NOT_FOUND);
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Intake not yet completed" });
       }
@@ -1576,9 +1623,9 @@ export const quickIntakeRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertIntakeAccess(ctx.session.user.id, input.id);
-      return ctx.db.quickIntake.findUniqueOrThrow({
+      return found(await ctx.db.quickIntake.findUnique({
         where: { id: input.id },
-      });
+      }), INTAKE_NOT_FOUND);
     }),
 
   getAllQuestions: protectedProcedure
@@ -1597,9 +1644,9 @@ export const quickIntakeRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertIntakeAccess(ctx.session.user.id, input.id);
-      const intake = await ctx.db.quickIntake.findUniqueOrThrow({
+      const intake = found(await ctx.db.quickIntake.findUnique({
         where: { id: input.id },
-      });
+      }), INTAKE_NOT_FOUND);
 
       const biz = input.responses.biz ?? {};
       const bizModel = biz.biz_model ? extractKeyFromOption(biz.biz_model as string) : undefined;
@@ -1614,7 +1661,7 @@ export const quickIntakeRouter = createTRPCRouter({
       const updatedIntake = await ctx.db.quickIntake.update({
         where: { id: input.id },
         data: {
-          responses: input.responses as Prisma.InputJsonValue,
+          responses: { ...input.responses, ...((intake.responses as Record<string, unknown> | null)?._overton && !input.responses._overton ? { _overton: (intake.responses as Record<string, unknown>)._overton } : {}) } as Prisma.InputJsonValue,
           ...(bizModel !== undefined ? { businessModel: bizModel } : {}),
           ...(bizPositioning !== undefined ? { positioning: bizPositioning } : {}),
           ...(bizNature !== undefined ? { brandNature: bizNature } : {}),

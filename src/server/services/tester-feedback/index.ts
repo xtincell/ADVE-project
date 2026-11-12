@@ -73,20 +73,26 @@ export async function triageFeedback(input: TriageFeedbackInput) {
     where: { id: input.id },
     data: {
       status: input.status,
-      ...(resolving ? { resolvedBy: input.reviewedBy, resolvedAt: new Date() } : {}),
+      resolvedBy: resolving ? input.reviewedBy : null,
+      resolvedAt: resolving ? new Date() : null,
     },
   });
 }
 
-export async function listFeedback(args: { status?: FeedbackStatus; limit?: number }) {
+export async function listFeedback(args: { status?: FeedbackStatus; limit?: number; search?: string; cursor?: string | null }) {
+  const search = args.search?.trim();
   return db.feedback.findMany({
-    where: args.status ? { status: args.status } : {},
-    orderBy: { createdAt: "desc" },
-    take: args.limit ?? 200,
+    where: {
+      ...(args.status ? { status: args.status } : {}),
+      ...(search ? { OR: ["message", "email", "pageUrl", "id"].map(key => ({ [key]: { contains: search, mode: "insensitive" as const } })) } : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: args.limit ?? 50,
+    ...(args.cursor ? { cursor: { id: args.cursor }, skip: 1 } : {}),
   });
 }
 
 /** Nombre de remontées non traitées (badge inbox). */
 export async function unresolvedFeedbackCount(): Promise<number> {
-  return db.feedback.count({ where: { status: "NEW" } });
+  return db.feedback.count({ where: { status: { in: ["NEW", "TRIAGED"] } } });
 }

@@ -203,7 +203,7 @@ function RelList({ title, items, status, cols, span }: { title: string; items: u
 
 export function PillarEFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "e");
+  const st = makeStatusFor(certainty, "e", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.E as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;

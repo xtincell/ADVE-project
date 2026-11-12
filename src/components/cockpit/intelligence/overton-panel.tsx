@@ -45,11 +45,12 @@ function OvertonPanelSkeleton() {
 
 function OvertonPanelInner({ strategyId }: { strategyId: string }) {
   const [showPricing, setShowPricing] = useState(false);
-  const { data, isLoading } = trpc.cockpitDashboard.overtonSignal.useQuery(
+  const { data, isLoading, error, refetch } = trpc.cockpitDashboard.overtonSignal.useQuery(
     { strategyId },
     { enabled: !!strategyId },
   );
 
+  if (error) return <EmptyState icon={Radar} title="Le radar n’a pas pu être chargé" description="La lecture des données a échoué. Vous pouvez réessayer." action={{ label: "Réessayer", onClick: () => { void refetch(); } }} />;
   if (isLoading || !data) return <OvertonPanelSkeleton />;
 
   // Paid-tier gate (FR32) — server-enforced; render the upgrade CTA, not a blank.
@@ -70,7 +71,7 @@ function OvertonPanelInner({ strategyId }: { strategyId: string }) {
   }
 
   // The radar owns every connector-state branch (Story 7.3) — pass through.
-  return <OvertonRadar signal={data} instance="full" density="comfortable" />;
+  return <OvertonRadar signal={data} strategyPlan={data.strategyPlan} positioning={data.positioning} instance="full" density="comfortable" />;
 }
 
 export function OvertonPanel() {
@@ -117,7 +118,8 @@ export function OvertonTeaser() {
   // than a per-founder last-visit tracker (deferred — see RESIDUAL-DEBT).
   const liveEvidence = data.state === "LIVE" ? data.data : null;
   const topClaim = liveEvidence?.claimImitations?.[0] ?? null;
-  const hasNewActivity = !!topClaim;
+  const age = topClaim ? Date.now() - Date.parse(topClaim.observedAt) : NaN;
+  const hasNewActivity = Number.isFinite(age) && age >= 0 && age <= 7 * 24 * 60 * 60 * 1000;
 
   return (
     <Link
@@ -130,7 +132,7 @@ export function OvertonTeaser() {
           Nouveau
         </span>
       )}
-      <OvertonRadar signal={data} instance="teaser" density="comfortable" />
+      <OvertonRadar signal={data} strategyPlan={data.strategyPlan} instance="teaser" density="comfortable" />
     </Link>
   );
 }

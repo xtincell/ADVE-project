@@ -1,3 +1,5 @@
+import type { PortfolioReference, PortfolioLifecycle } from "@/domain/portfolio-reference";
+import type { SourceReceipt } from "@/domain/source-certainty";
 import { ADVE_STORAGE_KEYS, type BrandTier } from "@/domain";
 
 /**
@@ -19,6 +21,7 @@ import { ADVE_STORAGE_KEYS, type BrandTier } from "@/domain";
  */
 
 import type { PillarKey } from "@/lib/types/advertis-vector";
+import type { CreateBrandAssetInput } from "@/server/services/brand-vault/engine";
 
 // ── Phase enum ────────────────────────────────────────────────────────
 
@@ -55,6 +58,8 @@ export type Intent =
       kind: "FILL_ADVE";
       phase: StrategyLifecyclePhase;
       strategyId: string;
+      /** Optional creative previews; public diagnostics explicitly leave them off. */
+      prepareDeliverables?: boolean;
       sources?: {
         responses?: Record<string, Record<string, unknown>>;
         extractedValues?: Record<string, Record<string, unknown>>;
@@ -99,6 +104,7 @@ export type Intent =
       operatorId?: string;
       op:
         | { type: "SELECT"; actionId: string; selected: boolean }
+        | { type: "PREFERENCE"; actionId: string; preference: "FAVORITE" | "NEUTRAL" | "REJECTED" }
         | { type: "TIMING"; actionId: string; timingStart: string | null; timingEnd?: string | null }
         | { type: "AUTOSCHEDULE"; startDate?: string; cadenceDays?: number; onlyUnscheduled?: boolean };
     }
@@ -141,12 +147,15 @@ export type Intent =
       kind: "INDEX_BRAND_CONTEXT";
       strategyId: string;
       scope: "INTAKE_ONLY" | "FULL";
+      prepareEmbeddings?: boolean;
     }
   // ── Seshat single-source indexing (operator upload → BRAND_SOURCE chunks) ──
   | {
       kind: "INDEX_BRAND_SOURCE";
       strategyId: string;
       sourceId: string;
+      /** Explicit deterministic reconciliation can skip vector preparation. */
+      prepareEmbeddings?: boolean;
     }
   // ── Seshat market study ingestion (ADR-0037 PR-I) ──────────────────
   | {
@@ -292,7 +301,11 @@ export type Intent =
   | {
       kind: "PTAH_MATERIALIZE_BRIEF";
       strategyId: string;
+      resumeTaskId?: string;
       operatorId: string;
+      campaignId?: string | null;
+      briefId?: string | null;
+      sourceBrandAssetId?: string | null;
       sourceIntentId: string;
       brief: {
         briefText: string;
@@ -344,8 +357,32 @@ export type Intent =
       campaignId?: string;
       /** Override le manipulationMode hérité de Strategy.manipulationMix.primary. */
       overrideManipulationMode?: "peddler" | "dealer" | "facilitator" | "entertainer";
+      pins?: import("@/domain/production-sources").ProductionPin[];
+      calendarBrief?:{assetId:string;version:number};
+      calendarPreparation?:import("@/domain/calendar-production").CalendarPreparation;
+      previewIntentId?: string;
+      creativeProposalId?: string;
       /** Mode preview : retourne le DAG résolu + estimation coût sans dispatcher. */
       previewOnly?: boolean;
+    }
+  // ADR-0208 — already catalogued vault commands, same engine as manual UI.
+  | {
+      kind: "SELECT_BRAND_ASSET"; strategyId: string;
+      batchId: string; selectedAssetId: string; selectedById: string;
+      selectedReason?: string; promoteToActive?: boolean;
+    }
+  | {
+      kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE"; strategyId: string;
+      brandAssetId: string; promotedById: string; force?: boolean;
+    }
+  | {
+      kind: "SUPERSEDE_BRAND_ASSET"; strategyId: string;
+      oldAssetId: string; supersededById: string; reason?: string;
+      newAssetInput: Omit<CreateBrandAssetInput, "operatorId"> & { operatorId?: string | null };
+    }
+  | {
+      kind: "ARCHIVE_BRAND_ASSET"; strategyId: string;
+      brandAssetId: string; archivedById: string; reason?: string;
     }
   // ── Phase 14 — Imhotep full activation (ADR-0019, supersedes ADR-0017). ──
   // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
@@ -499,6 +536,8 @@ export type Intent =
       overrideLocked?: boolean;
       /** Optimistic concurrency. Pillar.version (Pillar.updatedAt fallback). */
       expectedVersion?: number;
+      /** Versions des documents effectivement lus, revérifiées dans la transaction d'écriture. */
+      sourceReceipts?: SourceReceipt[];
       /**
        * L'amendement vient-il d'un AGENT et non d'un humain ?
        *
@@ -527,6 +566,7 @@ export type Intent =
       extraction: unknown;
       sourceFilename?: string;
       sourceDataSourceId?: string;
+      sourceReceipt?: { sourceId: string; contentHash: string };
       /**
        * C3 (audit 2026-07-22) — mode d'extraction qui a produit les champs.
        * STRUCTURED = parseur déterministe → provenance SOURCE (fait observé) ;
@@ -616,6 +656,10 @@ export type Intent =
       imageUrl?: string | null;
       scheduleAt?: string | null;
       brandActionId?: string | null;
+      scheduledVersion?: string;
+      publicationPackageId?: string;
+      publicationPackageHash?: string;
+      publicationTarget?: { connectionId: string; accountId: string };
       /** Brief créatif intégré (direction pour illustrer). */
       brief?: string | null;
       /** Copy du visuel (texte DANS l'image). */
@@ -630,9 +674,15 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       /** Source agnostique de la remontée (n'importe quelle marque, n'importe quel canal). */
-      sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL";
+      sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL" | "COLLECTOR";
       /** Étiquette libre lisible (ex. "quizz.spawt.online"). */
       sourceLabel?: string | null;
+      /** Immutable producer receipt: all three fields together, or legacy unknown. */
+      observationId?: string;
+      sourceVersion?: string;
+      observedAt?: string;
+      /** Empreinte SHA-256 déclarée par le producteur (reçu DataCollector vérifié avant émission). */
+      sourceDigest?: string;
       /** Cible AARRR : requis pour écrire une CampaignAARRMetric. */
       campaignId?: string | null;
       /** Cible KPI d'activité de mission (garde de portée sur strategyId). */
@@ -648,7 +698,32 @@ export type Intent =
         target?: number | null;
         /** MissionActivity.id à mettre à jour (kpiActual = value). */
         kpiActivityId?: string | null;
+        /** Provenance de la cellule (source, objet observé, unité, date, note). */
+        source?: string; subject?: string; unit?: string; observedAt?: string; note?: string;
       }>;
+      /** Mesures déclarées sans valeur : conservées comme telles, jamais routées ni lues comme 0. */
+      unobserved?: Array<{
+        metric: string; state: "NOT_PUBLISHED" | "FAILED" | "NOT_REQUESTED"; errorCode?: string;
+        source?: string; subject?: string; unit?: string; observedAt?: string; note?: string;
+      }>;
+    }
+  // ── ADR-0244 — bilan de campagne arrêté dans La Barre (LB4) ──────────
+  // Émis par la route `/la-barre/bilan` après relecture de la version dans la
+  // base enregistrée de La Barre et recalcul de son empreinte. Écrit une
+  // édition PROPOSED dans les sources de la marque, jamais un pilier.
+  | {
+      kind: "INGEST_BARRE_CAMPAIGN_REVIEW";
+      strategyId: string;
+      /** Personne connectée qui transmet (session relue, pas l'acteur déclaré par La Barre). */
+      operatorId: string;
+      /** Instance La Barre raccordée (`barreBinding().instance`). */
+      instance: string;
+      /** ETag de la base La Barre relue, quand l'hôte le fournit. */
+      sourceRevision: string | null;
+      /** Version figée telle que La Barre l'a enregistrée ; re-validée par le handler. */
+      review: import("@/domain/barre-campaign-review").BarreCampaignReview;
+      /** Marques du bilan sans dossier de marque lisible par cette personne. */
+      unlinkedBrands: string[];
     }
   // ── ADR-0134 — mesure communautaire réelle (chaîne community→devotion→cult) ──
   // Émis par le cron social-sync quotidien (emitIntentTyped, caller
@@ -820,21 +895,27 @@ export type Intent =
       clusterTag?: string | null;
       /** Optional link to existing Strategy (operationnel REGIONAL_BRAND/SKU). */
       attachStrategyId?: string | null;
+      sourceRefs?: PortfolioReference[];
+      lifecycle?: PortfolioLifecycle;
     }
   | {
       kind: "OPERATOR_UPDATE_BRAND_NODE";
       strategyId: string; // audit pivot
       operatorId: string;
       nodeId: string;
+      /** Required when replacing sourceRefs, countryCode or clientId; guards the read version. */
+      expectedUpdatedAt?: string;
       patches: {
         name?: string;
         slug?: string;
         clusterTag?: string | null;
         countryCode?: string | null;
+        clientId?: string | null;
         nodeRole?: string[];
-        lifecycle?: string;
+        lifecycle?: PortfolioLifecycle;
         inheritanceLocked?: boolean;
         pillarOverrides?: unknown;
+        sourceRefs?: PortfolioReference[];
       };
     }
   | {
@@ -857,6 +938,8 @@ export type Intent =
       strategyId: string; // the strategy being attached (pivot natural here)
       operatorId: string;
       nodeId: string;
+      expectedStrategyId: string | null;
+      expectedUpdatedAt: string;
     }
   | {
       kind: "OPERATOR_TAG_NODE_ROLE";
@@ -886,6 +969,8 @@ export type Intent =
       strategyId: string; // pivot
       operatorId: string;
       deliverableId: string;
+      /** Version lue (updatedAt ISO). Requise pour remplacer contenu, visuel ou délégation. */
+      expectedUpdatedAt?: string | null;
       patches: {
         status?: string;
         dueDate?: string | null;
@@ -916,6 +1001,8 @@ export type Intent =
   // ── Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS) ────────────────
   | {
       kind: "OPERATOR_CREATE_CHANGE_REQUEST";
+      /** Explicit retry identity persisted in CampaignChangeRequest.id. */
+      requestId?: string;
       strategyId: string; // audit pivot
       operatorId: string;
       campaignDeliverableId: string;
@@ -929,6 +1016,8 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       ticketId: string;
+      /** Version lue (updatedAt ISO). Requise pour remplacer besoin, impact ou responsable. */
+      expectedUpdatedAt?: string | null;
       patches: {
         status?: "PENDING" | "IN_PROGRESS" | "RESOLVED" | "REJECTED" | "ESCALATED";
         assignedToUserId?: string | null;
@@ -1348,9 +1437,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return ["i"];
     case "SYNTHESIZE_S":
       return ["s"];
-    // B2 — édite la PROJECTION BrandAction (selected/timing/status), pas le
-    // blob I-pillar (staleness gérée par la resync du materializer, pas ici).
+    // Selection is versioned in I; timing alone changes the execution projection.
     case "SET_BRAND_ACTION_STATUS":
+      return intent.op.type === "SELECT" || intent.op.type === "PREFERENCE" ? ["i"] : [];
     // Phase 24 (ADR-0106) — Intention : aval de l'ADVE, ne mute aucun pilier.
     case "CAPTURE_INTENTION":
     case "GENERATE_BRIEF_FROM_INTENTION":
@@ -1369,6 +1458,10 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "RUN_ORACLE_SEQUENCE":
     case "PROMOTE_SEQUENCE_LIFECYCLE":
     case "UPDATE_MODEL_POLICY":
+    case "SELECT_BRAND_ASSET":
+    case "PROMOTE_BRAND_ASSET_TO_ACTIVE":
+    case "SUPERSEDE_BRAND_ASSET":
+    case "ARCHIVE_BRAND_ASSET":
     case "PTAH_MATERIALIZE_BRIEF":
     case "PTAH_RECONCILE_TASK":
     case "PTAH_REGENERATE_FADING_ASSET":
@@ -1425,6 +1518,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // ADR-0146 — ingestion métrique externe : écrit CampaignAARRMetric /
     // MissionActivity.kpiActual / Signal, jamais un pilier ADVE.
     case "INGEST_EXTERNAL_METRIC":
+    // ADR-0244 — bilan La Barre : une édition documentaire PROPOSED, jamais un pilier.
+    case "INGEST_BARRE_CAMPAIGN_REVIEW":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +
@@ -1827,6 +1922,11 @@ export async function emitIntent(
     }
   };
 
+  if (intent.kind === "PTAH_MATERIALIZE_BRIEF") {
+    const { conditionVisualIntent } = await import("@/server/services/creative-direction/material");
+    intent = await conditionVisualIntent(intent);
+  }
+
   // ── Q1 fail-closed — émission hash-chaînée AVANT toute délibération ──
   let emissionId: string;
   try {
@@ -1975,7 +2075,7 @@ export async function emitIntent(
   // Dispatch to Artemis
   let result: IntentResult;
   try {
-    result = await execute(intent);
+    result = await execute(intent, { intentId: emissionId });
   } catch (err) {
     result = {
       intentKind: intent.kind,

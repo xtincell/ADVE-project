@@ -72,6 +72,7 @@ export async function ingestBrandBook(intent: IngestIntent): Promise<HandlerResu
     extraction: parsed.data,
     sourceFilename,
     sourceDataSourceId,
+    sourceReceipt: intent.sourceReceipt,
     extractionMode,
   });
   const nothing = !result.wrote;

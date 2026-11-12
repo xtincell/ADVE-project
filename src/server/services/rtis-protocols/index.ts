@@ -18,7 +18,7 @@ import { executeProtocoleRisk, type ProtocoleRiskResult } from "./risk";
 import { executeProtocoleTrack, type ProtocoleTrackResult } from "./track";
 import { executeProtocoleInnovation, type ProtocoleInnovationResult } from "./innovation";
 import { executeProtocoleStrategy, type ProtocoleStrategyResult } from "./strategy";
-import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { writePillarAndScore, withPillarTransaction } from "@/server/services/pillar-gateway";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 
 export { executeProtocoleRisk, executeProtocoleTrack, executeProtocoleInnovation, executeProtocoleStrategy };
@@ -49,7 +49,11 @@ async function persistViaGateway(
   const writeRes = await writePillarAndScore({
     strategyId,
     pillarKey: result.pillarKey as PillarKey,
-    operation: { type: "MERGE_DEEP", patch: result.content },
+    // Each returned field is the current derived snapshot, not an additive
+    // intake. Keep absent fields and human protections in the shared gateway;
+    // archive the previous lists instead of appending obsolete hypotheses.
+    operation: { type: "SET_FIELDS", fields: Object.entries(result.content)
+      .filter(([, value]) => value !== undefined).map(([path, value]) => ({ path, value })) },
     author: {
       system: protocolName as "PROTOCOLE_R" | "PROTOCOLE_T" | "PROTOCOLE_I" | "PROTOCOLE_S",
       reason: `Cascade RTIS — protocole ${result.pillarKey.toUpperCase()}`,
@@ -103,13 +107,18 @@ export async function executeRTISCascade(
     if (!w.success && w.error) errors.push(`I (gateway): ${w.error}`);
   }
 
-  // S — puise dans ADVE + R + T + I
-  const sResult = await executeProtocoleStrategy(strategyId);
-  results.push(sResult);
-  if (sResult.error) errors.push(`S: ${sResult.error}`);
-  else {
-    const w = await persistViaGateway(strategyId, sResult);
-    if (!w.success && w.error) errors.push(`S (gateway): ${w.error}`);
+  // S is recalculated and replaced under the same lock/snapshot as manual S.
+  // The existing strict protocol gate remains; a partial plan can still fail it.
+  try {
+    const { recalculateSynthesisInTransaction } = await import("@/server/services/mestor/rtis-cascade");
+    const result = await withPillarTransaction(strategyId,
+      (tx, write) => recalculateSynthesisInTransaction(strategyId, tx, write,
+        { writeOptions: { strictSchemaValidation: true } }));
+    results.push({ ...result.calculated, content: result.persisted.newContent });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    results.push({ pillarKey: "s", content: {}, confidence: 0, selectedFromICount: 0, error });
+    errors.push(`S: ${error}`);
   }
 
   return { results, errors };

@@ -1,33 +1,61 @@
 # DESIGN-TOKEN-MAP — Inventaire exhaustif tokens (auto-régénéré)
 
-> **Auto-régénéré** par `scripts/generate-token-map.ts` (2026-04-30).
+> **Auto-régénéré** par `scripts/generate-token-map.ts` (2026-10-07).
 > Source runtime : `src/styles/tokens/*.css`. Cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) §5.
 
-## Tier — reference (19)
+## Tier — reference (47)
 
 | Token | Valeur |
 |---|---|
-| `--ref-ink-0` | `oklch(0.08 0.005 60)` |
-| `--ref-ink-1` | `oklch(0.11 0.005 60)` |
-| `--ref-ink-2` | `oklch(0.14 0.005 60)` |
-| `--ref-ink-3` | `oklch(0.17 0.005 60)` |
-| `--ref-ink-line` | `oklch(0.21 0.005 60)` |
-| `--ref-ink-line-muted` | `oklch(0.16 0.005 60)` |
-| `--ref-mute-2` | `oklch(0.31 0.005 60)` |
-| `--ref-mute` | `oklch(0.45 0.005 60)` |
-| `--ref-bone-3` | `oklch(0.81 0.025 80)` |
-| `--ref-bone-2` | `oklch(0.91 0.020 80)` |
-| `--ref-bone` | `oklch(0.95 0.015 80)` |
-| `--ref-rouge` | `oklch(0.62 0.22 25)` |
-| `--ref-rouge-2` | `oklch(0.68 0.22 25)` |
-| `--ref-rouge-deep` | `oklch(0.50 0.20 25)` |
-| `--ref-ember` | `oklch(0.72 0.20 40)` |
-| `--ref-green` | `oklch(0.72 0.18 145)` |
-| `--ref-amber` | `oklch(0.78 0.16 80)` |
-| `--ref-blue` | `oklch(0.68 0.16 240)` |
-| `--ref-gold` | `oklch(0.74 0.14 80)` |
+| `--up-red` | `#e56458` |
+| `--up-red-hover` | `#ef7d71` |
+| `--up-red-active` | `#c8473c` |
+| `--up-red-ember` | `#ff6b3d` |
+| `--up-gold` | `#facc15` |
+| `--up-gold-deep` | `#d4a24c` |
+| `--up-ink-0` | `#0a0a0a` |
+| `--up-ink-1` | `#0d0d0d` |
+| `--up-ink-2` | `#151515` |
+| `--up-ink-3` | `#1f1f1f` |
+| `--up-ink-4` | `#2e2e2e` |
+| `--up-line` | `#262626` |
+| `--up-line-soft` | `#1a1a1a` |
+| `--up-white` | `#ffffff` |
+| `--up-bone` | `#f5f4f1` |
+| `--up-bone-2` | `#ece9e3` |
+| `--up-slate-900` | `#141414` |
+| `--up-slate-700` | `#3a3a3a` |
+| `--up-slate-500` | `#6b6b6b` |
+| `--up-slate-400` | `#9a9a9a` |
+| `--up-slate-300` | `#c9c3b6` |
+| `--up-slate-200` | `#e8e2d6` |
+| `--up-green` | `#10b981` |
+| `--up-blue` | `#3b82f6` |
+| `--up-violet` | `#8b5cf6` |
+| `--up-orange` | `#f59e0b` |
+| `--ref-ink-0` | `var(--up-ink-1)` |
+| `--ref-ink-1` | `var(--up-ink-2)` |
+| `--ref-ink-2` | `var(--up-ink-3)` |
+| `--ref-ink-3` | `var(--up-ink-4)` |
+| `--ref-ink-line` | `var(--up-line)` |
+| `--ref-ink-line-muted` | `var(--up-line-soft)` |
+| `--ref-mute-2` | `var(--up-slate-700)` |
+| `--ref-mute` | `var(--up-slate-500)` |
+| `--ref-bone-3` | `var(--up-slate-300)` |
+| `--ref-bone-2` | `var(--up-slate-200)` |
+| `--ref-bone` | `var(--up-bone)` |
+| `--ref-rouge` | `var(--up-red)` |
+| `--ref-rouge-2` | `var(--up-red-hover)` |
+| `--ref-rouge-deep` | `var(--up-red-active)` |
+| `--ref-ember` | `var(--up-red-ember)` |
+| `--ref-green` | `var(--up-green)` |
+| `--ref-amber` | `var(--up-orange)` |
+| `--ref-blue` | `var(--up-blue)` |
+| `--ref-violet` | `var(--up-violet)` |
+| `--ref-gold` | `var(--up-gold)` |
+| `--ref-gold-deep` | `var(--up-gold-deep)` |
 
-## Tier — system (36)
+## Tier — system (40)
 
 | Token | Valeur |
 |---|---|
@@ -35,6 +63,8 @@
 | `--color-surface-raised` | `var(--ref-ink-1)` |
 | `--color-surface-elevated` | `var(--ref-ink-2)` |
 | `--color-surface-overlay` | `var(--ref-ink-3)` |
+| `--color-media-light` | `var(--ref-bone)` |
+| `--color-media-dark` | `var(--ref-ink-0)` |
 | `--color-foreground` | `var(--ref-bone)` |
 | `--color-foreground-secondary` | `var(--ref-bone-3)` |
 | `--color-foreground-muted` | `var(--ref-mute)` |
@@ -45,9 +75,11 @@
 | `--color-accent` | `var(--ref-rouge)` |
 | `--color-accent-hover` | `var(--ref-rouge-2)` |
 | `--color-accent-active` | `var(--ref-rouge-deep)` |
-| `--color-accent-foreground` | `var(--ref-bone)` |
+| `--color-accent-foreground` | `var(--up-white)` |
 | `--color-accent-subtle` | `color-mix(in oklab, var(--ref-rouge) 15%, transparent)` |
 | `--color-accent-secondary` | `var(--ref-ember)` |
+| `--color-level` | `var(--ref-gold)` |
+| `--color-level-subtle` | `color-mix(in oklab, var(--ref-gold) 15%, transparent)` |
 | `--color-success` | `var(--ref-green)` |
 | `--color-warning` | `var(--ref-amber)` |
 | `--color-error` | `var(--ref-rouge)` |
@@ -57,18 +89,18 @@
 | `--focus-ring-offset` | `2px` |
 | `--focus-ring-style` | `solid` |
 | `--color-background` | `var(--ref-bone)` |
-| `--color-surface-raised` | `oklch(0.98 0.005 80)` |
+| `--color-surface-raised` | `var(--up-white)` |
 | `--color-surface-elevated` | `var(--ref-bone-2)` |
-| `--color-surface-overlay` | `var(--ref-ink-0)` |
-| `--color-foreground` | `var(--ref-ink-0)` |
-| `--color-foreground-secondary` | `var(--ref-mute-2)` |
+| `--color-surface-overlay` | `var(--up-white)` |
+| `--color-foreground` | `var(--up-slate-900)` |
+| `--color-foreground-secondary` | `var(--up-slate-700)` |
 | `--color-foreground-muted` | `var(--ref-mute)` |
 | `--color-foreground-inverse` | `var(--ref-bone)` |
-| `--color-border` | `color-mix(in oklab, var(--ref-ink-0) 14%, transparent)` |
-| `--color-border-subtle` | `color-mix(in oklab, var(--ref-ink-0) 8%, transparent)` |
-| `--color-border-strong` | `color-mix(in oklab, var(--ref-ink-0) 30%, transparent)` |
+| `--color-border` | `color-mix(in oklab, var(--up-slate-900) 14%, transparent)` |
+| `--color-border-subtle` | `color-mix(in oklab, var(--up-slate-900) 8%, transparent)` |
+| `--color-border-strong` | `color-mix(in oklab, var(--up-slate-900) 30%, transparent)` |
 
-## Tier — component (119)
+## Tier — component (121)
 
 | Token | Valeur |
 |---|---|
@@ -104,6 +136,8 @@
 | `--card-shadow` | `var(--shadow-sm)` |
 | `--card-shadow-hover` | `var(--shadow-md)` |
 | `--card-radius` | `var(--radius-lg)` |
+| `--asset-preview-bg-light` | `var(--color-media-light)` |
+| `--asset-preview-bg-dark` | `var(--color-media-dark)` |
 | `--input-bg` | `var(--color-surface-raised)` |
 | `--input-bg-disabled` | `var(--color-surface-elevated)` |
 | `--input-border` | `var(--color-border)` |
@@ -220,7 +254,7 @@
 | `--classification-culte` | `var(--ref-rouge)` |
 | `--classification-icone` | `var(--ref-gold)` |
 
-## Tier — animations (21)
+## Tier — animations (24)
 
 | Token | Valeur |
 |---|---|
@@ -245,3 +279,6 @@
 | `--ease-accelerate` | `cubic-bezier(0.4, 0, 1, 1)` |
 | `--ease-default` | `var(--ease-in-out)` |
 | `--ease-bounce` | `var(--ease-spring)` |
+| `--animate-modal-in` | `scale-in var(--motion-base) var(--ease-spring) both` |
+| `--animate-toast-in` | `slide-down var(--motion-medium) var(--ease-out) both` |
+| `--animate-rise-in` | `slide-up var(--motion-slow) var(--ease-out) both` |

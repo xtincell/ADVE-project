@@ -2,12 +2,25 @@
 
 import type { PropositionValeurSection } from "@/server/services/strategy-presentation/types";
 import { MetricCard } from "../shared/metric-card";
+import { unitEconomicsMetricRows } from "@/domain/unit-economics";
+import { DataTable } from "../shared/data-table";
 
 interface Props { data: PropositionValeurSection }
 
 export function PropositionValeur({ data }: Props) {
   return (
     <div className="space-y-6">
+      {(data.valueExchanges?.length ?? 0) > 0 && (
+        <div>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Échanges de valeur par acteur</h3>
+          <p className="mb-3 text-xs text-foreground-muted">Ces rôles et échanges décrivent le modèle ; ils ne prouvent pas un contrat signé ou un client acquis. Un acteur peut cumuler plusieurs rôles.</p>
+          <DataTable headers={["Acteur et rôles", "Apport à la marque", "Contrepartie", "Coûts pour l’acteur", "Conditions de participation"]}
+            rows={(data.valueExchanges ?? []).map(e => [
+              [e.actor, e.actorRoles.join(" · "), e.productNames.join(" · ")].filter(Boolean).join(" — "),
+              e.valueToBrand.join(" · "), e.valueToActor.join(" · "), e.actorCosts.join(" · "), e.dependencyConditions.join(" · "),
+            ])} />
+        </div>
+      )}
       {data.pricing && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Stratégie de prix</h3>
@@ -23,7 +36,7 @@ export function PropositionValeur({ data }: Props) {
 
       {data.proofPoints.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Preuves de valeur</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Éléments de valeur déclarés</h3>
           <ul className="space-y-1.5">
             {data.proofPoints.map((p, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
@@ -37,7 +50,7 @@ export function PropositionValeur({ data }: Props) {
 
       {data.guarantees.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Garanties</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Promesses d’expérience</h3>
           <div className="flex flex-wrap gap-2">
             {data.guarantees.map((g, i) => (
               <span key={i} className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">{g}</span>
@@ -50,10 +63,9 @@ export function PropositionValeur({ data }: Props) {
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Unit Economics</h3>
           <div className="grid gap-4 sm:grid-cols-3">
-            <MetricCard label="CAC" value={data.unitEconomics.cac != null ? `${data.unitEconomics.cac.toLocaleString()} FCFA` : "—"} />
-            <MetricCard label="LTV" value={data.unitEconomics.ltv != null ? `${data.unitEconomics.ltv.toLocaleString()} FCFA` : "—"} />
-            <MetricCard label="LTV/CAC" value={data.unitEconomics.ltvCacRatio != null ? `${data.unitEconomics.ltvCacRatio.toFixed(1)}x` : "—"} />
+            {unitEconomicsMetricRows(data.unitEconomics).filter(r => ["cac", "ltv", "ltvCacRatio"].includes(r.key)).map(r => <MetricCard key={r.key} label={r.label} value={r.value} />)}
           </div>
+          {data.unitEconomics.commentaire ? <p className="mt-2 whitespace-pre-line text-xs text-foreground-muted">{data.unitEconomics.commentaire}</p> : null}
         </div>
       )}
 

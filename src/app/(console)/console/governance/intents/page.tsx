@@ -8,10 +8,13 @@
  * intent UI (Tier 3.8 of the residual debt).
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { Modal } from "@/components/shared/modal";
+import { Button } from "@/components/primitives/button";
+import { Textarea } from "@/components/primitives/textarea";
 import {
   Activity,
   AlertCircle,
@@ -40,6 +43,9 @@ export default function IntentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [kindFilter, setKindFilter] = useState<string>("");
   const [sinceDays, setSinceDays] = useState<number>(7);
+  const [compensationTarget, setCompensationTarget] = useState<{ id: string; kind: string } | null>(null);
+  const [compensationReason, setCompensationReason] = useState("");
+  const [compensationNotice, setCompensationNotice] = useState<string | null>(null);
 
   const list = trpc.governance.listIntents.useQuery(
     {
@@ -54,17 +60,17 @@ export default function IntentsPage() {
     onSuccess: (data) => {
       void list.refetch();
       void stats.refetch();
-      // Honnêteté (audit adversarial 2026-07-22) : ne JAMAIS laisser croire à une
-      // restauration quand seul un enregistrement d'audit a eu lieu. Les compensateurs
-      // de palier (DEMOTE_*) s'exécutent vraiment (executed:true) ; les ROLLBACK_*/
-      // DISCARD_*/REVERT_* n'ont pas encore de handler de restauration → audit-only.
-      if (data && "executed" in data && !data.executed) {
-        window.alert(
-          `« ${data.reverseKind} » enregistré EN AUDIT UNIQUEMENT — la restauration réelle de ce type n'est pas encore câblée : RIEN n'a été restauré (le journal conserve la trace). Cf. RESIDUAL-DEBT.`,
-        );
-      }
+      setCompensationTarget(null);
+      setCompensationReason("");
+      // Le reçu serveur distingue un handler exécuté d'une trace sans restauration.
+      setCompensationNotice(data.executed
+        ? `« ${data.reverseKind} » traité. Le résultat est conservé dans le journal ; un effet déjà enregistré n'est pas rejoué.`
+        : `« ${data.reverseKind} » enregistré EN AUDIT UNIQUEMENT : RIEN n'a été restauré. Ce type ne dispose pas encore d'un traitement de restauration.`);
     },
   });
+  const closeCompensation = useCallback(() => {
+    if (!compensate.isPending) setCompensationTarget(null);
+  }, [compensate.isPending]);
 
   const visibleItems = useMemo(() => {
     if (!list.data) return [];
@@ -77,12 +83,11 @@ export default function IntentsPage() {
     );
   }, [list.data, filter]);
 
-  const handleCompensate = async (intentId: string, kind: string) => {
-    const reason = window.prompt(
-      `Compensate ${kind}?\nMotif (visible dans l'audit trail) :`,
-    );
-    if (!reason || reason.trim().length < 3) return;
-    compensate.mutate({ originalIntentId: intentId, reason: reason.trim() });
+  const handleCompensate = (intentId: string, kind: string) => {
+    compensate.reset();
+    setCompensationNotice(null);
+    setCompensationReason("");
+    setCompensationTarget({ id: intentId, kind });
   };
 
   if (list.isLoading) return <SkeletonPage />;
@@ -93,6 +98,32 @@ export default function IntentsPage() {
         title="Intents"
         description="Audit trail IntentEmission — explore, compensate, diagnose."
       />
+      {compensationNotice && (
+        <p role="status" className="rounded-lg border border-border bg-surface-raised p-4 text-sm text-foreground">
+          {compensationNotice}
+        </p>
+      )}
+      <Modal open={compensationTarget !== null} onClose={closeCompensation} title="Annuler cette action" size="sm" dismissOnBackdrop={!compensate.isPending}>
+        <form onSubmit={(event) => {
+          event.preventDefault();
+          if (!compensationTarget || compensationReason.trim().length < 3 || compensate.isPending) return;
+          compensate.mutate({ originalIntentId: compensationTarget.id, reason: compensationReason.trim() });
+        }} className="space-y-4">
+          <p className="text-sm text-foreground-secondary">
+            L’action inverse sera tracée. Un conflit ou un historique insuffisant entraîne un refus explicite.
+          </p>
+          <p className="break-all font-mono text-xs text-foreground-muted">{compensationTarget?.kind}</p>
+          <label className="block space-y-2 text-sm text-foreground">
+            <span>Motif visible dans le journal</span>
+            <Textarea value={compensationReason} onChange={(event) => setCompensationReason(event.target.value)} disabled={compensate.isPending} minLength={3} required />
+          </label>
+          {compensate.error && <p role="alert" className="text-sm text-error">{compensate.error.message}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={closeCompensation} disabled={compensate.isPending}>Retour</Button>
+            <Button type="submit" loading={compensate.isPending} disabled={compensationReason.trim().length < 3}>Exécuter l’action inverse</Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Stats by kind */}
       {stats.data && stats.data.length > 0 && (

@@ -43,6 +43,7 @@ export interface OvertonSectorAxis {
 export interface OvertonRadarSignal {
   /** Sector cultural-axis vector: tag → strength in [0,1]. `null` when unobserved. */
   readonly sectorAxis: OvertonSectorAxis | null;
+  readonly sectorArticles?: ReadonlyArray<OvertonSectorArticle>;
   /** Brand orientation derived from pillar D (positioning). */
   readonly brandTags: Record<string, number>;
   /** Fraction (0..1) of brand vocabulary competitors adopted. */
@@ -66,4 +67,37 @@ export interface OvertonRadarSignal {
    * observation exists yet). `null`/absent = axis missing entirely.
    */
   readonly axisPolityResolution?: "EXACT" | "SCALE_ONLY" | "GLOBAL_FALLBACK" | null;
+}
+
+/** Collected sector news is not automatically an earned brand mention. */
+export interface OvertonSectorArticle {
+  readonly publication: string;
+  readonly headline: string;
+  readonly sourceUrl: string;
+  readonly publishedAt?: string;
+}
+export interface OvertonStrategyPlan {
+  readonly current: string;
+  readonly target: string;
+  readonly gap?: string;
+  readonly stale: boolean;
+  readonly milestones: ReadonlyArray<{ phase: string; targetPerception: string; measurementMethod?: string }>;
+}
+
+/** Faithful projection of S, with T's canonical gap as an upstream fallback. */
+export function readOvertonStrategyPlan(s: unknown, t: unknown, stale: boolean): OvertonStrategyPlan | undefined {
+  const object = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const strategy = object(s);
+  const window = object(strategy.fenetreOverton);
+  const upstream = object(object(t).perceptionGap);
+  const current = text(window.perceptionActuelle) || text(upstream.currentPerception);
+  const target = text(window.perceptionCible) || text(upstream.targetPerception);
+  if (!current && !target) return;
+  return { current, target, gap: text(window.ecart) || text(upstream.gapDescription), stale,
+    milestones: (Array.isArray(strategy.overtonMilestones) ? strategy.overtonMilestones : []).flatMap((raw) => {
+      const item = object(raw);
+      return text(item.phase) && text(item.targetPerception) ? [{ phase: text(item.phase), targetPerception: text(item.targetPerception), measurementMethod: text(item.measurementMethod) || undefined }] : [];
+    }),
+  };
 }

@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
 import { accessibleStrategyIds } from "../middleware/strategy-scope";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
+import { accessible, found } from "../entity-access";
 import { db } from "@/lib/db";
 import {
   sendBrandEmail,
@@ -10,6 +11,9 @@ import {
   getBrandEmailConnectorView,
   validateBrevoKey,
 } from "@/server/services/anubis/brand-email";
+
+/** IN1 : une campagne d'emailing inconnue ou hors d'atteinte reçoit le même 404. */
+const NEWSLETTER_NOT_FOUND = "Campagne d’emailing introuvable.";
 
 export const newsletterRouter = createTRPCRouter({
   // ── Subscribers (CRM Contacts with NEWSLETTER source/tag) ─────────────────
@@ -149,9 +153,9 @@ export const newsletterRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const campaign = await db.newsletterCampaign.findUniqueOrThrow({
+      const campaign = found(await db.newsletterCampaign.findUnique({
         where: { id: input.newsletterId },
-      });
+      }), NEWSLETTER_NOT_FOUND);
 
       if (campaign.status === "SENT") {
         throw new Error("Newsletter has already been sent.");
@@ -284,19 +288,20 @@ export const newsletterRouter = createTRPCRouter({
   newslettersStats: protectedProcedure
     .input(z.object({ newsletterId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const campaign = await db.newsletterCampaign.findUniqueOrThrow({
-        where: { id: input.newsletterId },
-      });
-
       // anti-IDOR (ADR-0166) : les emails/noms des destinataires (crmMessage →
       // contact) ne fuient plus cross-marque. Le fondateur consulte SES campagnes
       // (page cockpit) ; l'opérateur/god-mode voit tout ; une campagne legacy
       // (strategyId null) reste opérateur-only. Remplace le stopgap round-6
       // (operatorProcedure) qui cassait la modale « Consulter » du fondateur.
-      const ids = await accessibleStrategyIds(ctx.session.user.id);
-      if (ids !== null && (!campaign.strategyId || !ids.includes(campaign.strategyId))) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne." });
-      }
+      // IN1 : inconnue ou hors d'atteinte, le même 404.
+      const campaign = await accessible(db.newsletterCampaign.findUnique({
+        where: { id: input.newsletterId },
+      }), NEWSLETTER_NOT_FOUND, async (campaign) => {
+        const ids = await accessibleStrategyIds(ctx.session.user.id);
+        if (ids !== null && (!campaign.strategyId || !ids.includes(campaign.strategyId))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne." });
+        }
+      });
 
       const messages = await db.crmMessage.findMany({
         where: { campaignId: input.newsletterId },
@@ -309,8 +314,8 @@ export const newsletterRouter = createTRPCRouter({
         campaign,
         messages: messages.map((m) => ({
           id: m.id,
-          recipient: m.contact.email,
-          name: m.contact.name,
+          recipient: m.contact?.email ?? "",
+          name: m.contact?.name ?? null,
           status: m.status,
           sentAt: m.createdAt,
         })),

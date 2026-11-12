@@ -8,7 +8,8 @@
  * `trpc.glory.launchCalendar`. (Phase 24.)
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { CalendarProduction } from "./calendar-production";
 import { type LucideIcon, CalendarDays, Flag, Radio, Hash, Ban, CheckCircle2, Megaphone, Sparkles, AtSign, Quote, Link2, Star, ChevronDown, MessageSquareText, Image as ImageIcon, Rocket } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
@@ -84,13 +85,20 @@ function todayISO(): string {
 
 export function LaunchCalendarPanel() {
   const strategyId = useCurrentStrategyId();
+  const [chosenEdition,setChosenEdition]=useState<{strategyId:string;id:string}|null>(null);
+  const editionId=chosenEdition?.strategyId===strategyId ? chosenEdition?.id : undefined;
   const query = trpc.glory.launchCalendar.useQuery(
-    { strategyId: strategyId ?? "" },
+    { strategyId: strategyId ?? "", editionId },
     { enabled: !!strategyId },
   );
   const utils = trpc.useUtils();
   const [j0, setJ0] = useState(todayISO());
   const [weeks, setWeeks] = useState(4);
+  const [projectDates, setProjectDates] = useState(false);
+  const createPlan = trpc.glory.execute.useMutation({ onSuccess: () => {
+    void utils.glory.launchCalendar.invalidate({strategyId: strategyId!});
+    void utils.deliverableOrchestrator.calendarProductionRows.invalidate({strategyId: strategyId!});
+  }});
   const arm = trpc.glory.armLaunchCalendar.useMutation({
     onSuccess: () => {
       void utils.glory.launchCalendar.invalidate();
@@ -112,7 +120,7 @@ export function LaunchCalendarPanel() {
   // colle à ce qui sera réellement armé, VOIX DE MARQUE incluse (pilier D —
   // le re-dérive sans elle perdait le lexique/ton ADVE, audit 2026-07-16).
   const datedPosts: ContentPost[] =
-    calendar && Object.keys(calendar.cadenceParCanal).length > 0
+    calendar && (projectDates || !calendar.posts.length) && Object.keys(calendar.cadenceParCanal).length > 0
       ? deriveDatedPosts(calendar, j0, weeks, data?.brandVoice ?? {})
       : calendar?.posts ?? [];
 
@@ -134,19 +142,29 @@ export function LaunchCalendarPanel() {
         </p>
       </header>
 
+      {data && data.editions.length>1 && <label className="mb-6 flex flex-wrap items-center gap-3 text-sm">
+        Édition du planning
+        <select className="rounded border border-border bg-background p-2" value={editionId??data.activeCalendarId??""} onChange={e=>{
+          setChosenEdition(e.target.value===data.activeCalendarId ? null : {strategyId,id:e.target.value});setProjectDates(false);
+        }}>
+          {data.editions.map(item=><option key={item.id} value={item.id}>
+            {item.id===data.activeCalendarId?"Planning actif":"Édition précédente"} · {item.label??new Date(item.createdAt).toLocaleDateString(LOCALE)}
+          </option>)}
+        </select>
+      </label>}
       {query.isLoading ? <SkeletonPage /> : null}
+      {query.isError && <p role="alert">Impossible de lire cette édition. <button type="button" className="underline" onClick={()=>setChosenEdition(null)}>Revenir au planning actif</button></p>}
 
       {/* ═══ J-0 + armement des publications ══════════════════════ */}
-      {calendar && !isEmpty ? (
+      {calendar && !isEmpty && !editionId ? (
         <div className="mb-10 rounded-xl border border-accent/25 bg-accent/[0.04] p-4 md:p-5">
           <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-accent">
             <Rocket className="h-3.5 w-3.5" />
             Démarrer le lancement
           </div>
           <p className="mt-1.5 text-xs text-foreground-secondary max-w-[70ch]">
-            Choisissez le jour J-0 (défaut&nbsp;: aujourd&apos;hui). Le rétroplan ci-dessous se
-            recale dessus. « Armer&nbsp;» planifie les publications (Facebook, Instagram,
-            LinkedIn) — le système les publie automatiquement à la date prévue.
+            Les dates et les textes enregistrés sont conservés. Vous pouvez aussi projeter la cadence depuis un autre jour de départ.
+            « Armer les publications » programme les posts admissibles pour diffusion. Les commandes de production visuelle se trouvent plus bas.
           </p>
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-2xs font-medium text-foreground-muted">
@@ -170,13 +188,17 @@ export function LaunchCalendarPanel() {
                 ))}
               </select>
             </label>
+            <label className="flex items-center gap-2 text-xs">
+              <input type="checkbox" checked={projectDates} onChange={e => setProjectDates(e.target.checked)} />
+              Projeter la cadence à partir du jour J-0
+            </label>
             <button
               type="button"
               onClick={() =>
                 arm.mutate({
                   strategyId,
                   startDate: new Date(`${j0}T09:00:00Z`).toISOString(),
-                  weeks,
+                  weeks, useStoredPosts: !projectDates,
                 })
               }
               disabled={arm.isPending}
@@ -216,6 +238,15 @@ export function LaunchCalendarPanel() {
         </div>
       ) : null}
 
+      {!calendar && !query.isLoading && <div className="my-4 rounded border border-border p-4">
+        <p className="mb-2 text-sm">Glory prépare un planning à partir des piliers de cette marque.</p>
+        <button className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground" disabled={createPlan.isPending}
+          onClick={() => createPlan.mutate({strategyId,toolSlug:"content-calendar-strategist",input:{}})}>
+          {createPlan.isPending ? "Préparation du planning…" : "Générer le planning éditorial"}
+        </button>
+        {createPlan.error && <p role="alert">{createPlan.error.message}</p>}
+        {createPlan.data && !calendar && <p role="status">Vérifiez les dates et les thèmes du planning produit dans le calendrier.</p>}
+      </div>}
       {isEmpty ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
           <p className="text-sm text-foreground-secondary">{COPY.empty.title}</p>
@@ -288,18 +319,12 @@ export function LaunchCalendarPanel() {
           {datedPosts.length > 0 ? (
             <div>
               <SectionHeader icon={CalendarDays} label={COPY.sections.posts} suffix={COPY.counts.posts(datedPosts.length)} />
-              <div className="space-y-6">
-                {groupPostsByWeek(datedPosts).map(([week, posts]) => (
-                  <div key={week}>
-                    <div className="mb-2 font-mono text-2xs uppercase tracking-widest text-accent">{week}</div>
-                    <ol className="space-y-1.5">
-                      {posts.map((p, i) => (
-                        <PostRow key={i} post={p} />
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-              </div>
+              <CalendarProduction key={strategyId + (editionId??"") + j0 + weeks + projectDates} editionId={editionId} strategyId={strategyId} startDate={j0} weeks={weeks} projectDates={projectDates}
+                fallback={<div className="space-y-6">{groupPostsByWeek(datedPosts).map(([week, posts]) => (
+                  <div key={week}><h3 className="mb-2 text-xs text-accent">{week}</h3><ol>{posts.map((p, i) => <PostRow key={i} post={p} />)}</ol></div>
+                ))}</div>}
+                renderPost={(post, actions) => <PostRow post={post} production={actions} />}
+              />
             </div>
           ) : null}
 
@@ -548,7 +573,7 @@ function WeekRow({ week, isLast }: { week: LaunchTimelineWeek; isLast: boolean }
 }
 
 /** Une ligne de post cliquable → déplie la caption + le brief illustration. */
-function PostRow({ post }: { post: ContentPost }) {
+function PostRow({ post, production }: { post: ContentPost; production?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const caption = post.caption ?? "";
   const title = post.theme ?? post.angle ?? post.format ?? COPY.post.titleFallback;
@@ -567,6 +592,7 @@ function PostRow({ post }: { post: ContentPost }) {
         <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-foreground-muted transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
+      {production}
       {open ? (
         <div className="space-y-4 border-t border-white/5 px-3 py-3">
           {/* Méta */}

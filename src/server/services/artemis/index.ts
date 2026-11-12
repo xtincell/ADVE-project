@@ -1,9 +1,11 @@
 /**
- * ARTEMIS — Diagnostic Engine with 24 Frameworks
+ * ARTEMIS — Diagnostic Engine with 28 Frameworks
  * Topological sort for dependency resolution, execution orchestration
- * Real Claude AI calls for framework execution
+ * Calls through the existing LLM Gateway for framework execution
  */
 
+import { isUsableGeneration } from "@/domain/generation-result";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { callLLM } from "@/server/services/llm-gateway";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
@@ -112,14 +114,16 @@ export async function executeFramework(
   //   - When ORACLE_VIA_NETERU=true AND BrandContextNodes exist → ALSO appends
   //     narrative context for orientation (clearly marked "do not cite verbatim")
   //
-  // Default flag OFF → behavior identical to the previous inline path. Zero
-  // regression risk for existing framework callers (signal processing,
-  // brief-ingest, Oracle, etc.). Enabling the flag is opt-in per environment.
-  const { loadStrategyContextForFramework } = await import(
+  // Narrative augmentation remains opt-in. Qualified DB values are always
+  // available, and must reach the framework rather than only its summary.
+  const { loadStrategyContextForFramework, formatPreciseFields } = await import(
     "@/server/services/seshat/context-store"
   );
   const ctx = await loadStrategyContextForFramework(strategyId);
   const strategyLines = ctx.lines;
+  const frameworkPillars = new Set(fw.pillarKeys.map(key => key.toLowerCase()));
+  const precise = ctx.precise.filter(field =>
+    !PILLAR_STORAGE_KEYS.some(key => key === field.source) || frameworkPillars.has(field.source));
 
   const systemPrompt = `${UNTRUSTED_NOTICE}
 
@@ -133,7 +137,14 @@ Tu dois produire une analyse structuree avec:
 4. Un niveau de confiance (0-1) sur ton diagnostic
 Reponds en JSON avec les champs: analysis, score (0-10), prescriptions (array), confidence (0-1), ${fw.outputFields.map((f) => f).join(", ")}
 
-${wrapUntrusted("CONTEXTE STRATÉGIE", strategyLines.join("\n"), { max: 12000 })}`;
+Les extraits ci-dessous sont bornés. Une valeur tronquée ou absente ne peut pas servir de citation.
+Conserve la référence, la version d’édition et l’origine des valeurs utilisées. INFERRED est une déduction,
+UNKNOWN une origine inconnue : ne les attribue pas au fondateur comme des déclarations.
+Une valeur stockée peut être un objectif ou une hypothèse ; sa date d’édition ne prouve pas une mesure.
+
+${wrapUntrusted("VALEURS STRUCTURÉES QUALIFIÉES", formatPreciseFields(precise), { max: 8000 })}
+
+${wrapUntrusted("ORIENTATION STRATÉGIE — résumé, ne pas citer comme preuve", strategyLines.join("\n"), { max: 4000 })}`;
 
   const userPrompt = `${fw.promptTemplate}
 
@@ -164,7 +175,7 @@ ${wrapUntrusted("DONNÉES FOURNIES", JSON.stringify(input, null, 2))}`;
       const durationMs = Date.now() - startTime;
       output = {
         ...(structured.data as Record<string, unknown>),
-        _meta: { attempts: structured.attempts, schemaEnforced: true },
+        _meta: { attempts: structured.attempts, schemaEnforced: true, model: structured.model, provider: structured.provider },
       };
 
       score = typeof output.score === "number" ? output.score : null;
@@ -248,6 +259,7 @@ ${wrapUntrusted("DONNÉES FOURNIES", JSON.stringify(input, null, 2))}`;
       const confidence = typeof output.confidence === "number" ? output.confidence : null;
       const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
 
+      output._meta = { model: aiResult.model, provider: aiResult.provider, schemaEnforced: false };
       aiCost = ((aiResult.usage?.inputTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.outputTokens ?? 0) / 1_000_000) * 15;
 
       await db.frameworkExecution.update({
@@ -312,8 +324,8 @@ export async function runDiagnosticBatch(
   for (const slug of sorted) {
     try {
       const input = inputs[slug] ?? {};
-      const { resultId } = await executeFramework(slug, strategyId, input);
-      results.push({ slug, resultId, status: "COMPLETED" });
+      const { resultId, output } = await executeFramework(slug, strategyId, input);
+      results.push({ slug, resultId, status: isUsableGeneration(output) ? "COMPLETED" : "FAILED" });
     } catch (error) {
       results.push({ slug, resultId: "", status: "FAILED" });
     }

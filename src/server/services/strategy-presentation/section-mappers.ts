@@ -7,10 +7,19 @@
  * Note: Uses `any` for strategy param since Prisma complex includes resist clean typing.
  */
 
+import { brandMarketScope } from "@/domain/brand-market-scope";
+import { isUsableGeneration } from "@/domain/generation-result";
+import { readOvertonPositioning } from "@/domain/overton-positioning";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
+import { projectFinancialPillar, unitEconomicsNote, unitEconomicsRatio, type FinancialMetricContext } from "@/domain/unit-economics";
+import { brandActorRoleLabels } from "@/domain/brand-actors";
+import { coerceProvenance, FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
+import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-catalog";
 import { TIER_MIN_DEPTH } from "@/domain/superfan-conditions";
 import { collectNormalizedInitiatives, type NormalizedInitiative } from "@/lib/types/pillar-schemas";
+import { InitiativeBudgetSummarySchema } from "@/lib/types/pillar-schemas";
+import { aggregateCampaignBudgets, roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
 // section-defaults n'est plus consommé par les mappers (audit galileo) : les
 // modules dévorent les vraies données ADVERTIS (multi-clés + sources
 // alternatives) et n'inventent plus de contenu generique. Cf. ADR-0095.
@@ -48,11 +57,12 @@ import type {
 
 function getPillarContent(strategy: any, key: string): Record<string, unknown> | null {
   const pillar = strategy.pillars.find((p: any) => p.key === key);
-  return (pillar?.content as Record<string, unknown>) ?? null;
+  const content = (pillar?.content as Record<string, unknown>) ?? null;
+  return key === "v" && content ? projectFinancialPillar(content) : content;
 }
 
 function getGloryOutput(strategy: any, toolSlug: string): Record<string, unknown> | null {
-  const output = strategy.gloryOutputs.find((g: any) => g.toolSlug === toolSlug);
+  const output = strategy.gloryOutputs.find((g: any) => g.toolSlug === toolSlug && isUsableGeneration(g.output));
   return (output?.output as Record<string, unknown>) ?? null;
 }
 
@@ -112,7 +122,7 @@ export function mapExecutiveSummary(
 
   const compositeClamped = Math.min(200, Math.max(0, vector.composite));
   const highlights: string[] = [];
-  highlights.push(`Marque classifiée ${classification} — score composite ${compositeClamped.toFixed(0)}/200`);
+  highlights.push(`Profil documentaire ${classification} — composite ${compositeClamped.toFixed(0)}/200. La force révélée du classement dépend des preuves de marché.`);
   if (derivedCultIndex) {
     highlights.push(`Cult Index : ${derivedCultIndex.score.toFixed(1)} — Tier ${derivedCultIndex.tier}`);
   }
@@ -148,6 +158,7 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
   const bCtx = (strategy.businessContext as Record<string, unknown>) ?? {};
   const pillarA = getPillarContent(strategy, "a");
   const pillarD = getPillarContent(strategy, "d");
+  const pillarV = getPillarContent(strategy, "v");
 
   const enemy = pillarA?.enemy as Record<string, unknown> | null;
   const prophecy = pillarA?.prophecy as Record<string, unknown> | null;
@@ -162,6 +173,7 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
       const px = p as Record<string, unknown>;
       return {
         nom: pickStr(px, ["nom", "name", "titre", "label"]),
+        actorRoles: brandActorRoleLabels(px.actorRoles),
         trancheAge: pickStr(px, ["trancheAge", "age", "tranche", "ageRange"]),
         csp: pickStr(px, ["csp", "profession", "metier", "occupation", "income"]),
         insightCle: pickStr(px, ["insightCle", "insight", "hiddenDesire", "whatTheyActuallyBuy"]),
@@ -190,11 +202,11 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
 
   return {
     businessContext: {
-      sector: safeStr(bCtx.sector),
-      businessModel: safeStr(bCtx.businessModel),
-      positioningArchetype: safeStr(bCtx.positioningArchetype),
-      economicModels: safeArr(bCtx.economicModels) as string[],
-      salesChannels: safeArr(bCtx.salesChannels) as string[],
+      sector: safeStr(pillarA?.secteur) ?? safeStr(bCtx.sector) ?? safeStr(strategy.client?.sector),
+      businessModel: safeStr(pillarV?.businessModel) ?? safeStr(bCtx.businessModel),
+      positioningArchetype: safeStr(pillarV?.positioningArchetype) ?? safeStr(bCtx.positioningArchetype),
+      economicModels: safeArr(pillarV?.economicModels ?? bCtx.economicModels).map(m => typeof m === "string" ? m : pickStr(m, ["modele", "name", "model"])).filter(Boolean),
+      salesChannels: pickArr(pillarV, ["salesChannel"]).length > 0 ? pickArr(pillarV, ["salesChannel"]) : pickArr(bCtx, ["salesChannels"]),
     },
     enemy: enemy
       ? {
@@ -210,6 +222,7 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
           horizon: safeStr(prophecy.horizon) ?? "",
         }
       : null,
+    market: brandMarketScope(strategy),
     client: strategy.client
       ? {
           sector: strategy.client.sector,
@@ -265,6 +278,12 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
   const ikigai = pillarA?.ikigai as Record<string, unknown> | null;
   const tonDeVoix = pillarD?.tonDeVoix as Record<string, unknown> | null;
   const assets = pillarD?.assetsLinguistiques as Record<string, unknown> | null;
+  const doctrine = typeof pillarA?.doctrine === "string" ? safeStr(pillarA.doctrine)
+    : pillarA?.doctrine && typeof pillarA.doctrine === "object"
+      ? [pickStr(pillarA.doctrine, ["texte"]),
+        ...(["dogmas", "principles", "practices"] as const).map(key => pickArr(pillarA.doctrine, [key]).join("\n"))]
+        .filter(Boolean).join("\n\n") || null
+      : null;
   // Valeurs RÉELLES (audit galileo) — clés variées : `valeur`/`value`/`customName`,
   // `rang`/`rank`. On ne fabrique PLUS de valeurs Schwartz génériques
   // (defaultValeurs) qui écrasaient les vraies valeurs de marque.
@@ -283,7 +302,6 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
   // Messaging framework dérivé des personas RÉELLES (multi-clés). Vide si pas
   // de personas — aucune audience/CTA inventée.
   const messagingFramework = safeArr(pillarD?.personas)
-    .slice(0, 3)
     .map((p: unknown) => {
       const px = p as Record<string, unknown>;
       return {
@@ -298,7 +316,7 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
   return {
     archetype: safeStr(pillarA?.archetype),
     citationFondatrice: safeStr(pillarA?.citationFondatrice),
-    doctrine: safeStr(pillarA?.doctrine),
+    doctrine,
     ikigai: ikigai
       ? {
           love: safeStr(ikigai.love) ?? "",
@@ -449,6 +467,7 @@ export function mapProductionLivrables(strategy: any): ProductionLivrablesSectio
   };
 
   for (const g of strategy.gloryOutputs) {
+    if (!isUsableGeneration(g.output)) continue;
     const layer = LAYER_SLUGS[g.toolSlug] ?? "HYBRID";
     gloryOutputsByLayer[layer]!.push({
       toolSlug: g.toolSlug,
@@ -462,7 +481,10 @@ export function mapProductionLivrables(strategy: any): ProductionLivrablesSectio
   // fictif (defaultGloryOutputsByLayer "manifesto-forge" qui faisait croire que
   // des outils avaient tourné). Si rien n'a été produit, les couches restent
   // vides — état honnête.
-  return { missions, gloryOutputsByLayer };
+  const proposedAssets = arr(getPillarContent(strategy, "i")?.assetsProduisibles).map((a: any) => ({
+    asset: pickStr(a, ["asset", "name", "nom"]), type: str(a.type), usage: str(a.usage),
+  })).filter(a => a.asset);
+  return { missions, gloryOutputsByLayer, proposedAssets };
 }
 
 // ─── 08: Medias & Distribution ──────────────────────────────────────────────
@@ -486,19 +508,16 @@ export function mapMediasDistribution(strategy: any): MediasDistributionSection 
   // Actions média RÉELLES : campagnes (ATL/MEDIA/DIGITAL) → catalogue I
   // (canaux média) → calendrier annuel I (name/budget/drivers). Aucune action
   // inventée (defaultMediaActions supprimé).
-  let mediaActions = strategy.campaigns.flatMap((c: any) =>
+  let mediaActions: MediasDistributionSection["mediaActions"] = strategy.campaigns.flatMap((c: any) =>
     c.actions
       .filter((a: any) => a.category === "ATL" || a.category === "MEDIA" || a.category === "DIGITAL")
       .map((a: any) => ({ name: a.name, category: a.category, budget: a.budget, driverName: null as string | null })),
   );
   if (mediaActions.length === 0) {
-    const catalogue = (iContent?.catalogueParCanal ?? {}) as Record<string, any[]>;
     const MEDIA_CHANNELS = ["DIGITAL", "MEDIA_TRADITIONNEL", "MEDIA", "PR_INFLUENCE", "ATL"];
-    mediaActions = MEDIA_CHANNELS.flatMap((canal) =>
-      arr(catalogue[canal]).slice(0, 4).map((a: any) => ({
-        name: str(a.action ?? a.name), category: canal, budget: null as number | null, driverName: null as string | null,
-      })),
-    ).filter((a: any) => a.name).slice(0, 10);
+    mediaActions = collectNormalizedInitiatives(iContent).filter(a => MEDIA_CHANNELS.includes(a.channel)).map(a => ({
+      name: a.action, category: a.channel, budget: a.budget ?? null, budgetLabel: initiativeCost(a), proposed: true, driverName: null,
+    }));
   }
   if (mediaActions.length === 0) {
     mediaActions = arr(iContent?.annualCalendar).map((e: any) => ({
@@ -523,22 +542,28 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
   // KPIs RÉELS : E.kpis → tableau de bord S (kpiDashboard / northStarKPI) →
   // vide. On ne fabrique PLUS 12 KPIs génériques (defaultKpis "Notoriete
   // assistee…") qui n'ont aucun lien avec la marque.
-  let kpis = safeArr(pillarE?.kpis).map((k: unknown) => {
+  let kpis = safeArr(pillarE?.kpis).map((k: unknown): KpisMesureSection["kpis"][number] => {
     const kx = k as Record<string, unknown>;
     return {
       name: pickStr(kx, ["name", "nom", "kpi", "metric"]),
       metricType: pickStr(kx, ["metricType", "type", "unit"]),
       target: pickStr(kx, ["target", "cible", "objectif", "goal"]),
       frequency: pickStr(kx, ["frequency", "frequence", "cadence"]),
+      ...(kx.qualification === "PROPOSED" || kx.qualification === "DECLARED" ? { qualification: kx.qualification } : {}),
+      ...Object.fromEntries(["definition", "unit", "observationWindow", "targetContext", "sourceNotes"]
+        .flatMap(key => typeof kx[key] === "string" && kx[key] ? [[key, kx[key]]] : [])),
     };
   }).filter((k) => k.name);
   if (kpis.length === 0) {
     const dash = arr(pillarS?.kpiDashboard).length > 0 ? arr(pillarS?.kpiDashboard) : arr(pillarS?.northStarKPI);
-    kpis = dash.map((k: any) => ({
+    kpis = dash.map((k: any): KpisMesureSection["kpis"][number] => ({
       name: pickStr(k, ["name", "nom", "kpi", "metric", "label"]),
       metricType: pickStr(k, ["metricType", "type", "unit"]),
       target: pickStr(k, ["target", "cible", "objectif", "goal", "value"]),
       frequency: pickStr(k, ["frequency", "frequence", "cadence"]),
+      ...(k.qualification === "PROPOSED" || k.qualification === "DECLARED" ? { qualification: k.qualification } : {}),
+      ...Object.fromEntries(["definition", "unit", "observationWindow", "targetContext", "sourceNotes"]
+        .flatMap(key => typeof k[key] === "string" && k[key] ? [[key, k[key]]] : [])),
     })).filter((k: any) => k.name);
   }
 
@@ -611,10 +636,11 @@ export function mapBudget(strategy: any): BudgetSection {
   const campaignBudgets = strategy.campaigns.map((c: any) => ({
     name: c.name,
     budget: c.budget,
+    budgetCurrency: c.budgetCurrency,
     status: c.status,
   }));
 
-  const totalBudget = campaignBudgets.reduce((sum: number, c: any) => sum + (c.budget ?? 0), 0);
+  const campaignBudgetSummary = aggregateCampaignBudgets(campaignBudgets);
 
   // Enveloppe globale + ventilation : pilier S canonique → pilier I (certaines
   // marques y stockent globalBudget/budgetBreakdown, ex. CIMENCAM). Audit
@@ -641,16 +667,25 @@ export function mapBudget(strategy: any): BudgetSection {
       ? {
           cac: safeNum(ue.cac),
           ltv: safeNum(ue.ltv),
-          ltvCacRatio: safeNum(ue.ltvCacRatio),
+          ltvCacRatio: unitEconomicsRatio(ue.cac, ue.ltv, ue.ltvCacRatio),
+          ...(unitEconomicsNote(ue) ? { commentaire: unitEconomicsNote(ue) } : {}),
           margeNette: safeNum(ue.margeNette),
           roiEstime: safeNum(ue.roiEstime),
           budgetCom: safeNum(ue.budgetCom),
           caVise: safeNum(ue.caVise),
+          ...(safeNum(ue.paybackPeriod) !== null ? { paybackPeriod: safeNum(ue.paybackPeriod) } : {}),
+          ...(safeStr(ue.pointMort) ? { pointMort: safeStr(ue.pointMort) } : {}),
+          ...(typeof ue.currency === "string" ? { currency: ue.currency } : {}),
+          ...(ue._financialContext ? { _financialContext: ue._financialContext as FinancialMetricContext } : {}),
         }
       : null,
     campaignBudgets,
-    totalBudget,
+    totalBudget: campaignBudgetSummary.totalBudget,
+    campaignBudgetSummary,
     globalBudget,
+    strategyBudgetSummary: InitiativeBudgetSummarySchema.safeParse((pillarS?.computed as Record<string, unknown>)?.budgetSummary).success ? InitiativeBudgetSummarySchema.parse((pillarS?.computed as Record<string, unknown>).budgetSummary) : undefined,
+    budgetByDevotion: (pillarS?.budgetByDevotion ?? {}) as Record<string, number>,
+    devotionFunnel: Array.isArray(pillarS?.devotionFunnel) ? pillarS.devotionFunnel : [],
     budgetBreakdown,
   };
 }
@@ -745,7 +780,10 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
   // ── Gouvernance : équipe campagnes → teamStructure déclarée (I/S) →
   // propriétaire seul. Plus d'équipe fictive (defaultTeamMembers).
   const owner = { name: strategy.user.name, email: strategy.user.email };
-  const declaredTeam = [...arr(iContent?.teamStructure), ...arr(sContent?.teamStructure)].map((t: any) => ({
+  const strategyTeam = [...arr(iContent?.teamStructure), ...arr(sContent?.teamStructure)];
+  // S already projects A's documented team. A is a fallback, not three more
+  // people to concatenate into the same Oracle roster.
+  const declaredTeam = (strategyTeam.length ? strategyTeam : arr(getPillarContent(strategy, "a")?.equipeDirigeante)).map((t: any) => ({
     name: pickStr(t, ["name", "nom"]), role: pickStr(t, ["title", "role", "responsibility", "responsabilite"]), email: null as string | null,
   })).filter((t: any) => t.name);
   const finalTeam = uniqueTeam.length > 0
@@ -762,7 +800,6 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
 // ─── 12: Equipe ─────────────────────────────────────────────────────────────
 
 export function mapEquipe(strategy: any): EquipeSection {
-  const owner = { name: strategy.user.name, email: strategy.user.email, image: strategy.user.image };
 
   const teamMembers = strategy.campaigns.flatMap((c: any) =>
     c.teamMembers.map((tm: any) => ({
@@ -792,11 +829,7 @@ export function mapEquipe(strategy: any): EquipeSection {
   })).filter((t: any) => t.name);
   const finalTeam = uniqueTeam.length > 0
     ? uniqueTeam
-    : declaredTeamEq.length > 0
-      ? declaredTeamEq
-      : (owner.name || owner.email)
-        ? [{ name: owner.name ?? "Propriétaire", role: "Strategy Owner", email: owner.email ?? null, image: owner.image ?? null }]
-        : [];
+    : declaredTeamEq;
 
   // Opérateur RÉEL (relationnel) — null si absent (plus de "LaFusee" fabriqué).
   const operator = strategy.operator
@@ -811,7 +844,7 @@ export function mapEquipe(strategy: any): EquipeSection {
   const equipeDirigeante = rawEquipe.map((m: any) => ({
     nom: pickStr(m, ["nom", "name"]),
     role: pickStr(m, ["role", "title", "poste"]),
-    bio: pickStr(m, ["bio", "description", "responsibility", "responsabilite"]),
+    bio: pickStr(m, ["bio", "description", "responsibility", "responsabilite"]) || pickArr(m, ["responsabilites"]).join(" · "),
     experiencePasse: pickArr(m, ["experiencePasse", "experience"]),
     competencesCles: pickArr(m, ["competencesCles", "skills", "competences"]),
     credentials: pickArr(m, ["credentials", "certifications"]),
@@ -828,7 +861,10 @@ export function mapEquipe(strategy: any): EquipeSection {
   } : null;
 
   // ── Berkus aggregate — pull scores from framework results ─────────────
-  const berkusFrameworks = arr(strategy.frameworkResults ?? []);
+  // A historical framework can have a numeric score as its only result.
+  const berkusFrameworks = arr(strategy.frameworkResults).filter((row) =>
+    typeof row.score === "number" && isUsableGeneration({ ...row.output, score: row.score }),
+  );
   const berkusTeam = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-25-berkus-team-assessment");
   const berkusTraction = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-26-berkus-traction");
   const berkusProduct = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-27-berkus-product");
@@ -861,18 +897,14 @@ export function mapEquipe(strategy: any): EquipeSection {
 // ─── 13: Conditions & Prochaines Etapes ─────────────────────────────────────
 
 export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
-  // Generate client context from strategy owner when no client record
+  // A software account is not evidence of the contracting client.
   const client = strategy.client
     ? {
         contactName: strategy.client.contactName,
         contactEmail: strategy.client.contactEmail,
         sector: strategy.client.sector,
       }
-    : {
-        contactName: strategy.user.name ?? strategy.name ?? null,
-        contactEmail: strategy.user.email ?? null,
-        sector: str((strategy.businessContext as any)?.sector) || null,
-      };
+    : null;
 
   // ── Contrats : RÉELS uniquement. L'ancien fallback `defaultContracts`
   // fabriquait un contrat "ACTIVE" fictif affiché au client — supprimé
@@ -966,13 +998,17 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
     ),
     "timeline-gouvernance": check(s.timelineGouvernance.campaigns.length > 0, s.timelineGouvernance.teamMembers.length > 0),
     "equipe": check(!!s.equipe.operator || s.equipe.equipeDirigeante.length > 0, s.equipe.equipeDirigeante.length > 0 && !!s.equipe.equipeComplementarite),
-    "conditions-etapes": check(!!s.conditionsEtapes.client, s.conditionsEtapes.contracts.length > 0),
+    // A diagnosed absence of contract is a known state, not missing ADVE.
+    // The section also renders the next steps and explicitly says no contract.
+    "conditions-etapes": check(!!s.conditionsEtapes.client || (s.conditionsEtapes.prochainesEtapes?.length ?? 0) > 0,
+      (s.conditionsEtapes.prochainesEtapes?.length ?? 0) > 0 && (s.conditionsEtapes.prochainesEtapes ?? []).every(step => !!step.action.trim())),
   };
 }
 
 // ─── NEW SECTION MAPPERS (v3 Oracle enrichment) ─────────────────────────────
 
 export function mapPropositionValeur(strategy: any): PropositionValeurSection {
+  const dContent = getPillarContent(strategy, "d");
   const vContent = getPillarContent(strategy, "v") as any;
   const eContent = getPillarContent(strategy, "e") as any;
   const iContent = getPillarContent(strategy, "i") as any;
@@ -982,7 +1018,7 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
   // générique inventé ("Echelle de prix a definir…").
   const ladder = arr(vContent?.productLadder).length > 0 ? arr(vContent?.productLadder) : arr(vContent?.produitsCatalogue);
   const ladderDescription = ladder.length > 0
-    ? ladder.map((t: any) => `${pickStr(t, ["tier", "nom", "name"])}${typeof t.prix === "number" ? ` (${t.prix.toLocaleString("fr-FR")} FCFA)` : ""} — ${pickStr(t, ["cible", "segmentCible", "description", "position"])}`.replace(/ — $/, "")).join(" · ")
+    ? ladder.map((t: any) => `${pickStr(t, ["tier", "nom", "name"])} (${arr(vContent?.productLadder).length > 0 ? productLadderPriceLabel(t, vContent?.produitsCatalogue) : cataloguePriceLabel(t)}) — ${pickStr(t, ["cible", "segmentCible", "description", "position"])}`.replace(/ — $/, "")).join(" · ")
     : "";
   const pricingStrategy = pickStr(vContent, ["pricingJustification", "pricingStrategy", "pricing"]);
   const pricing = (pricingStrategy || ladderDescription) ? {
@@ -1019,6 +1055,18 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
   }
 
   return {
+    valueExchanges: arr(vContent?.personaSegmentMap).map((exchange: any) => {
+      const actor = pickStr(exchange, ["personaName"]);
+      const persona = arr(dContent?.personas).find((p: any) => pickStr(p, ["name", "nom"]) === actor);
+      return {
+        actor, actorRoles: brandActorRoleLabels(persona?.actorRoles),
+        productNames: pickArr(exchange, ["productNames"]),
+        valueToBrand: pickArr(exchange, ["valueToBrand"]),
+        valueToActor: pickArr(exchange, ["valueToActor"]),
+        actorCosts: pickArr(exchange, ["actorCosts"]),
+        dependencyConditions: pickArr(exchange, ["dependencyConditions"]),
+      };
+    }),
     pricing,
     proofPoints,
     guarantees,
@@ -1026,7 +1074,10 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
     unitEconomics: vContent?.unitEconomics ? {
       cac: vContent.unitEconomics.cac ?? null,
       ltv: vContent.unitEconomics.ltv ?? null,
-      ltvCacRatio: vContent.unitEconomics.ltvCacRatio ?? null,
+      ltvCacRatio: unitEconomicsRatio(vContent.unitEconomics.cac, vContent.unitEconomics.ltv, vContent.unitEconomics.ltvCacRatio),
+      ...(unitEconomicsNote(vContent.unitEconomics) ? { commentaire: unitEconomicsNote(vContent.unitEconomics) } : {}),
+      ...(vContent.unitEconomics.currency ? { currency: vContent.unitEconomics.currency } : {}),
+      ...(vContent.unitEconomics._financialContext ? { _financialContext: vContent.unitEconomics._financialContext } : {}),
     } : null,
   };
 }
@@ -1043,7 +1094,8 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
     return {
       nom: pickStr(t, ["nom", "name", "titre"]) || canal,
       canal,
-      qualite: pickStr(t, ["qualite", "quality"]) || "standard",
+      role: pickStr(t, ["role"]),
+      qualite: pickStr(t, ["qualite", "quality"]),
       stadeAarrr: pickStr(t, ["stadeAarrr", "aarrStage", "stade"]),
     };
   }).filter((t: any) => t.nom || t.canal);
@@ -1060,24 +1112,33 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
   const realTriggers = arr(eContent?.conversionTriggers).map((t: any) => ({
     from: pickStr(t, ["fromLevel", "from"]), to: pickStr(t, ["toLevel", "to"]), trigger: str(t.trigger),
   })).filter((t: any) => t.trigger);
-  const realBarriers = arr(eContent?.barriersEngagement ?? eContent?.barriers).map(str).filter(Boolean);
+  const realBarriers = arr(eContent?.barriersEngagement ?? eContent?.barriers).map((b: unknown) =>
+    typeof b === "string" ? b : [pickStr(b, ["level"]), pickStr(b, ["barrier"]), pickStr(b, ["mitigation"])]
+      .filter(Boolean).join(" — ")).filter(Boolean);
   const hasPathway = !!devSnap || realTriggers.length > 0 || realBarriers.length > 0;
   const currentDistribution: Record<string, number> = devSnap
     ? { spectateur: devSnap.spectateur, interesse: devSnap.interesse, participant: devSnap.participant, engage: devSnap.engage, ambassadeur: devSnap.ambassadeur, evangeliste: devSnap.evangeliste }
     : {};
-  const devotionPathway = hasPathway ? { currentDistribution, conversionTriggers: realTriggers, barriers: realBarriers } : null;
+  const devotionPathway = hasPathway ? { currentDistribution, score: devSnap?.devotionScore ?? null, conversionTriggers: realTriggers, barriers: realBarriers } : null;
 
   // Community strategy : champs canoniques E (communityStrategy → principes +
   // communityBuilding). Vide ("") si rien de déclaré — plus de phrase générique.
   const cb = (eContent?.communityBuilding ?? {}) as any;
-  const principes = arr(eContent?.principesCommunautaires).map(str).filter(Boolean);
+  const principes = arr(eContent?.principesCommunautaires).map((p: unknown) => typeof p === "string" ? p
+    : [pickStr(p, ["principle"]), pickStr(p, ["enforcement"])].filter(Boolean).join(" — ")).filter(Boolean);
+  const platforms = arr(cb.platforms).map((p: unknown) => {
+    if (typeof p === "string") return p;
+    const platform = p as Record<string, unknown> | null;
+    return [pickStr(platform, ["name"]), pickStr(platform, ["type"]),
+      typeof platform?.memberCount === "number" && Number.isFinite(platform.memberCount)
+        ? `${platform.memberCount} membre(s) déclaré(s)` : ""].filter(Boolean).join(" · ");
+  }).filter(Boolean);
   const cbParts = [
-    Array.isArray(cb.platforms) && cb.platforms.length > 0 ? `Plateformes : ${cb.platforms.map(str).join(", ")}` : "",
-    str(cb.growthMechanics),
+    platforms.length ? `Plateformes : ${platforms.join(", ")}` : "",
+    pickArr(cb, ["growthMechanics"]).join(" · "),
   ].filter(Boolean);
-  const communityStrategy = str(eContent?.communityStrategy ?? eContent?.community)
-    || [principes.slice(0, 3).join(" · "), ...cbParts].filter(Boolean).join(" — ")
-    || null;
+  const communityStrategy = [pickStr(eContent, ["communityStrategy", "community"]), principes.join(" · "), ...cbParts]
+    .filter(Boolean).join(" — ") || null;
 
   return {
     touchpoints,
@@ -1116,7 +1177,10 @@ export function mapSwotInterne(strategy: any): SwotInterneSection {
   // génériques inventés).
   const mitigations = arr(rContent?.mitigationPriorities).map((m: any) => ({
     risque: pickStr(m, ["risk", "risque"]), action: pickStr(m, ["action", "mitigation"]),
-    priorite: pickStr(m, ["priority", "priorite"]) || "MEDIUM",
+    priorite: pickStr(m, ["priority", "priorite"]),
+    owner: pickStr(m, ["owner", "responsable"]),
+    timeline: pickStr(m, ["timeline", "echeance"]),
+    investment: pickStr(m, ["investment", "investissement"]),
   })).filter((m: any) => m.risque || m.action);
 
   return {
@@ -1196,12 +1260,15 @@ export function mapSwotExterne(strategy: any): SwotExterneSection {
   const brandMarketFit = bmfScore !== null
     ? {
         score: bmfScore,
+        scoreMax: 100,
+        provenance: FIELD_PROVENANCE_LABEL[coerceProvenance(tContent?._fieldProvenance?.brandMarketFitScore)],
         gaps: [str(percGap.gapDescription)].filter(Boolean),
         opportunities: arr(tContent?.marketReality?.weakSignals).map(str).filter(Boolean).slice(0, 4),
       }
     : tContent?.brandMarketFit
       ? {
           score: tContent.brandMarketFit.score ?? null,
+          scoreMax: safeNum(tContent.brandMarketFit.scoreMax ?? tContent.brandMarketFit.scale),
           gaps: arr(tContent.brandMarketFit.gaps).map(str),
           opportunities: arr(tContent.brandMarketFit.opportunities).map(str),
         }
@@ -1234,15 +1301,15 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
   // les Signal rows DB, puis defaults.
   const analyzedSignals = arr(tContent?.weakSignalAnalysis).map((w: any) => ({
     signal: str(w.thesis ?? w.rawEvent),
-    source: str(w.rawEvent && w.thesis ? `Observé : ${str(w.rawEvent)}` : "Tarsis — analyse signaux faibles"),
-    severity: str(w.urgency ?? w.impactCategory ?? "MEDIUM"),
+    source: ["Analyse du dossier à vérifier", str(w.sourceRef), str(w.rawEvent)].filter(Boolean).join(" — "),
+    severity: str(w.urgency ?? w.impactCategory),
     detectedAt: "",
   })).filter((w: any) => w.signal);
 
   const marketWeakSignals = arr(tContent?.marketReality?.weakSignals).map((s: unknown) => ({
     signal: str(s),
-    source: "Veille marché (pilier T)",
-    severity: "MEDIUM",
+    source: "Signal mentionné dans la lecture de marché ; origine et date à préciser",
+    severity: "",
     detectedAt: "",
   })).filter((w: any) => w.signal);
 
@@ -1255,7 +1322,7 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
       detectedAt: s.createdAt ? new Date(s.createdAt).toLocaleDateString("fr-FR") : "",
     }));
 
-  const weakSignals = [...analyzedSignals, ...marketWeakSignals, ...dbSignals].slice(0, 8);
+  const weakSignals = [...analyzedSignals, ...marketWeakSignals, ...dbSignals];
 
   // ── Opportunités : recommandations des analyses Tarsis + activations du
   // catalogue I, puis Signal rows DB, puis defaults.
@@ -1302,12 +1369,11 @@ const BUDGET_ESTIME_LABEL: Record<string, string> = { LOW: "Faible", MEDIUM: "Mo
 
 /** Pure cost label for an initiative — numeric FCFA if known, else the qualitative estimate, else null. */
 function initiativeCost(init: NormalizedInitiative): string | null {
-  if (init.budget > 0) {
-    if (init.budget >= 1_000_000) return `${(init.budget / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M FCFA`;
-    if (init.budget >= 1_000) return `${Math.round(init.budget / 1_000)} k FCFA`;
-    return `${Math.round(init.budget)} FCFA`;
-  }
-  return init.budgetEstime ? (BUDGET_ESTIME_LABEL[init.budgetEstime] ?? init.budgetEstime) : null;
+  if (init.budget === undefined) return null;
+  const cost = init.budget >= 1_000_000 ? `${(init.budget / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M FCFA`
+    : init.budget >= 1_000 ? `${Math.round(init.budget / 1_000)} k FCFA` : `${Math.round(init.budget)} FCFA`;
+  return init.budgetBasis === "QUALITATIVE_ESTIMATE" && init.budgetEstime
+    ? `Estimation ${BUDGET_ESTIME_LABEL[init.budgetEstime]!.toLowerCase()} · ${cost}` : cost;
 }
 
 export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
@@ -1357,6 +1423,7 @@ export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
 }
 
 export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
+  const positioning = readOvertonPositioning({ a: getPillarContent(strategy, "a"), d: getPillarContent(strategy, "d") });
   const sContent = getPillarContent(strategy, "s") as any;
   const dContent = getPillarContent(strategy, "d") as any;
   const iContent = getPillarContent(strategy, "i") as any;
@@ -1394,10 +1461,15 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   // Roadmap : S.roadmap → calendrier annuel I (chaque entrée = phase réelle avec
   // budget/objectif/drivers) → axes stratégiques S. Plus de roadmap 7-phases
   // générique (defaultRoadmap "Phase 1 — Fondations").
-  let roadmap = arr(sContent?.roadmap).map((r: any) => ({
+  let roadmap: FenetreOvertonSection["roadmap"] = arr(sContent?.roadmap).map((r: any) => ({
     phase: str(r.phase), objectif: str(r.objectif ?? r.objective),
-    livrables: arr(r.livrables ?? r.deliverables).map(str).filter(Boolean),
-    budget: typeof r.budget === "number" ? r.budget : null, duree: str(r.duree ?? r.duration),
+    livrables: arr(r.livrables ?? r.deliverables ?? r.actions).map(str).filter(Boolean),
+    budget: typeof r.budget === "number" ? r.budget : null,
+    budgetSummary: InitiativeBudgetSummarySchema.safeParse(r.budgetSummary).success ? r.budgetSummary : undefined,
+    duree: str(r.duree ?? r.duration),
+    ...(typeof r.canonType === "string" ? { canonType: r.canonType } : {}),
+    ...(typeof r.cadence === "string" ? { cadence: r.cadence } : {}),
+    ...(Array.isArray(r.actionRefs) ? { actionRefs: r.actionRefs.filter((id: unknown) => typeof id === "string") } : {}),
   })).filter((r: any) => r.phase || r.objectif);
   if (roadmap.length === 0) {
     roadmap = arr(iContent?.annualCalendar).map((e: any) => ({
@@ -1417,7 +1489,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   // priorisée est un jalon réel, son KPI = critère de succès). Plus de jalons
   // génériques datés (defaultJalons).
   let jalons = arr(sContent?.jalons ?? sContent?.milestones ?? sContent?.overtonMilestones).map((j: any) => ({
-    date: str(j.date), milestone: str(j.milestone ?? j.label ?? j.targetPerception), critereSucces: str(j.critere ?? j.criteria ?? j.successCriteria),
+    date: str(j.date), milestone: str(j.milestone ?? j.label ?? j.targetPerception), critereSucces: str(j.critere ?? j.criteria ?? j.successCriteria ?? j.measurementMethod),
   })).filter((j: any) => j.milestone);
   if (jalons.length === 0) {
     jalons = arr(iContent?.sprint90Days).map((a: any) => ({
@@ -1429,26 +1501,32 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   // ADR-0089 — ambition retenue + jeu de stratégie par route.
   const computed = sContent?.computed as any;
   const num = (v: unknown) => (typeof v === "number" ? v : null);
+  const summary = (v: unknown) => { const parsed = InitiativeBudgetSummarySchema.safeParse(v); return parsed.success ? parsed.data : undefined; };
   const selectedRouteKey = typeof computed?.selectedRouteKey === "string" ? computed.selectedRouteKey : null;
   const roadmapRoutes = arr(computed?.roadmapRoutes).map((r: any) => ({
     key: str(r.key),
     label: str(r.label),
     recommended: Boolean(r.recommended),
     selected: typeof r.selected === "boolean" ? r.selected : (selectedRouteKey !== null && str(r.key) === selectedRouteKey),
-    projectedGrowthPct: typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : 0,
+    projectedGrowthPct: num(r.projectedGrowthPct),
     projectedRevenue: typeof r.projectedRevenue === "number" ? r.projectedRevenue : null,
-    targetCultIndex: typeof r.targetCultIndex === "number" ? r.targetCultIndex : 0,
+    targetCultIndex: num(r.targetCultIndex),
     description: str(r.description),
     initiativeCount: num(r.initiativeCount),
+    initiatives: arr(r.initiatives).filter((a: any) => typeof a.id === "string" && typeof a.action === "string"),
     totalBudget: num(r.totalBudget),
+    budgetSummary: summary(r.budgetSummary),
+    projectionAssumptions: r.projectionAssumptions && typeof r.projectionAssumptions === "object" ? r.projectionAssumptions : undefined,
     riskCoverage: num(r.riskCoverage),
   }));
   const computedDashboard = computed
     ? {
         totalBudget: num(computed.totalBudget),
+        budgetSummary: summary(computed.budgetSummary),
         riskCoverage: num(computed.riskCoverage),
         selectedInitiativeCount: num(computed.selectedInitiativeCount),
         coherenceScore: num(computed.coherenceScore),
+        ...(computed.coherenceSummary ? { coherenceSummary: computed.coherenceSummary } : {}),
         budgetByPhase: Object.entries((computed.budgetByPhase ?? {}) as Record<string, unknown>)
           .filter(([, b]) => typeof b === "number")
           .map(([phase, b]) => ({ phase, budget: b as number })),
@@ -1456,6 +1534,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     : null;
 
   return {
+    positioning,
     perceptionActuelle,
     perceptionCible,
     ecart,
@@ -1610,7 +1689,7 @@ export function mapCroissanceEvolution(strategy: any): CroissanceEvolutionSectio
   // catégories réelles du catalogue V. Plus de pivots/extensions génériques.
   const computed = (sContent?.computed ?? {}) as any;
   const routeScenarios = arr(computed.roadmapRoutes).map((r: any) =>
-    `${str(r.label)}${r.selected ? " (retenue)" : r.recommended ? " (recommandée)" : ""} — +${r.projectedGrowthPct}% de croissance projetée, Cult Index cible ${r.targetCultIndex}/100. ${str(r.description)}`,
+    `${str(r.label)}${r.selected ? " (retenue)" : r.recommended ? " (recommandée)" : ""} — scénario hypothétique : ${typeof r.projectedGrowthPct === "number" ? `+${r.projectedGrowthPct}% de croissance projetée` : "croissance à préciser"}, indice d’attachement cible ${typeof r.targetCultIndex === "number" ? `${r.targetCultIndex}/100` : "à préciser"}. ${str(r.description)} ${roadmapAssumptionsLabel(r.projectionAssumptions) ?? ""}`,
   ).filter(Boolean);
   const recoScenarios = arr(sContent?.recommandationsPrioritaires)
     .map((r: any) => str(r.recommendation ?? r.reco ?? r.action)).filter(Boolean);
@@ -1689,4 +1768,3 @@ function pickArr(obj: any, keys: string[]): string[] {
   }
   return [];
 }
-

@@ -35,14 +35,17 @@ const LEVEL_CLASS: Record<LogEntry["level"], string> = {
 export function OracleLiveConsole(props: OracleLiveConsoleProps): React.ReactElement {
   const {
     log,
-    isStreaming,
-    emptyHint = "En attente de la première génération…",
+    emptyHint = "Aucune opération lancée dans cet onglet.",
     className = "",
   } = props;
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (log.length > 0) {
+      // Keep the page still: only the journal's own scroll container advances.
+      const container = endRef.current?.parentElement;
+      if (container) container.scrollTop = container.scrollHeight;
+    }
   }, [log.length]);
 
   return (
@@ -53,7 +56,7 @@ export function OracleLiveConsole(props: OracleLiveConsoleProps): React.ReactEle
     >
       {log.length === 0 ? (
         <p className="text-foreground-muted">
-          {isStreaming ? `[…] ${emptyHint}` : `[off] ${emptyHint}`}
+          {emptyHint}
         </p>
       ) : (
         <>

@@ -117,5 +117,6 @@ export async function buildReferenceContextText(strategyId: string, opts?: { lim
     retrieve: () => retrieveReferenceDossiers(strategyId, opts),
     label: `reference-context(strategy=${strategyId})`,
   });
-  return formatReferenceDossiers(facts);
+  const { recipeContext } = await import("./creative-intelligence");
+  return formatReferenceDossiers(facts) + await recipeContext(strategyId);
 }

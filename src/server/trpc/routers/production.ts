@@ -12,6 +12,7 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessCampaign } from "@/server/services/operator-isolation";
 import * as prod from "@/server/services/production";
+import { accessible } from "../entity-access";
 /* lafusee:governed-active */
 
 type Ctx = { session: { user: { id: string; role: string; operatorId?: string | null } } };
@@ -23,6 +24,21 @@ async function assertCampaignAccess(ctx: Ctx, campaignId: string) {
     role: ctx.session.user.role ?? "USER",
   });
   if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne." });
+}
+
+/**
+ * IN1 : exécution, livrable ou ligne de devis keyés par un id d'entrée. Un id
+ * inconnu et une entité d'une autre campagne reçoivent le même 404, avant tout effet.
+ */
+async function assertExecutionAccess(ctx: Ctx & { db: typeof import("@/lib/db").db }, executionId: string) {
+  await accessible(ctx.db.campaignExecution.findUnique({ where: { id: executionId }, select: { campaignId: true } }),
+    "Exécution introuvable.", (exec) => assertCampaignAccess(ctx, exec.campaignId));
+}
+async function assertDeliverableSpecAccess(ctx: Ctx & { db: typeof import("@/lib/db").db }, deliverableSpecId: string) {
+  await accessible(ctx.db.deliverableSpec.findUnique({
+    where: { id: deliverableSpecId },
+    select: { execution: { select: { campaignId: true } } },
+  }), "Livrable introuvable.", (spec) => assertCampaignAccess(ctx, spec.execution.campaignId));
 }
 
 export const productionRouter = createTRPCRouter({
@@ -40,8 +56,7 @@ export const productionRouter = createTRPCRouter({
   aicpDevis: protectedProcedure
     .input(z.object({ executionId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.executionId }, select: { campaignId: true } });
-      await assertCampaignAccess(ctx, exec.campaignId);
+      await assertExecutionAccess(ctx, input.executionId);
       return prod.getAicpDevis(input.executionId);
     }),
 
@@ -49,8 +64,7 @@ export const productionRouter = createTRPCRouter({
   deliverables: protectedProcedure
     .input(z.object({ executionId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.executionId }, select: { campaignId: true } });
-      await assertCampaignAccess(ctx, exec.campaignId);
+      await assertExecutionAccess(ctx, input.executionId);
       return ctx.db.deliverableSpec.findMany({ where: { executionId: input.executionId }, include: { usageGrants: true } });
     }),
 
@@ -58,11 +72,7 @@ export const productionRouter = createTRPCRouter({
   diffusionStatus: protectedProcedure
     .input(z.object({ deliverableSpecId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const spec = await ctx.db.deliverableSpec.findUniqueOrThrow({
-        where: { id: input.deliverableSpecId },
-        select: { execution: { select: { campaignId: true } } },
-      });
-      await assertCampaignAccess(ctx, spec.execution.campaignId);
+      await assertDeliverableSpecAccess(ctx, input.deliverableSpecId);
       return prod.checkDiffusionAllowed(input.deliverableSpecId);
     }),
 
@@ -72,8 +82,7 @@ export const productionRouter = createTRPCRouter({
     inputSchema: z.object({ executionId: z.string(), channelSpecKeys: z.array(z.string()).min(1) }),
     caller: "production:fanOut",
   }).mutation(async ({ ctx, input }) => {
-    const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.executionId }, select: { campaignId: true } });
-    await assertCampaignAccess(ctx, exec.campaignId);
+    await assertExecutionAccess(ctx, input.executionId);
     return prod.fanOutDeliverables(input);
   }),
 
@@ -93,11 +102,7 @@ export const productionRouter = createTRPCRouter({
     }),
     caller: "production:createUsageGrant",
   }).mutation(async ({ ctx, input }) => {
-    const spec = await ctx.db.deliverableSpec.findUniqueOrThrow({
-      where: { id: input.deliverableSpecId },
-      select: { execution: { select: { campaignId: true } } },
-    });
-    await assertCampaignAccess(ctx, spec.execution.campaignId);
+    await assertDeliverableSpecAccess(ctx, input.deliverableSpecId);
     return prod.createUsageGrant(input);
   }),
 
@@ -113,8 +118,7 @@ export const productionRouter = createTRPCRouter({
     }),
     caller: "production:addAicpLine",
   }).mutation(async ({ ctx, input }) => {
-    const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.executionId }, select: { campaignId: true } });
-    await assertCampaignAccess(ctx, exec.campaignId);
+    await assertExecutionAccess(ctx, input.executionId);
     return prod.addAicpLine(input);
   }),
 
@@ -124,11 +128,10 @@ export const productionRouter = createTRPCRouter({
     inputSchema: z.object({ lineId: z.string(), actualAmount: z.number().nonnegative() }),
     caller: "production:recordAicpActual",
   }).mutation(async ({ ctx, input }) => {
-    const line = await ctx.db.aicpLineItem.findUniqueOrThrow({
+    await accessible(ctx.db.aicpLineItem.findUnique({
       where: { id: input.lineId },
       select: { execution: { select: { campaignId: true } } },
-    });
-    await assertCampaignAccess(ctx, line.execution.campaignId);
+    }), "Ligne de devis introuvable.", (line) => assertCampaignAccess(ctx, line.execution.campaignId));
     return prod.recordAicpActual(input);
   }),
 });

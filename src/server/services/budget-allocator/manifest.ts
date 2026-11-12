@@ -10,7 +10,7 @@ import { defineManifest } from "@/server/governance/manifest";
 export const manifest = defineManifest({
   service: "budget-allocator",
   governor: "THOT",
-  version: "1.1.0",
+  version: "1.1.1",
   acceptsIntents: [],
   emits: [],
   capabilities: [
@@ -18,7 +18,7 @@ export const manifest = defineManifest({
       name: "generateBudgetPlan",
       inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
       outputSchema: z.unknown(),
-      sideEffects: ["DB_READ", "DB_WRITE"],
+      sideEffects: ["DB_READ"],
       qualityTier: "B",
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification: "Allocates per-mission budget; without it cost gates cannot be evaluated and Thot's veto power is theoretical.",

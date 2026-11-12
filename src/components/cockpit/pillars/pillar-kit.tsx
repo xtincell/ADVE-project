@@ -14,6 +14,8 @@
  */
 
 import type { ReactNode } from "react";
+import { FIELD_PROVENANCE_LABEL, fieldStatusFor } from "@/domain/field-provenance";
+import { SOURCE_CERTAINTY_LABEL } from "@/domain/source-certainty";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -24,17 +26,38 @@ export function isEmpty(v: unknown): boolean {
 }
 
 const STATUS_LABEL: Record<string, [string, string]> = {
-  DECLARED: ["Déclaré", "ok"],
-  INFERRED: ["Inféré", "orange"],
+  HUMAN: [FIELD_PROVENANCE_LABEL.HUMAN, "ok"],
+  SOURCE: [FIELD_PROVENANCE_LABEL.SOURCE, "info"],
+  UNKNOWN: [FIELD_PROVENANCE_LABEL.UNKNOWN, "muted"],
+  DECLARED: [SOURCE_CERTAINTY_LABEL.DECLARED, "ok"],
+  OFFICIAL: [SOURCE_CERTAINTY_LABEL.OFFICIAL, "info"],
+  ARBITRARY: [SOURCE_CERTAINTY_LABEL.ARBITRARY, "orange"],
+  INFERRED: [FIELD_PROVENANCE_LABEL.INFERRED, "orange"],
+  PARTIALLY_INFERRED: ["Compléments proposés", "orange"],
+  MIXED: ["Informations complétées", "info"],
   CALCULATED: ["Calculé", "info"],
   EMPTY: ["À saisir", "muted"],
 };
 
-/** Resolve a field's certainty marker for a bare key, tolerating "a.key" form. */
-export function makeStatusFor(certainty: Record<string, string> | null | undefined, pillarKey: string) {
-  const fc = certainty ?? {};
+/**
+ * Origine de la valeur courante, distincte de la fiabilité d'un document et
+ * d'une approbation. La provenance du gateway prime sur une ancienne certitude.
+ * Sans trace de provenance, conserver uniquement le marqueur legacy explicite.
+ */
+/** Display a mixed parent without changing the authority used by the writer. */
+export function makeStatusFor(certainty: Record<string, string> | null | undefined, pillarKey: string, provenance?: unknown) {
+  const status = fieldStatusFor(certainty, pillarKey, provenance);
+  const origins = provenance && typeof provenance === "object" && !Array.isArray(provenance) ? provenance as Rec : {};
   const prefix = `${pillarKey.toLowerCase()}.`;
-  return (key: string): string | undefined => fc[key] ?? fc[`${prefix}${key}`];
+  const children = Object.keys(origins).map(path => path.startsWith(prefix) ? path.slice(prefix.length) : path);
+  return (path: string): string | undefined => {
+    const own = status(path);
+    const bare = path.startsWith(prefix) ? path.slice(prefix.length) : path;
+    const different = children.filter(child => child.startsWith(`${bare}.`) || child.startsWith(`${bare}[`))
+      .map(status).filter(child => child !== undefined && child !== own);
+    if (different.length) return own === "INFERRED" || different.includes("INFERRED") ? "PARTIALLY_INFERRED" : "MIXED";
+    return own;
+  };
 }
 
 export function asRec(v: unknown): Rec {
@@ -68,6 +91,26 @@ export function str(v: unknown): string {
   return String(v);
 }
 
+/** Read declared labels without assigning a Schwartz category or rewriting data. */
+export function brandValueLabel(value: Rec): string {
+  for (const key of ["customName", "value", "valeur", "nom", "name", "title"]) {
+    const label = value[key];
+    if (typeof label === "string" && label.trim()) return label;
+  }
+  return "";
+}
+
+/** Both source spellings express the same supplied ordinal, not a new ranking. */
+export function brandValueRank(value: Rec): number | undefined {
+  for (const key of ["rank", "rang"]) {
+    const raw = value[key];
+    if (typeof raw !== "number" && typeof raw !== "string") continue;
+    const ordinal = Number(raw);
+    if (Number.isFinite(ordinal) && ordinal > 0) return ordinal;
+  }
+  return undefined;
+}
+
 // ── Section ────────────────────────────────────────────────────────────
 
 export function Section({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
@@ -85,10 +128,11 @@ export function Section({ title, sub, children }: { title: string; sub?: string;
 // ── Status dot ─────────────────────────────────────────────────────────
 
 export function StatusDot({ status, empty }: { status?: string; empty: boolean }) {
-  const fallback: [string, string] = ["Déclaré", "ok"];
-  const entry = (empty ? STATUS_LABEL.EMPTY : STATUS_LABEL[status ?? "DECLARED"]) ?? fallback;
+  const marker = empty ? "EMPTY" : status ?? "UNKNOWN";
+  const entry = (Object.hasOwn(STATUS_LABEL, marker) ? STATUS_LABEL[marker] : undefined)
+    ?? [FIELD_PROVENANCE_LABEL.UNKNOWN, "muted"];
   const [lbl, tone] = entry;
-  return <span className="ck-fc__status" data-t={tone}>{lbl}</span>;
+  return <span className="ck-fc__status" data-t={tone} title="L’origine d’une valeur ne constitue pas une approbation de son contenu.">{lbl}</span>;
 }
 
 export function EmptyValue() {

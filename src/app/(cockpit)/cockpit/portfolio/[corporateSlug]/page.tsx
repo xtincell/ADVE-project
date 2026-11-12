@@ -12,6 +12,9 @@
 
 "use client";
 
+import { usePortfolioOperator } from "@/components/portfolio/use-portfolio-operator";
+import { BrandWorkspace } from "@/components/portfolio/BrandWorkspace";
+import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS } from "@/domain/portfolio-reference";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
@@ -19,10 +22,9 @@ import { BrandNodeForm } from "@/components/portfolio/BrandNodeForm";
 import { PortfolioTreeView } from "@/components/portfolio/PortfolioTreeView";
 import { NodeBreadcrumb } from "@/components/portfolio/NodeBreadcrumb";
 import { ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain/pillars";
-import { useStrategy } from "@/components/cockpit/strategy-context";
-import { Plus, Edit3, Archive, MapPin, Tag, Calendar, Rocket, Sparkles } from "lucide-react";
+import { BrandPlatformCta } from "@/components/portfolio/BrandPlatformCta";
+import { Plus, Edit3, Archive, MapPin, Tag, Calendar } from "lucide-react";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { useToast } from "@/components/shared/notification-toast";
 
 export default function PortfolioNodeDetailPage() {
   const params = useParams<{ corporateSlug: string }>();
@@ -34,7 +36,7 @@ export default function PortfolioNodeDetailPage() {
   // plus bas — sinon Rules of Hooks violée (React #310).
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
 
-  const { data: operator } = trpc.operator.getOwn.useQuery();
+  const { operator, isLoading: operatorLoading, error: operatorError } = usePortfolioOperator();
   const { data: node, isLoading } = trpc.brandNode.getBySlug.useQuery(
     { operatorId: operator?.id ?? "", slug },
     { enabled: Boolean(operator?.id) },
@@ -44,17 +46,19 @@ export default function PortfolioNodeDetailPage() {
   const archiveMutation = trpc.brandNode.delete.useMutation({
     onSuccess: () => {
       utils.brandNode.invalidate();
-      router.push("/cockpit/portfolio");
+      router.push(`/cockpit/portfolio?operator=${encodeURIComponent(operator?.id ?? "")}`);
     },
   });
 
-  if (isLoading || !operator) return <div className="p-6 text-sm text-foreground-secondary">Loading…</div>;
+  if (operatorError) return <p role="alert" className="p-6 text-error">{operatorError.message}</p>;
+  if (!operatorLoading && !operator) return <p className="p-6">Aucune équipe accessible pour ce portefeuille.</p>;
+  if (isLoading || !operator) return <div className="p-6 text-sm text-foreground-secondary">Chargement…</div>;
   if (!node) {
     return (
       <div className="p-6">
         <NodeBreadcrumb nodeId="" />
         <div className="mt-4 rounded border border-error/30 bg-error/10 p-4 text-sm">
-          BrandNode "<code>{slug}</code>" introuvable pour operator {operator.name}.
+          Marque "<code>{slug}</code>" introuvable dans l’équipe {operator.name}.
         </div>
       </div>
     );
@@ -70,21 +74,20 @@ export default function PortfolioNodeDetailPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-8">
       <header className="flex flex-col gap-2">
         <NodeBreadcrumb nodeId={node.id} />
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="flex items-baseline gap-3 text-2xl font-semibold">
+            <h1 className="flex flex-wrap items-baseline gap-3 font-display text-3xl font-semibold">
               {node.name}
               <span className="rounded bg-info/15 px-2 py-0.5 text-xs uppercase tracking-wide text-info">
-                {node.nodeKind}
+                {PORTFOLIO_KIND_LABELS[node.nodeKind] ?? "Élément du portefeuille"}
               </span>
               <span className="rounded bg-surface-overlay px-2 py-0.5 text-xs uppercase tracking-wide">
-                {node.nodeNature}
+                {PORTFOLIO_LIFECYCLE_LABELS[node.lifecycle] ?? node.lifecycle}
               </span>
             </h1>
-            <code className="text-xs text-foreground-secondary">slug: {node.slug}</code>
           </div>
           <div className="flex flex-wrap gap-2">
             <BrandPlatformCta
@@ -94,6 +97,8 @@ export default function PortfolioNodeDetailPage() {
               operatorId={operator.id}
               clientId={node.clientId}
               strategyId={node.strategyId}
+              countryCode={node.countryCode}
+              updatedAt={node.updatedAt}
             />
             <button
               onClick={() => setMode((m) => (m === "EDIT" ? "VIEW" : "EDIT"))}
@@ -105,7 +110,7 @@ export default function PortfolioNodeDetailPage() {
               onClick={() => setMode((m) => (m === "CREATE_CHILD" ? "VIEW" : "CREATE_CHILD"))}
               className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-card"
             >
-              <Plus className="h-4 w-4" /> Ajouter enfant
+              <Plus className="h-4 w-4" /> Ajouter un élément
             </button>
             <button
               onClick={() => setArchiveConfirmOpen(true)}
@@ -160,28 +165,14 @@ export default function PortfolioNodeDetailPage() {
         </div>
       )}
 
-      {/* Metadata */}
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetaItem icon={<MapPin className="h-4 w-4" />} label="Country" value={node.countryCode ?? "—"} />
-        <MetaItem icon={<MapPin className="h-4 w-4" />} label="Cluster" value={node.clusterTag ?? "—"} />
-        <MetaItem icon={<Calendar className="h-4 w-4" />} label="Lifecycle" value={node.lifecycle} />
-        <MetaItem
-          icon={<Tag className="h-4 w-4" />}
-          label="Roles"
-          value={node.nodeRole.length === 0 ? "—" : node.nodeRole.join(", ")}
-        />
-      </section>
-
-      {/* Phase 18-N1/N8 — Inheritance résolue (badges) */}
-      <InheritanceSection nodeId={node.id} />
-
-      {/* Children */}
-      <section>
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-foreground-secondary">
-          Descendance directe
-        </h2>
-        <PortfolioTreeView operatorId={operator.id} parentNodeId={node.id} maxDepth={4} />
-      </section>
+      <BrandWorkspace nodeId={node.id} />
+      <details className="border-t border-border pt-4">
+        <summary className="cursor-pointer text-sm text-foreground-secondary">Arbre complet et héritage stratégique</summary>
+        <div className="mt-5 space-y-6">
+          <InheritanceSection nodeId={node.id} />
+          <PortfolioTreeView operatorId={operator.id} parentNodeId={node.id} maxDepth={4} />
+        </div>
+      </details>
     </div>
   );
 }
@@ -202,92 +193,6 @@ export default function PortfolioNodeDetailPage() {
 // n'a PAS besoin de plateforme (peut rester sans Strategy), mais LaFusée
 // produit a SA plateforme propre. Le bouton est neutre et n'oblige pas la
 // création — c'est l'opérateur qui décide.
-
-function BrandPlatformCta({
-  nodeId,
-  nodeName,
-  nodeKind,
-  operatorId,
-  clientId,
-  strategyId,
-}: {
-  nodeId: string;
-  nodeName: string;
-  nodeKind: string;
-  operatorId: string;
-  clientId: string | null;
-  strategyId: string | null;
-}) {
-  const router = useRouter();
-  const { setStrategyId } = useStrategy();
-  const utils = trpc.useUtils();
-  const toast = useToast();
-  const [createConfirmOpen, setCreateConfirmOpen] = useState(false);
-
-  const createStrategy = trpc.strategy.create.useMutation();
-  const attachStrategy = trpc.brandNode.attachStrategy.useMutation();
-
-  const isPending = createStrategy.isPending || attachStrategy.isPending;
-
-  if (strategyId) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setStrategyId(strategyId);
-          router.push("/cockpit/brand/strategy");
-        }}
-        className="inline-flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
-        title={`Plateforme de marque ${nodeName} (Strategy attachée)`}
-      >
-        <Rocket className="h-4 w-4" />
-        Ouvrir la plateforme de marque
-      </button>
-    );
-  }
-
-  const handleCreate = async () => {
-    setCreateConfirmOpen(false);
-    try {
-      const newStrategy = await createStrategy.mutateAsync({
-        name: nodeName,
-        operatorId,
-        clientId: clientId ?? undefined,
-      });
-      await attachStrategy.mutateAsync({ nodeId, strategyId: newStrategy.id, operatorId });
-      await utils.brandNode.invalidate();
-      await utils.strategy.invalidate();
-      setStrategyId(newStrategy.id);
-      router.push("/cockpit/brand/strategy");
-    } catch (err) {
-      toast.error(`Création échouée : ${err instanceof Error ? err.message : String(err)}`);
-    }
-  };
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setCreateConfirmOpen(true)}
-        disabled={isPending}
-        className="inline-flex items-center gap-1.5 rounded border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent hover:border-accent hover:bg-accent/20 disabled:opacity-50"
-        title={`Créer la plateforme de marque pour ${nodeName}`}
-      >
-        <Sparkles className="h-4 w-4" />
-        {isPending ? "Création…" : "Créer la plateforme de marque"}
-      </button>
-      <ConfirmDialog
-        open={createConfirmOpen}
-        onClose={() => setCreateConfirmOpen(false)}
-        onConfirm={() => void handleCreate()}
-        variant="info"
-        title={`Créer la plateforme de marque pour « ${nodeName} » ?`}
-        message="Vous pourrez ensuite éditer les piliers et générer l'Oracle."
-        confirmLabel="Créer"
-      />
-    </>
-  );
-}
 
 // ──────────────────────────────────────────────────────────────────────
 // InheritanceSection — Phase 18-N1/N8

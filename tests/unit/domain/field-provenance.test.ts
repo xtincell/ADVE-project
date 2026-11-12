@@ -13,6 +13,8 @@ import {
   coerceProvenance,
   decideOverwrite,
   isFieldProvenance,
+  fieldStatusFor,
+  inferredFieldPaths,
 } from "@/domain/field-provenance";
 
 describe("FieldProvenance — échelle d'autorité", () => {
@@ -33,6 +35,38 @@ describe("FieldProvenance — échelle d'autorité", () => {
     for (const lvl of FIELD_PROVENANCE_LEVELS) expect(isFieldProvenance(lvl)).toBe(true);
     expect(isFieldProvenance("DECLARED")).toBe(false);
     expect(isFieldProvenance("")).toBe(false);
+  });
+});
+
+describe("revue des champs — même autorité pour le lecteur et la confirmation", () => {
+  it("propose l'inférence canonique même sans ancien marqueur", () => {
+    expect(inferredFieldPaths({ promesse: "À relire", _fieldProvenance: { promesse: "INFERRED" } }, {}, "v")).toEqual(["promesse"]);
+  });
+  it("une autorité humaine de tête prime sur le badge d'une feuille", () => {
+    const fc = { "v.produitsCatalogue[0].nom": "INFERRED" };
+    const content = { produitsCatalogue: [{ nom: "Relu" }], _fieldProvenance: { produitsCatalogue: "HUMAN" } };
+    expect(fieldStatusFor(fc, "v", content._fieldProvenance)("produitsCatalogue[0].nom")).toBe("HUMAN");
+    expect(inferredFieldPaths(content, fc, "v")).toEqual([]);
+  });
+  it("regroupe les anciennes feuilles au grain du garde sans proposer les champs absents", () => {
+    expect(inferredFieldPaths({ matrice: { gauche: "A", droite: "B" } }, {
+      "a.matrice.gauche": "INFERRED", "matrice.droite": "INFERRED", fantome: "INFERRED",
+    }, "a")).toEqual(["matrice"]);
+  });
+  it("sans trace ne déclare rien ; UNKNOWN explicite prime sur le legacy", () => {
+    expect(fieldStatusFor({}, "a")("vision")).toBeUndefined();
+    expect(inferredFieldPaths({ vision: "À revoir", _fieldProvenance: { vision: "UNKNOWN" } }, { vision: "INFERRED" }, "a")).toEqual([]);
+  });
+  it("les compléments canoniques gardent leur grain même dans un objet humain", () => {
+    const content = { model: { input: 50, other: 10 }, _fieldProvenance: { model: "HUMAN", "model.input": "INFERRED" } };
+    const status = fieldStatusFor({}, "v", content._fieldProvenance);
+    expect(status("model")).toBe("HUMAN");
+    expect(status("model.input")).toBe("INFERRED");
+    expect(status("model.other")).toBe("HUMAN");
+    expect(inferredFieldPaths(content, {}, "v")).toEqual(["model.input"]);
+  });
+  it("compare la profondeur sans faire gagner le préfixe historique du parent", () => {
+    expect(fieldStatusFor({}, "v", { "v.x": "HUMAN", "x.y": "INFERRED" })("x.y")).toBe("INFERRED");
   });
 });
 

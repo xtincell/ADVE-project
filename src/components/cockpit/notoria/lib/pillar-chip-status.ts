@@ -130,3 +130,10 @@ export function getPillarChipStatus(p: PillarReadinessProjection): PillarChipSta
 export function isPillarReadyForCascade(p: PillarReadinessProjection): boolean {
   return getPillarChipStatus(p).isReadyForCascade;
 }
+
+/** A recalculation permission is not evidence that a result is current. */
+export function getPillarProductionState(p: PillarReadinessProjection | undefined): "missing" | "partial" | "stale" | "current" {
+  if (!p || p.stage === "EMPTY") return "missing";
+  if (p.stale) return "stale";
+  return p.completionLevel === "INCOMPLET" ? "partial" : "current";
+}

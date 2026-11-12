@@ -13,6 +13,9 @@
 
 import type { Intent } from "@/server/services/mestor/intents";
 import { db } from "@/lib/db";
+import { TRPCError } from "@trpc/server";
+import { getOperatorContext, canAccessStrategy } from "@/server/services/operator-isolation";
+import { assertCollaboratorMayEmit } from "./collaborator-firewall";
 
 /**
  * Map of `originalKind → reverseKind`. Listed kinds are reversible;
@@ -20,6 +23,9 @@ import { db } from "@/lib/db";
  */
 export const COMPENSATING_MAP: Readonly<Record<string, string>> = Object.freeze({
   WRITE_PILLAR: "ROLLBACK_PILLAR",
+  OPERATOR_AMEND_PILLAR: "ROLLBACK_PILLAR",
+  ROLLBACK_PILLAR: "ROLLBACK_PILLAR",
+  LEGACY_PILLAR_ROLLBACK_VERSION: "ROLLBACK_PILLAR",
   FILL_ADVE: "ROLLBACK_ADVE",
   RUN_RTIS_CASCADE: "ROLLBACK_RTIS_CASCADE",
   GENERATE_RECOMMENDATIONS: "DISCARD_RECOMMENDATIONS",
@@ -71,8 +77,8 @@ export function listMissingCompensators(allIntentKinds: readonly string[]): stri
 export interface CompensateInput {
   readonly originalIntentId: string;
   readonly reason: string;
-  /** Optional payload override for the reverse intent. */
-  readonly payloadOverride?: Record<string, unknown>;
+  /** Actor from the authenticated caller, never from a payload override. */
+  readonly userId: string;
 }
 
 export interface CompensateResult {
@@ -86,8 +92,9 @@ export async function buildCompensatingIntent(input: CompensateInput): Promise<C
     where: { id: input.originalIntentId },
     select: { id: true, intentKind: true, payload: true, strategyId: true, status: true },
   });
-  if (!original) {
-    throw new Error(`compensating-intents: original intent ${input.originalIntentId} not found`);
+  const actor = await getOperatorContext(input.userId);
+  if (!original || !(await canAccessStrategy(original.strategyId, actor))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Compensation indisponible pour cette marque." });
   }
   if (original.status !== "OK") {
     throw new Error(`compensating-intents: cannot compensate intent in status=${original.status}`);
@@ -104,7 +111,10 @@ export async function buildCompensatingIntent(input: CompensateInput): Promise<C
   // propage `key` depuis le payload de l'écriture d'origine (WRITE_PILLAR porte
   // `{ strategyId, key, content }`). Absent pour les autres compensateurs.
   const origPayload = (original.payload ?? {}) as Record<string, unknown>;
-  const originalKey = typeof origPayload.key === "string" ? origPayload.key : undefined;
+  const originalKey = original.intentKind === "OPERATOR_AMEND_PILLAR"
+    ? (typeof origPayload.pillarKey === "string" ? origPayload.pillarKey : undefined)
+    : (typeof origPayload.key === "string" ? origPayload.key : undefined);
+  await assertCollaboratorMayEmit({ userId: actor.userId, role: actor.role, strategyId: original.strategyId, kind: reverseKind });
 
   const reverseIntent = {
     kind: reverseKind,
@@ -112,7 +122,7 @@ export async function buildCompensatingIntent(input: CompensateInput): Promise<C
     compensatedFrom: input.originalIntentId,
     reason: input.reason,
     ...(originalKey ? { key: originalKey } : {}),
-    ...(input.payloadOverride ?? {}),
+    operatorId: input.userId,
   } as unknown as Intent;
 
   return {

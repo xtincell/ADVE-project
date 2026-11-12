@@ -2,7 +2,7 @@
 
 > **AUTO-GÉNÉRÉ** — ne pas éditer à la main. Source : `src/lib/types/variable-bible-canonical-map.ts`. Régen : `npx tsx scripts/gen-variable-bible-canon.ts`. Cf. [ADR-0037](adr/0037-country-scoped-knowledge-base.md) §11 + PR-K.
 
-Total : **62 codes manuel mappés** sur **155 entries variable-bible**.
+Total : **62 codes manuel mappés** sur **157 entries variable-bible**.
 
 ---
 
@@ -42,7 +42,7 @@ Total : **62 codes manuel mappés** sur **155 entries variable-bible**.
 | `D-Proofs` | Preuves de différenciation | PILIER 2 §2.x | `d.proofPoints` | Les preuves tangibles des promesses de la marque |
 | `D-Symboles` | Symboles | PILIER 2 §2.x | `d.symboles` | Les symboles visuels et culturels associés à la marque |
 | `D-Ton` | Ton de Voix | PILIER 2 §2.4 | `d.tonDeVoix` | Le ton et la personnalité verbale de la marque |
-| `D1` | Persona cible | PILIER 2 §2.5 | `d.personas` | Les 2-5 profils types de clients de la marque |
+| `D1` | Persona cible | PILIER 2 §2.5 | `d.personas` | Les profils types des différents publics de la marque |
 | `D10` | ESOV (Excess Share of Voice) | PILIER 2 §2.10 | `d.esov` | Excess Share of Voice — écart entre part de voix et part de marché |
 | `D11` | Barrières imitation | PILIER 2 §2.11 | `d.barriersImitation` | Barrières à l'imitation par la concurrence (au-delà de la PI) |
 | `D12` | Ratio Storytelling/Evidence | PILIER 2 §2.12 | `d.storyEvidenceRatio` | Ratio Storytelling/Evidence dans la communication (équilibre récit / preuve) |
@@ -96,16 +96,16 @@ Test CI : `tests/unit/governance/variable-bible-canonical-coverage.test.ts` vér
 
 Lecture inverse — quels fields code n'ont PAS de code manuel : champs marqués `derivedFrom` (RTIS, calculs cross-pilier) + champs code-only (extensions du framework). Liste explicite dans la section ci-dessous.
 
-### Fields code sans code manuel (96)
+### Fields code sans code manuel (98)
 
 Ces fields sont soit (a) dérivés/calculés, soit (b) extensions code-only du framework La Fusée. Aucun code manuel correspondant n'est attendu.
 
 - **A** : `brandNature`, `langue`, `publicCible`, `citationFondatrice`, `noyauIdentitaire`, `herosJourney`, `enemy`, `doctrine`, `livingMythology`, `timelineNarrative`, `equipeComplementarite`
 - **D** : `archetypalExpression`, `sousPromesses`, `sacredObjects`
-- **V** : `businessModel`, `pricingJustification`, `economicModels`, `positioningArchetype`, `salesChannel`, `freeLayer`, `personaSegmentMap`, `valeurMarqueTangible`, `valeurMarqueIntangible`, `coutMarqueTangible`, `coutMarqueIntangible`, `coutClientTangible`, `coutClientIntangible`
+- **V** : `productSystem`, `businessModel`, `pricingJustification`, `economicModels`, `positioningArchetype`, `salesChannel`, `freeLayer`, `personaSegmentMap`, `valeurMarqueTangible`, `valeurMarqueIntangible`, `coutMarqueTangible`, `coutMarqueIntangible`, `coutClientTangible`, `coutClientIntangible`
 - **E** : `promesseExperience`, `superfanPortrait`, `primaryChannel`, `productExperienceMap`, `ladderProductAlignment`, `channelTouchpointMap`, `conversionTriggers`, `barriersEngagement`, `principesCommunautaires`, `kpis`, `ritesDePassage`
 - **R** : `globalSwot`, `overtonBlockers`, `riskScore`, `pillarGaps`, `coherenceRisks`, `devotionVulnerabilities`, `microSWOTs`, `probabilityImpactMatrix`, `mitigationPriorities`
 - **T** : `overtonPosition`, `perceptionGap`, `tamSamSom`, `riskValidation`, `competitorOvertonPositions`, `triangulation`, `hypothesisValidation`, `marketReality`, `brandMarketFitScore`, `weakSignalAnalysis`, `marketDataSources`, `lastMarketDataRefresh`, `sectorKnowledgeReused`, `traction`
 - **I** : `catalogueParCanal`, `innovationsProduit`, `actionsByDevotionLevel`, `actionsByOvertonPhase`, `riskMitigationActions`, `hypothesisTestActions`, `assetsProduisibles`, `activationsPossibles`, `formatsDisponibles`, `totalActions`, `brandPlatform`, `copyStrategy`, `bigIdea`, `potentielBudget`, `mediaPlan`, `generationMeta`
-- **S** : `fenetreOverton`, `selectedFromI`, `devotionFunnel`, `northStarKPI`, `visionStrategique`, `syntheseExecutive`, `axesStrategiques`, `facteursClesSucces`, `sprint90Days`, `roadmap`, `globalBudget`, `budgetBreakdown`, `teamStructure`, `kpiDashboard`, `coherenceScore`, `rejectedFromI`, `overtonMilestones`, `budgetByDevotion`, `recommandationsPrioritaires`
+- **S** : `fenetreOverton`, `computed`, `selectedFromI`, `devotionFunnel`, `northStarKPI`, `visionStrategique`, `syntheseExecutive`, `axesStrategiques`, `facteursClesSucces`, `sprint90Days`, `roadmap`, `globalBudget`, `budgetBreakdown`, `teamStructure`, `kpiDashboard`, `coherenceScore`, `rejectedFromI`, `overtonMilestones`, `budgetByDevotion`, `recommandationsPrioritaires`
 

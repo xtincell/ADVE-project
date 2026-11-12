@@ -41,6 +41,25 @@ describe("parseHtmlMeta", () => {
     expect(meta.ogImage).toBe("https://www.cimencam.cm/og.jpg");
     expect(meta.language).toBe("fr");
   });
+  it("preserves quoted punctuation, long descriptions and complete signed image URLs", () => {
+    const description = "L'expérience du public, puis son avis documenté. ".repeat(10).trim();
+    const image = `https://images.example/photo.jpg?signature=${"x".repeat(420)}&width=1200`;
+    const result = parseHtmlMeta(`<meta content="${description}" property="og:description"><meta property='og:image' content='${image.replace("&", "&amp;")}'><meta content='He said "bonjour"' property='og:title'>`);
+    expect(result.description).toBe(description);
+    expect(result.ogImage).toBe(image);
+    expect(result.title).toBe('He said "bonjour"');
+  });
+  it("bounds oversized text visibly and omits oversized URLs instead of cutting them", () => {
+    const result = parseHtmlMeta(`<meta name="description" content="${"Mot ".repeat(2_000)}"><meta property="og:image" content="https://images.example/${"a".repeat(9_000)}">`);
+    expect(result.description!.length).toBeLessThanOrEqual(4_000);
+    expect(result.description).toMatch(/…$/);
+    expect(result.ogImage).toBeNull();
+  });
+  it("can use real Twitter preview metadata when OpenGraph is absent", () => {
+    const result = parseHtmlMeta('<meta name="twitter:image" content="/photo.jpg"><meta name="twitter:description" content="Extrait éditeur.">');
+    expect(result.ogImage).toBe("/photo.jpg");
+    expect(result.description).toBe("Extrait éditeur.");
+  });
   it("retourne null proprement sur HTML vide", () => {
     expect(parseHtmlMeta("<html></html>")).toEqual({ title: null, description: null, ogImage: null, language: null });
   });

@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { loadAssetDossier } from "@/server/services/brand-vault/dossier";
+import { depositInBrandVault, recordVaultDepositFailure } from "@/server/services/brand-vault/glory-deposit";
+import { getGloryTool } from "@/server/services/artemis/tools/registry";
+import { isUsableGeneration } from "@/domain/generation-result";
+import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
@@ -8,14 +13,20 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import type { Context } from "@/server/trpc/context";
 import {
+  BrandAssetLifecycleError,
+  assertOrdinaryAsset,
   selectFromBatch as engineSelectFromBatch,
   promoteToActive as enginePromoteToActive,
   supersede as engineSupersede,
   archive as engineArchive,
-  type CreateBrandAssetInput,
 } from "@/server/services/brand-vault/engine";
 import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { PILLAR_KEYS } from "@/domain";
+import { assetUploadSchema, assetProvenanceSchema, retainAssetFile, transferAssetFile, classifyAssetOriginal } from "@/server/services/brand-vault/original";
+import { SourceAssetClassificationInputSchema } from "@/domain/source-document";
+import { assetTransferInputSchema, anyAssetOriginalReceiptSchema } from "@/domain/source-original";
+import { PublicWebUrl } from "@/domain/public-brand";
+import { accessible, found } from "../entity-access";
 /* lafusee:governed-active */
 
 // BrandVault 3 levels: system / operator / production
@@ -28,13 +39,13 @@ type AssetLevel = "system" | "operator" | "production";
  * chokepoint `canAccessStrategy`. Fuite IDOR CRITIQUE sinon : lecture/suppression
  * (dont `purge` = hard delete) des actifs de n'importe quel tenant par son id.
  */
+// IN1 : un actif inconnu et l'actif d'une autre marque reçoivent le même 404.
+const ASSET_NOT_FOUND = "Actif introuvable.";
 async function assertBrandAssetAccess(ctx: Context, assetId: string): Promise<string> {
-  const asset = await ctx.db.brandAsset.findUnique({
+  const asset = await accessible(ctx.db.brandAsset.findUnique({
     where: { id: assetId },
     select: { strategyId: true },
-  });
-  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Actif introuvable." });
-  await assertStrategyAccessForAsset(ctx, asset.strategyId);
+  }), ASSET_NOT_FOUND, (a) => assertStrategyAccessForAsset(ctx, a.strategyId));
   return asset.strategyId;
 }
 
@@ -54,6 +65,27 @@ async function assertStrategyAccessForAsset(ctx: Context, strategyId: string): P
   if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cet actif." });
 }
 
+/** Resolve the audit pivot before Mestor's ownership/delegation gates, while
+ * preserving the existing native input contract (asset id, no extra user step). */
+async function withAssetStrategy<T extends { selectedAssetId?: string; brandAssetId?: string; oldAssetId?: string }>(input: T) {
+  const id = input.selectedAssetId ?? input.brandAssetId ?? input.oldAssetId;
+  const asset = id ? await db.brandAsset.findUnique({ where: { id }, select: { strategyId: true } }) : null;
+  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Actif introuvable." });
+  return { ...input, strategyId: asset.strategyId };
+}
+
+/** Expected lifecycle refusals are actionable 4xx responses, not server outages. */
+async function vaultResult<T>(mutate: () => Promise<T>): Promise<T> {
+  try { return await mutate(); } catch (error) {
+    if (error instanceof BrandAssetLifecycleError) throw new TRPCError({ code: error.code, message: error.message, cause: error });
+    if (error instanceof Error && error.name === "CollaboratorWriteVetoError") throw new TRPCError({ code: "FORBIDDEN", message: error.message, cause: error });
+    if (error instanceof Error && (error.name === "SequenceQualityError" || /^SOURCE_/.test(error.message))) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error.message, cause: error });
+    }
+    throw error;
+  }
+}
+
 export const brandVaultRouter = createTRPCRouter({
   // Upload/create an asset
   create: governedProcedure({
@@ -62,8 +94,11 @@ export const brandVaultRouter = createTRPCRouter({
 
     inputSchema: z.object({
       strategyId: z.string(),
-      name: z.string(),
+      name: z.string().trim().min(1).max(500),
       fileUrl: z.string().optional(),
+      file: assetUploadSchema.optional(),
+      provenance: assetProvenanceSchema.optional(),
+      autoTag: z.boolean().default(false),
       /** Type UI (Mes actifs) → kind canonique — sans lui, tout upload
        *  tombait en kind GENERIC et le dashboard (LOGO_FINAL/LOGO_IDEA)
        *  ne voyait JAMAIS un logo uploadé par le founder (bug 12/07). */
@@ -77,72 +112,94 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { level, expiresAt, pillarTags, type, ...rest } = input;
+      const { level, expiresAt, pillarTags, type, file, provenance, autoTag, fileUrl, ...rest } = input;
       // Type UI → kind canonique (source de vérité domain/brand-asset-kinds).
       const KIND_FOR_TYPE: Record<string, string> = {
         LOGO: "LOGO_FINAL",
-        FONT: "TYPOGRAPHY_SYSTEM",
+        FONT: "GENERIC", // a font file is not a structured typography system
         COLOR: "CHROMATIC_STRATEGY",
         IMAGE: "KV_VISUAL",
         DOCUMENT: "GENERIC",
       };
       const kind = type ? KIND_FOR_TYPE[type] ?? "GENERIC" : "GENERIC";
-      // Premier logo actif de la marque → ACTIVE (le dashboard l'affiche
-      // immédiatement) ; sinon SELECTED (variante, le porteur arbitre).
-      let state: "ACTIVE" | "SELECTED" | undefined;
-      if (kind === "LOGO_FINAL") {
-        const activeLogo = await ctx.db.brandAsset.findFirst({
-          where: { strategyId: input.strategyId, kind: "LOGO_FINAL", state: "ACTIVE" },
-          select: { id: true },
-        });
-        state = activeLogo ? "SELECTED" : "ACTIVE";
-      }
-      const mimeType = input.fileUrl?.startsWith("data:")
-        ? input.fileUrl.slice(5, input.fileUrl.indexOf(";")) || undefined
-        : undefined;
-      const asset = await ctx.db.brandAsset.create({
+      if (file && fileUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "Déposez un fichier ou un lien, pas les deux." });
+      // Legacy data URLs join the same private retention path; never persist them in JSON.
+      const inline = fileUrl?.match(/^data:([^;,]+);base64,([A-Za-z0-9+/=]+)$/);
+      if (!file && fileUrl?.startsWith("data:") && !inline) throw new TRPCError({ code: "BAD_REQUEST", message: "Fichier encodé invalide." });
+      const received = file ?? (inline ? { name: input.name, mimeType: inline[1]!, content: inline[2]! } : null);
+      if (!received && fileUrl && !PublicWebUrl.safeParse(fileUrl).success) throw new TRPCError({ code: "BAD_REQUEST", message: "Un lien HTTPS public est requis." });
+      if (provenance && !received) throw new TRPCError({ code: "BAD_REQUEST", message: "La provenance de fichier exige ses octets originaux." });
+      const asset = received ? await vaultResult(() => retainAssetFile({
+        strategyId: input.strategyId, name: input.name, kind, level,
+        pillarTags: { ...pillarTags }, assetType: type, file: received, provenance,
+      }, ctx.session.user.id, ctx.intentId)) : await ctx.db.brandAsset.create({
         data: {
           ...rest,
           kind,
-          ...(state ? { state } : {}),
-          ...(mimeType ? { mimeType } : {}),
+          fileUrl,
+          state: "CANDIDATE",
+          batchId: ctx.intentId,
+          sourceIntentId: ctx.intentId,
           pillarTags: {
             ...((pillarTags ?? {}) as Record<string, unknown>),
+            assetType: type ?? "DOCUMENT",
             level,
             expiresAt: expiresAt ?? null,
           } as Prisma.InputJsonValue,
         },
       });
 
-      // Auto-tag asset with AI-detected pillar relevance (non-blocking)
-      tagAsset(asset.id).catch((err) => { console.warn("[asset-tagger] tag failed:", err instanceof Error ? err.message : err); });
+      // Optional naming suggestion through the existing call manager; no implicit analysis.
+      if (autoTag) await tagAsset(asset.id);
 
       return asset;
     }),
+
+  transfer: governedProcedure({
+    kind: "LEGACY_BRAND_VAULT_CREATE", inputSchema: assetTransferInputSchema,
+    caller: "brand-vault:transfer",
+  }).mutation(async ({ ctx, input }) => {
+    const result = await vaultResult(() => transferAssetFile(input, ctx.session.user.id, ctx.intentId));
+    if (input.transfer.action === "FINISH" && input.transfer.autoTag) await tagAsset(result.assetId);
+    return result;
+  }),
 
   // List assets filtered by pillar and level
   list: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       pillar: z.string().optional(),
-      limit: z.number().default(50),
+      family: z.enum(["INTELLECTUAL", "MATERIAL", "HYBRID"]).optional(),
+      limit: z.number().int().min(1).max(200).default(50),
+      cursor: z.string().optional(),
+      search: z.string().max(200).optional(),
+      type: z.enum(["LOGO", "FONT", "COLOR", "IMAGE", "DOCUMENT"]).optional(),
+      state: z.enum(["DRAFT", "CANDIDATE", "SELECTED", "ACTIVE", "SUPERSEDED", "ARCHIVED", "REJECTED", "ALL"]).optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const assets = await ctx.db.brandAsset.findMany({
-        where: { strategyId: input.strategyId },
-        orderBy: { createdAt: "desc" },
+      const filters: Prisma.BrandAssetWhereInput[] = [];
+      if (input.pillar) filters.push({ OR: [{ pillarSource: input.pillar.toUpperCase() }, { pillarTags: { path: [input.pillar.toLowerCase()], gt: 0.5 } }] });
+      if (input.family) filters.push({ family: input.family });
+      if (input.search) filters.push({ OR: [
+        { name: { contains: input.search, mode: "insensitive" } },
+        { metadata: { path: ["provenance", "path"], string_contains: input.search } },
+      ] });
+      const kinds: Record<string, string[]> = { LOGO: ["LOGO_FINAL", "LOGO_IDEA"], FONT: ["TYPOGRAPHY_SYSTEM"], COLOR: ["CHROMATIC_STRATEGY"], IMAGE: ["KV_VISUAL"], DOCUMENT: ["GENERIC"] };
+      if (input.type) filters.push({ OR: [
+        { kind: { in: kinds[input.type] }, ...(input.type === "DOCUMENT" ? { OR: [{ mimeType: null }, { NOT: { mimeType: { startsWith: "font/" } } }] } : {}) },
+        { pillarTags: { path: ["assetType"], equals: input.type } },
+        ...(input.type === "FONT" ? [{ mimeType: { startsWith: "font/" } }] : []),
+      ] });
+      if (input.cursor && !await ctx.db.brandAsset.findFirst({ where: { id: input.cursor, strategyId: input.strategyId }, select: { id: true } })) throw new TRPCError({ code: "NOT_FOUND", message: "Page d’actifs indisponible. Rechargez la liste." });
+      return ctx.db.brandAsset.findMany({
+        where: { strategyId: input.strategyId,
+          ...(input.state && input.state !== "ALL" ? { state: input.state } : input.state === "ALL" ? {} : { state: { notIn: ["ARCHIVED", "REJECTED"] } }),
+          AND: filters,
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: input.limit,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
       });
-
-      // Client-side filter by pillar if specified
-      if (input.pillar) {
-        return assets.filter((a) => {
-          const tags = a.pillarTags as Record<string, unknown> | null;
-          return tags && (tags[input.pillar!] as number) > 0.5;
-        });
-      }
-
-      return assets;
     }),
 
   // Get single asset
@@ -150,8 +207,43 @@ export const brandVaultRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
-      return ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      const asset = found(await ctx.db.brandAsset.findUnique({ where: { id: input.id } }), ASSET_NOT_FOUND);
+      const original = await ctx.db.fileUpload.findFirst({ where: { entityType: "BRAND_ASSET", entityId: asset.id }, select: { fileName: true, storageReceipt: true } });
+      const receipt = anyAssetOriginalReceiptSchema.safeParse(original?.storageReceipt);
+      const documentarySource = receipt.success && receipt.data.state === "STORED" ? await ctx.db.brandDataSource.findFirst({
+        where: { strategyId: asset.strategyId, sourceType: "FILE", origin: `upload:${receipt.data.contentHash}` },
+        orderBy: { createdAt: "asc" }, select: { id: true, processingStatus: true },
+      }) : null;
+      return { ...asset, originalFileName: original?.fileName ?? null, documentarySource, dossier: await loadAssetDossier(ctx.db, asset) };
     }),
+
+  pendingDeposits: strategyScopedProcedure
+    .input(z.object({ strategyId: z.string(), cursor: z.string().optional(), limit: z.number().int().min(1).max(50).default(20) }))
+    .query(async ({ ctx, input }) => {
+      if (input.cursor && !await ctx.db.gloryOutput.findFirst({ where: { id: input.cursor, strategyId: input.strategyId }, select: { id: true } })) throw new TRPCError({ code: "NOT_FOUND" });
+      const rows = await ctx.db.gloryOutput.findMany({ where: { strategyId: input.strategyId, output: { path: ["_vaultDeposit", "status"], equals: "FAILED" } },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: input.limit + 1,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}), select: { id: true, toolSlug: true, createdAt: true } });
+      return { items: rows.slice(0, input.limit).map(row => ({ ...row, name: getGloryTool(row.toolSlug)?.name ?? row.toolSlug })), nextCursor: rows.length > input.limit ? rows[input.limit - 1]!.id : undefined };
+    }),
+
+  retryDeposit: governedProcedure({ kind: "LEGACY_BRAND_VAULT_CREATE", caller: "brand-vault:retryDeposit",
+    inputSchema: z.object({ strategyId: z.string(), gloryOutputId: z.string() }),
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccessForAsset(ctx, input.strategyId);
+    const source = await ctx.db.gloryOutput.findFirst({ where: { id: input.gloryOutputId, strategyId: input.strategyId } });
+    if (!source || !isUsableGeneration(source.output)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Ce contenu ne peut pas être déposé. Sa tentative de génération reste conservée." });
+    const tool = getGloryTool(source.toolSlug);
+    if (!tool) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’outil d’origine doit être rétabli avant ce dépôt." });
+    const receipt = source.output._vaultDeposit as { context?: Record<string, unknown>; sourceIntentId?: string } | undefined;
+    const args = { tool, toolOutput: source.output, gloryOutputId: source.id, gloryIntentId: typeof receipt?.sourceIntentId === "string" ? receipt.sourceIntentId : null,
+      strategyId: input.strategyId, context: receipt?.context ?? {}, recoveryIntentId: ctx.intentId };
+    try { return { assetIds: await depositInBrandVault(args) }; }
+    catch (error) {
+      await recordVaultDepositFailure(args);
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le dépôt n’a pas abouti. Le contenu reste conservé et la reprise reste disponible.", cause: error });
+    }
+  }),
 
   // Update asset tags
   updateTags: governedProcedure({
@@ -160,7 +252,8 @@ export const brandVaultRouter = createTRPCRouter({
 
     inputSchema: z.object({
       id: z.string(),
-      pillarTags: z.record(z.string(), z.number()),
+      pillarTags: z.record(z.string(), z.number()).default({}),
+      sourceClassification: SourceAssetClassificationInputSchema.optional(),
     }),
 
     caller: "brand-vault:updateTags",
@@ -168,7 +261,12 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      if (input.sourceClassification) {
+        if (Object.keys(input.pillarTags).length) throw new TRPCError({ code: "BAD_REQUEST", message: "Classez le fichier et modifiez les tags de stratégie dans deux actions distinctes." });
+        return vaultResult(() => classifyAssetOriginal(input.id, input.sourceClassification!, ctx.session.user.id));
+      }
+      const asset = found(await ctx.db.brandAsset.findUnique({ where: { id: input.id } }), ASSET_NOT_FOUND);
+      await vaultResult(async () => assertOrdinaryAsset(asset.format));
       const existing = (asset.pillarTags as Record<string, unknown>) ?? {};
       return ctx.db.brandAsset.update({
         where: { id: input.id },
@@ -190,14 +288,9 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
-      const tags = (asset.pillarTags as Record<string, unknown>) ?? {};
-      return ctx.db.brandAsset.update({
-        where: { id: input.id },
-        data: {
-          pillarTags: { ...tags, expired: true, expiredAt: new Date().toISOString() } as Prisma.InputJsonValue,
-        },
-      });
+      const asset = found(await ctx.db.brandAsset.findUnique({ where: { id: input.id } }), ASSET_NOT_FOUND);
+      await vaultResult(async () => assertOrdinaryAsset(asset.format));
+      return vaultResult(() => engineArchive({ brandAssetId: input.id, archivedById: ctx.session.user.id, reason: "Archivage manuel depuis les actifs" }));
     }),
 
   // Garbage collection — find expired assets
@@ -233,10 +326,11 @@ export const brandVaultRouter = createTRPCRouter({
       // un founder pouvait hard-delete le vault d'un autre tenant (IDOR CRITIQUE).
       const owned = await ctx.db.brandAsset.findMany({
         where: { id: { in: input.assetIds } },
-        select: { id: true, strategyId: true },
+        select: { id: true, strategyId: true, format: true },
       });
       const accessibleStrategies = new Set<string>();
       for (const a of owned) {
+        await vaultResult(async () => assertOrdinaryAsset(a.format));
         if (!accessibleStrategies.has(a.strategyId)) {
           await assertStrategyAccessForAsset(ctx, a.strategyId);
           accessibleStrategies.add(a.strategyId);
@@ -244,6 +338,9 @@ export const brandVaultRouter = createTRPCRouter({
       }
       const purgeableIds = owned.map((a) => a.id);
       if (purgeableIds.length === 0) return { deleted: 0 };
+      if (await ctx.db.fileUpload.count({ where: { entityType: "BRAND_ASSET", entityId: { in: purgeableIds } } })) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Ces actifs conservent des originaux. Archivez-les pour préserver les fichiers et leur historique." });
+      }
       const result = await ctx.db.brandAsset.deleteMany({
         where: { id: { in: purgeableIds } },
       });
@@ -266,7 +363,7 @@ export const brandVaultRouter = createTRPCRouter({
       selectedAssetId: z.string(),
       selectedReason: z.string().optional(),
       promoteToActive: z.boolean().optional(),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:selectFromBatch",
@@ -275,13 +372,14 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.selectedAssetId);
-      return engineSelectFromBatch({
+      return vaultResult(() => engineSelectFromBatch({
+        strategyId: input.strategyId,
         batchId: input.batchId,
         selectedAssetId: input.selectedAssetId,
         selectedById: ctx.session.user.id,
         selectedReason: input.selectedReason,
         promoteToActive: input.promoteToActive,
-      });
+      }));
     }),
 
   promoteToActive: governedProcedure({
@@ -298,7 +396,7 @@ export const brandVaultRouter = createTRPCRouter({
        * payload minimal contractualisé. Audit trail conservé.
        */
       force: z.boolean().optional(),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:promoteToActive",
@@ -307,11 +405,12 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.brandAssetId);
-      return enginePromoteToActive({
+      return vaultResult(() => enginePromoteToActive({
+        strategyId: input.strategyId,
         brandAssetId: input.brandAssetId,
         promotedById: ctx.session.user.id,
         force: input.force,
-      });
+      }));
     }),
 
   supersede: governedProcedure({
@@ -342,7 +441,7 @@ export const brandVaultRouter = createTRPCRouter({
         briefId: z.string().optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
       }),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:supersede",
@@ -353,16 +452,14 @@ export const brandVaultRouter = createTRPCRouter({
       // Ownership sur l'actif superséédé ET sur la marque du nouvel actif.
       await assertBrandAssetAccess(ctx, input.oldAssetId);
       await assertStrategyAccessForAsset(ctx, input.newAsset.strategyId);
-      const newAssetInput: CreateBrandAssetInput = {
-        ...input.newAsset,
-        operatorId: ctx.session.user.id,
-      };
-      return engineSupersede({
+      return vaultResult(() => engineSupersede({
+        strategyId: input.strategyId,
+        intentId: ctx.intentId,
         oldAssetId: input.oldAssetId,
-        newAssetInput,
+        newAssetInput: input.newAsset,
         reason: input.reason,
         supersededById: ctx.session.user.id,
-      });
+      }));
     }),
 
   archive: governedProcedure({
@@ -374,7 +471,7 @@ export const brandVaultRouter = createTRPCRouter({
     inputSchema: z.object({
       brandAssetId: z.string(),
       reason: z.string().optional(),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:archive",
@@ -383,11 +480,12 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.brandAssetId);
-      return engineArchive({
+      return vaultResult(() => engineArchive({
+        strategyId: input.strategyId,
         brandAssetId: input.brandAssetId,
         archivedById: ctx.session.user.id,
         reason: input.reason,
-      });
+      }));
     }),
 
   // ── Phase 10 listing — kind-aware retrieval ─────────────────────

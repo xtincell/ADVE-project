@@ -44,6 +44,40 @@
 import type { Prisma } from "@prisma/client";
 import { eventBus } from "./event-bus";
 import { computeSelfHash } from "./hash-chain";
+import { createHash } from "node:crypto";
+
+/** Received bytes belong in the private original store, not in audit JSON.
+ * Only upload contracts are projected; strategic content remains unchanged.
+ * Seal this projection before persistence, leaving historical seals untouched. */
+function receivedFileTrace(kind: string, input: unknown): unknown {
+  if (!["LEGACY_INGESTION_UPLOAD_FILE", "LEGACY_BRAND_VAULT_CREATE"].includes(kind)
+    || !input || typeof input !== "object" || Array.isArray(input)) return input;
+  const receipt = (encoded: string) => {
+    const bytes = encoded.length <= 13_981_016 ? Buffer.from(encoded, "base64") : null;
+    return bytes?.length && bytes.toString("base64") === encoded
+      ? { schema: "received-file-trace-v1", contentHash: createHash("sha256").update(bytes).digest("hex"), byteLength: bytes.length }
+      : { schema: "received-file-trace-v1", invalidEncoding: true, encodedLength: encoded.length,
+        encodedHash: createHash("sha256").update(encoded).digest("hex") };
+  };
+  const projected = { ...input } as Record<string, unknown>;
+  if (kind === "LEGACY_INGESTION_UPLOAD_FILE" && typeof projected.content === "string") projected.content = receipt(projected.content);
+  if (kind === "LEGACY_BRAND_VAULT_CREATE") {
+    const transfer = projected.transfer;
+    if (transfer && typeof transfer === "object" && !Array.isArray(transfer)
+      && "content" in transfer && typeof transfer.content === "string") {
+      projected.transfer = { ...transfer, content: receipt(transfer.content) };
+    }
+    const file = projected.file;
+    if (file && typeof file === "object" && !Array.isArray(file) && "content" in file && typeof file.content === "string") {
+      projected.file = { ...file, content: receipt(file.content) };
+    }
+    if (typeof projected.fileUrl === "string" && projected.fileUrl.startsWith("data:")) {
+      const encoded = projected.fileUrl.match(/^data:[^;,]+;base64,([\s\S]*)$/)?.[1];
+      projected.fileUrl = receipt(encoded ?? projected.fileUrl);
+    }
+  }
+  return projected;
+}
 
 export type EmissionStatus = "OK" | "FAILED" | "VETOED" | "DOWNGRADED" | "QUEUED";
 
@@ -68,8 +102,8 @@ export interface EmissionTxLike {
     findFirst(args: {
       where: { strategyId: string; selfHash: { not: null } };
       orderBy: { emittedAt: "desc" };
-      select: { selfHash: true };
-    }): Promise<{ selfHash: string | null } | null>;
+      select: { selfHash: true; emittedAt: true };
+    }): Promise<{ selfHash: string | null; emittedAt: Date } | null>;
     create(args: { data: Record<string, unknown> }): Promise<unknown>;
   };
 }
@@ -120,7 +154,7 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
       ? args.strategyId
       : "(none)";
   const id = cryptoRandomId();
-  const emittedAt = new Date();
+  const payload = receivedFileTrace(args.kind, args.payload);
 
   try {
     await db.$transaction(async (tx) => {
@@ -138,9 +172,14 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
       const last = await tx.intentEmission.findFirst({
         where: { strategyId, selfHash: { not: null } },
         orderBy: { emittedAt: "desc" },
-        select: { selfHash: true },
+        select: { selfHash: true, emittedAt: true },
       });
       const prevHash = last?.selfHash ?? null;
+      // Assign order AFTER acquiring the lock. Date ties or clock rollback must
+      // not make the next read select an older predecessor and fork new rows.
+      const startedAt = new Date();
+      const emittedAt = new Date(Math.max(startedAt.getTime(), (last?.emittedAt.getTime() ?? 0) + 1));
+      const version = 2;
 
       // Le hash scelle la row À L'ÉMISSION (result: null par définition) —
       // cf. hash-chain.ts : le `result`, mutable à la complétion, est hors
@@ -149,11 +188,12 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
         id,
         intentKind: args.kind,
         strategyId,
-        payload: args.payload,
+        payload,
         result: null,
         caller: args.caller,
         emittedAt,
         prevHash,
+        version,
       });
 
       await tx.intentEmission.create({
@@ -161,13 +201,15 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
           id,
           intentKind: args.kind,
           strategyId,
-          payload: args.payload as Prisma.InputJsonValue,
+          payload: payload as Prisma.InputJsonValue,
           caller: args.caller,
           emittedAt,
           prevHash,
           selfHash,
+          version,
           status: "PENDING",
-          startedAt: emittedAt,
+          // Actual execution time stays distinct from the journal's logical order.
+          startedAt,
         },
       });
     });

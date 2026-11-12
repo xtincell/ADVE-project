@@ -51,6 +51,7 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
   // Pays + secteur — LES clés de la veille marché (external-feeds, intelligence
   // sectorielle, axe Overton). Aucune surface cockpit ne permettait de les
   // poser sur une marque existante (audit 2026-07-16) : veille morte.
+  const [region, setRegion] = useState("");
   const [country, setCountry] = useState<string>("");
   const [sector, setSector] = useState<string>("");
 
@@ -64,7 +65,8 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
     setAudience(s.addressableAudience != null ? String(s.addressableAudience) : "");
     setFounded(s.brandFoundedYear != null ? String(s.brandFoundedYear) : "");
     setCountry(s.countryCode ?? "");
-    const bc = (s.businessContext ?? null) as { sector?: unknown } | null;
+    const bc = (s.businessContext ?? null) as { sector?: unknown; marketRegion?: unknown } | null;
+    setRegion(typeof bc?.marketRegion === "string" ? bc.marketRegion : "");
     setSector(typeof bc?.sector === "string" ? bc.sector : "");
   }, [s]);
 
@@ -83,14 +85,16 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
   const foundedInvalid = foundedNum != null && (!Number.isInteger(foundedNum) || foundedNum < 1800 || foundedNum > currentYear);
   const countryInvalid = country.trim() !== "" && !/^[A-Za-z]{2}$/.test(country.trim());
 
+  const regionInvalid = region.trim().length === 1;
   const save = () => {
-    if (audienceInvalid || foundedInvalid || countryInvalid) return;
+    if (audienceInvalid || foundedInvalid || countryInvalid || regionInvalid) return;
     updateMutation.mutate({
       id: strategyId,
       marketScale: scale === "" ? null : scale,
       addressableAudience: audienceNum,
       brandFoundedYear: foundedNum,
       countryCode: country.trim() === "" ? null : country.trim().toUpperCase(),
+      marketRegion: region.trim() || null,
       sector: sector.trim() === "" ? null : sector.trim(),
     });
   };
@@ -181,6 +185,12 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
           {countryInvalid ? <span className="mt-1 block text-2xs text-error">Code pays à 2 lettres (ex. CM, CI).</span> : null}
         </label>
         <label className="block sm:col-span-2">
+          <span className="mb-1 block text-2xs font-medium uppercase tracking-wide text-foreground-muted">Territoire servi</span>
+          <input type="text" maxLength={120} value={region} onChange={event => setRegion(event.target.value)}
+            placeholder="Ex. Afrique de l’Ouest et du Centre" className={inputCls} />
+          {regionInvalid && <span className="mt-1 block text-2xs text-error">Précisez le nom du territoire.</span>}
+        </label>
+        <label className="block sm:col-span-2">
           <span className="mb-1 block text-2xs font-medium uppercase tracking-wide text-foreground-muted">Secteur</span>
           <input
             type="text"
@@ -191,7 +201,7 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
             className={inputCls}
           />
           <span className="mt-1 block text-2xs text-foreground-muted">
-            Pays + secteur activent votre veille marché et votre intelligence sectorielle.
+            La veille utilise le territoire de la marque et le secteur déclarés.
           </span>
         </label>
       </div>
@@ -202,7 +212,7 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
         ) : (
           <button
             onClick={save}
-            disabled={updateMutation.isPending || audienceInvalid || foundedInvalid || countryInvalid}
+            disabled={updateMutation.isPending || audienceInvalid || foundedInvalid || countryInvalid || regionInvalid}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {updateMutation.isPending ? "Enregistrement…" : "Enregistrer"}

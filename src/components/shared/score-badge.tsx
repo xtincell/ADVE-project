@@ -123,7 +123,7 @@ export function ScoreBadge({
             viewBox={`0 0 ${config.diameter} ${config.diameter}`}
             className="-rotate-90"
             role="img"
-            aria-label={isCockpit ? `Sante de marque ${pctScore}%, ${labels[classification]}` : `Score ${score} sur ${maxScore}, ${labels[classification]}`}
+            aria-label={`${isCockpit ? `Sante de marque ${pctScore}%` : `Score ${score} sur ${maxScore}`}${showClassification ? `, ${labels[classification]}` : ""}`}
           >
             {/* Background ring */}
             <circle

@@ -35,12 +35,19 @@
  */
 
 import { z } from "zod";
+import { DEVOTION_LADDER_TIERS } from "@/domain/devotion-ladder";
 import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./tool-types";
 
 const ALL_NATURES: readonly [GloryToolNature, ...GloryToolNature[]] = [
   "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
   "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
 ];
+
+const devotionTiers = DEVOTION_LADDER_TIERS.map(tier => tier.toLowerCase());
+const devotionTier = z.enum(devotionTiers);
+function inLadderOrder(rows: { palier: string }[]) {
+  return rows.every((row, index) => row.palier === devotionTiers[index]);
+}
 
 export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
   // ──────────────────────────────────────────────────────────────────────────
@@ -476,18 +483,19 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
     dependencies: [],
     description:
       "Cartographie l'échelle de devotion canon 6 paliers (spectateur → intéressé → participant → engagé → ambassadeur → évangéliste, cf. src/domain/devotion-ladder.ts) avec triggers, expériences clés et taux de conversion par palier — section distinctive DEVOTION-LADDER.",
-    inputFields: ["devotion_data", "personas", "touchpoints", "cult_signals", "current_devotion_score"],
+    inputFields: ["devotion_data", "personas", "touchpoints", "cult_signals", "superfan_profile", "devotion_projection"],
     pillarBindings: {
       devotion_data: "e.rituels",
       personas: "d.personas",
       touchpoints: "e.touchpoints",
       cult_signals: "e.rituels",
-      current_devotion_score: "e.superfanPortrait",
+      superfan_profile: "e.superfanPortrait",
     },
     outputFormat: "devotion_levels",
         outputSchema: z.object({
-      devotion_levels: z.array(z.object({ palier: z.enum(['spectateur','interesse','participant','engage','ambassadeur','evangeliste']), definition: z.string(), trigger: z.string(), experience: z.string(), conversionPct: z.number(), kpis: z.array(z.string()), drifts: z.array(z.string()) })),
+      devotion_levels: z.array(z.object({ palier: devotionTier, definition: z.string(), trigger: z.string(), experience: z.string(), conversionPct: z.number().min(0).max(100), kpis: z.array(z.string()), drifts: z.array(z.string()) })).length(devotionTiers.length).refine(inLadderOrder, "Les six paliers doivent suivre l’ordre canonique."),
       summary: z.string(),
+      distribution_note: z.string().min(1),
       current_distribution: z.object({ spectateurs: z.number(), interesses: z.number(), participants: z.number(), engages: z.number(), ambassadeurs: z.number(), evangelistes: z.number() })
     }),
     promptTemplate: `Mapping devotion ladder pour la marque (invocation devotion-engine SESHAT) :
@@ -496,7 +504,8 @@ Devotion data : {{devotion_data}}
 Personas : {{personas}}
 Touchpoints : {{touchpoints}}
 Cult signals : {{cult_signals}}
-Current devotion score : {{current_devotion_score}}
+Profil superfan : {{superfan_profile}}
+Projection de dévotion documentée par E, si elle existe : {{devotion_projection}}
 
 ⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
@@ -514,6 +523,7 @@ Schéma EXACT :
     }
   ],
   "summary": "<synthèse 2-3 phrases sur la maturité actuelle de la ladder>",
+  "distribution_note": "<origine, cohorte, période et statut de la répartition et des conversions>",
   "current_distribution": {
     "spectateurs":   <0-100>,
     "interesses":    <0-100>,
@@ -524,7 +534,7 @@ Schéma EXACT :
   }
 }
 
-Règles : devotion_levels EXACTEMENT 6 entrées, dans l'ordre canon (spectateur → interesse → participant → engage → ambassadeur → evangeliste — Devotion Ladder canonique, les 2 derniers paliers = superfans). palier : STRICTEMENT une des 6 valeurs énumérées, en minuscules sans accent. conversionPct : taux conversion vers palier SUIVANT (evangeliste = 0 ou taux d'évangélisation). kpis MIN 3, MAX 5 par palier. drifts MIN 1, MAX 3. current_distribution : 6 clés OBLIGATOIRES, somme proche 100 (pyramide typique 60/20/10/6/3/1). summary JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
+Règles : devotion_levels EXACTEMENT 6 entrées, dans l'ordre canon (spectateur → interesse → participant → engage → ambassadeur → evangeliste — Devotion Ladder canonique, les 2 derniers paliers = superfans). palier : STRICTEMENT une des 6 valeurs énumérées, en minuscules sans accent. conversionPct : taux conversion vers palier SUIVANT (evangeliste = 0 ou taux d'évangélisation). kpis MIN 3, MAX 5 par palier. drifts MIN 1, MAX 3. current_distribution : 6 clés OBLIGATOIRES, somme proche de 100. Indique dans distribution_note la cohorte, la période et la source. Quand la répartition ou les conversions sont inférées, qualifie-les explicitement d’hypothèses à vérifier. Une projection E reste un scénario et ne mesure pas une population observée. summary JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   }),
 
@@ -551,13 +561,13 @@ Règles : devotion_levels EXACTEMENT 6 entrées, dans l'ordre canon (spectateur 
     },
     outputFormat: "engagement_rituals",
         outputSchema: z.object({
-      rituals_by_level: z.array(z.object({ palier: z.enum(['visiteur','suiveur','fan','superfan','ambassadeur']), rituals: z.array(z.object({ name: z.string(), description: z.string(), frequency: z.enum(['daily','weekly','monthly','quarterly','event-based']), channel: z.string() })), codes: z.array(z.string()), symbols: z.array(z.string()), ceremonies: z.array(z.string()) })),
+      rituals_by_level: z.array(z.object({ palier: devotionTier, rituals: z.array(z.object({ name: z.string(), description: z.string(), frequency: z.enum(['daily','weekly','monthly','quarterly','event-based']), channel: z.string() })), codes: z.array(z.string()), symbols: z.array(z.string()), ceremonies: z.array(z.string()) })).length(devotionTiers.length).refine(inLadderOrder, "Les six paliers doivent suivre l’ordre canonique."),
       manifesto_extract: z.string(),
       implementation_priorities: z.array(z.object({ priority: z.number(), action: z.string(), owner: z.string() }))
     }),
     promptTemplate: `Design rituels d'engagement pour la marque :
 
-Devotion levels (output superfan-journey-mapper) : {{devotion_levels}}
+Paliers retenus (sortie devotion-levels-mapper) : {{devotion_levels}}
 ADN marque : {{brand_dna}}
 Ton de voix : {{tone_voice}}
 Rituels existants : {{existing_rituals}}
@@ -569,7 +579,7 @@ Schéma EXACT :
 {
   "rituals_by_level": [
     {
-      "palier":  "visiteur" | "suiveur" | "fan" | "superfan" | "ambassadeur",
+      "palier":  "spectateur" | "interesse" | "participant" | "engage" | "ambassadeur" | "evangeliste",
       "rituals": [
         { "name": "<nom>", "description": "<2 phrases>", "frequency": "daily" | "weekly" | "monthly" | "quarterly" | "event-based", "channel": "<canal/lieu>" }
       ],
@@ -584,7 +594,7 @@ Schéma EXACT :
   ]
 }
 
-Règles : rituals_by_level EXACTEMENT 5 entrées (1 par palier, ordre visiteur → ambassadeur). rituals MIN 2, MAX 3 par palier. frequency : STRICTEMENT une des 5 valeurs. codes MIN 1, MAX 4. symbols MIN 1, MAX 3. ceremonies MIN 1, MAX 2. implementation_priorities MIN 3, MAX 7 (priority entier ∈ [1,5], 1=top). manifesto_extract JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
+Règles : rituals_by_level EXACTEMENT 6 entrées, une par palier, dans cet ordre : ${devotionTiers.join(" → ")}. rituals MIN 2, MAX 3 par palier. frequency : STRICTEMENT une des 5 valeurs. codes MIN 1, MAX 4. symbols MIN 1, MAX 3. ceremonies MIN 1, MAX 2. implementation_priorities MIN 3, MAX 7 (priority entier ∈ [1,5], 1=top). manifesto_extract JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   }),
 ];

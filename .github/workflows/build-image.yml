@@ -14,8 +14,8 @@ name: Build image (ghcr)
 # DÉPLOIEMENT 100 % MANUEL (décision opérateur 2026-07-15) : aucun trigger
 # automatique. Le push sur `main` ne construit PLUS d'image et ne redéploie PLUS.
 # Pour livrer en prod : lancer CE workflow à la main (workflow_dispatch), cocher
-# `notify_coolify` pour déclencher le swap Coolify — ou `deploy.yml`, ou le
-# dashboard Coolify. Cf. docs/deploy/BUILD-DEPORT.md.
+# `notify_coolify` pour déclencher le swap Coolify — ou le dashboard Coolify.
+# Cf. docs/deploy/BUILD-DEPORT.md.
 on:
   workflow_dispatch:
     inputs:
@@ -59,12 +59,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Choisir la base Node officielle disponible (digest conservé)
+        id: node_base
+        run: |
+          set -euo pipefail
+          node_digest=sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+          node_image="public.ecr.aws/docker/library/node:22-bookworm-slim@$node_digest"
+          if ! docker buildx imagetools inspect "$node_image" >/dev/null; then
+            node_image="docker.io/library/node:22-bookworm-slim@$node_digest"
+            docker buildx imagetools inspect "$node_image" >/dev/null
+          fi
+          echo "image=$node_image" >> "$GITHUB_OUTPUT"
+
       # 1) Build + chargement LOCAL (pas encore poussé) avec cache gha.
       - name: Build (load local)
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
+          build-args: NODE_IMAGE=${{ steps.node_base.outputs.image }}
           tags: lafusee:candidate
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -76,9 +89,15 @@ jobs:
         run: |
           set -euo pipefail
           docker network create lf-smoke
+          pg_digest=sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+          pg_image="public.ecr.aws/docker/library/postgres:16-alpine@$pg_digest"
+          if ! docker pull "$pg_image"; then
+            pg_image="docker.io/library/postgres:16-alpine@$pg_digest"
+            docker pull "$pg_image"
+          fi
           docker run -d --name pg --network lf-smoke \
             -e POSTGRES_USER=lafusee -e POSTGRES_PASSWORD=lafusee -e POSTGRES_DB=lafusee \
-            postgres:16-alpine
+            "$pg_image"
           echo "Attente Postgres…"
           for i in $(seq 1 30); do
             if docker exec pg pg_isready -U lafusee >/dev/null 2>&1; then break; fi
@@ -106,6 +125,38 @@ jobs:
             exit 1
           fi
           echo "✓ image saine — démarre, migre, sert /login."
+          # La page de connexion ne prouve pas que le endpoint de session rend du JSON.
+          curl --fail --silent --show-error http://localhost:3000/api/auth/session \
+            | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8")); console.log("Anonymous session: HTTP 200 and valid JSON in exact image");'
+          # La publication de pièce utilise le moteur natif dans JSDOM externe.
+          # Vérifier ses fichiers runtime et le contexte VM dans le standalone exact.
+          docker exec app node --input-type=module -e '
+            import { JSDOM } from "jsdom";
+            import { Script } from "node:vm";
+            const dom = new JSDOM("<main></main>", { runScripts: "outside-only" });
+            try {
+              new Script("document.querySelector(\"main\").textContent = \"received\"")
+                .runInContext(dom.getInternalVMContext());
+              if (dom.window.document.querySelector("main").textContent !== "received")
+                throw new Error("Native document context not received");
+              console.log("JSDOM + native VM context received in exact image");
+            } finally { dom.window.close(); }
+          '
+          # Le test unitaire ne détecte pas un worker PDF omis du standalone.
+          # Exercer le lecteur installé dans l'image exacte avant publication.
+          docker cp tests/fixtures/source-deposit.pdf app:/tmp/source-deposit.pdf
+          docker exec app node --input-type=module -e '
+            import { readFile } from "node:fs/promises";
+            import { PDFParse } from "pdf-parse";
+            const parser = new PDFParse({ data: new Uint8Array(await readFile("/tmp/source-deposit.pdf")) });
+            try {
+              const result = await parser.getText();
+              if (result.total !== 2 || !result.text.includes("Source one: budget unknown.") || !result.text.includes("Source two: no approval inferred.")) {
+                throw new Error("PDF standalone extraction failed");
+              }
+              console.log("PDF standalone: 2 pages, both source texts present");
+            } finally { await parser.destroy(); }
+          '
           docker rm -f app pg >/dev/null 2>&1 || true
 
       # 3) Push (cache chaud → quasi instantané) : latest + version + sha.
@@ -114,6 +165,7 @@ jobs:
         with:
           context: .
           push: true
+          build-args: NODE_IMAGE=${{ steps.node_base.outputs.image }}
           tags: |
             ${{ steps.img.outputs.ref }}:latest
             ${{ steps.img.outputs.ref }}:v${{ steps.ver.outputs.v }}

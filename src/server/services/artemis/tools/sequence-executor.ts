@@ -1,3 +1,8 @@
+import { depositInBrandVault, recordVaultDepositFailure } from "@/server/services/brand-vault/glory-deposit";
+export { depositInBrandVault } from "@/server/services/brand-vault/glory-deposit";
+import { readMixDecision } from "@/domain/production-mix";
+import { isUsableGeneration } from "@/domain/generation-result";
+import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 /**
@@ -27,6 +32,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { COMMERCIAL_INPUT_FIELDS, formatCommercialQuoteBrief } from "./commercial-offer";
 // Import directly from source files to avoid circular dependency (index.ts re-exports us)
 import { getGloryTool } from "./registry";
 import { PillarResolver } from "./pillar-resolver";
@@ -138,7 +144,8 @@ async function executePillarStep(
     where: { strategyId_key: { strategyId, key: ref } },
   });
   if (!pillar) return {};
-  const content = (pillar.content as Record<string, unknown>) ?? {};
+  const raw = (pillar.content as Record<string, unknown>) ?? {};
+  const content = pillar.key.toLowerCase() === "v" ? projectFinancialPillar(raw) : raw;
   return { [`pillar_${ref}`]: content, ...content };
 }
 
@@ -210,10 +217,17 @@ async function executeGloryStep(
 
   // Merge priority: atomic > sequence > global (most specific wins)
   const input: Record<string, string> = { ...globalValues, ...sequenceValues, ...atomicValues };
+  if (ref === "devis-generator" || ref === "pricing-strategy-advisor") {
+    // Upstream narrative tools cannot invent a mapping, quantities or terms.
+    for (const field of COMMERCIAL_INPUT_FIELDS) delete input[field];
+    Object.assign(input, context._commercialInputs ?? {});
+  }
 
   // Lazy import to avoid circular dependency (index.ts re-exports us)
   const { executeTool } = await import("./engine");
   const { outputId, output, intentId: gloryIntentId } = await executeTool(ref, strategyId, input);
+
+  if (!isUsableGeneration(output)) throw new Error("La production n’a pas fourni de contenu exploitable. La tentative est conservée dans l’historique.");
 
   // Phase 10 (ADR-0012) — Auto-dépose dans le BrandVault après chaque Glory tool.
   // Mapping outputFormat → BrandAsset.kind via FORMAT_TO_KIND (brand-vault/engine).
@@ -221,6 +235,7 @@ async function executeGloryStep(
   // batch de candidats. Les outputs uniques (script, brand_audit_report)
   // deviennent un BrandAsset DRAFT unique.
   let brandAssetIds: string[] = [];
+  let vaultDepositFailed = false;
   if (tool && tool.outputFormat) {
     try {
       brandAssetIds = await depositInBrandVault({
@@ -232,10 +247,9 @@ async function executeGloryStep(
         context,
       });
     } catch (err) {
-      console.warn(
-        `[sequence-executor] BrandVault deposit failed for ${ref}:`,
-        err instanceof Error ? err.message : err,
-      );
+      vaultDepositFailed = true;
+      await recordVaultDepositFailure({ gloryOutputId: outputId, strategyId, gloryIntentId, context });
+      console.warn(`[sequence-executor] BrandVault deposit failed for ${ref}:`, err instanceof Error ? err.name : "Error");
     }
   }
 
@@ -254,7 +268,7 @@ async function executeGloryStep(
   // et la cascade Glory→Brief→Forge hash-chain f9cd9de complète est préservée.
   let forgeTaskId: string | undefined;
   const decision = shouldChainPtahForge({
-    hasForgeOutput: !!tool?.forgeOutput,
+    hasForgeOutput: !vaultDepositFailed && !!tool?.forgeOutput && !(ref === "devis-generator" && typeof output.devis !== "string" && !formatCommercialQuoteBrief(output.devis)),
     oracleEnrichmentMode: context.mode === "ENRICHMENT",
   });
   if (decision.shouldChain && tool) {
@@ -264,6 +278,7 @@ async function executeGloryStep(
         toolOutput: output,
         // sourceIntentId préfère la vraie IntentEmission row si dispo, fallback gloryOutput.id
         sourceIntentId: gloryIntentId ?? outputId,
+        sourceBrandAssetId: brandAssetIds.length === 1 ? brandAssetIds[0] : undefined,
         strategyId,
         context,
       });
@@ -285,128 +300,11 @@ async function executeGloryStep(
   return {
     ...output,
     _gloryOutputId: outputId,
+    ...(vaultDepositFailed ? { _vaultDeposit: { status: "FAILED", message: "Contenu conservé. Reprendre son dépôt dans le Data Asset Manager avant la production." } } : {}),
     ...(gloryIntentId ? { _gloryIntentId: gloryIntentId } : {}),
     ...(forgeTaskId ? { _ptahTaskId: forgeTaskId } : {}),
     ...(brandAssetIds.length > 0 ? { _brandAssetIds: brandAssetIds } : {}),
   };
-}
-
-/**
- * Auto-dépose un output Glory tool dans le BrandVault.
- *
- * Heuristique :
- *   - Si output contient une liste structurée (concepts, claims, prompts, names) →
- *     créer un batch de N BrandAsset CANDIDATE.
- *   - Sinon → 1 BrandAsset DRAFT unique.
- *
- * Le mapping outputFormat → kind est stable via brand-vault/engine FORMAT_TO_KIND.
- */
-async function depositInBrandVault(args: {
-  tool: NonNullable<ReturnType<typeof getGloryTool>>;
-  toolOutput: Record<string, unknown>;
-  gloryOutputId: string;
-  gloryIntentId: string | null;
-  strategyId: string;
-  context: SequenceContext;
-}): Promise<string[]> {
-  const { tool, toolOutput, gloryOutputId, gloryIntentId, strategyId, context } = args;
-  const { kindFromFormat, createBrandAsset, createCandidateBatch } = await import(
-    "@/server/services/brand-vault/engine"
-  );
-
-  const kind = kindFromFormat(tool.outputFormat);
-  if (kind === "GENERIC" && !tool.forgeOutput) return [];
-
-  const strategy = await db.strategy.findUnique({
-    where: { id: strategyId },
-    select: { operatorId: true },
-  });
-  if (!strategy?.operatorId) return [];
-
-  const pillarSource =
-    (context._pillarSource as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined) ??
-    (tool.pillarKeys[0]?.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined);
-  const manipulationMode = context._manipulationMode as
-    | "peddler" | "dealer" | "facilitator" | "entertainer" | undefined;
-  const campaignId = context._campaignId as string | undefined;
-  const briefId = context._briefId as string | undefined;
-
-  // Détecter si output est un batch de candidats
-  const candidates = extractCandidates(toolOutput);
-  if (candidates.length > 1) {
-    const batch = await createCandidateBatch({
-      strategyId,
-      operatorId: strategy.operatorId,
-      kind,
-      format: tool.outputFormat,
-      candidates,
-      pillarSource,
-      manipulationMode,
-      sourceIntentId: gloryIntentId ?? undefined,
-      sourceGloryOutputId: gloryOutputId,
-      campaignId,
-      briefId,
-    });
-    return batch.candidates.map((a) => a.id);
-  }
-
-  // Sinon : 1 asset unique en DRAFT
-  const asset = await createBrandAsset({
-    strategyId,
-    operatorId: strategy.operatorId,
-    name: `${tool.name} output`,
-    kind,
-    format: tool.outputFormat,
-    family: "INTELLECTUAL",
-    content: toolOutput,
-    summary: candidates[0]?.summary,
-    pillarSource,
-    manipulationMode,
-    state: "DRAFT",
-    sourceIntentId: gloryIntentId ?? undefined,
-    sourceGloryOutputId: gloryOutputId,
-    campaignId,
-    briefId,
-  });
-  return [asset.id];
-}
-
-/**
- * Extrait les candidats depuis un output Glory tool.
- * Supporte les patterns : `concepts: [...]`, `claims: [...]`, `prompts: [...]`,
- * `names: [...]`, `propositions: [...]`, et tout array de longueur > 1.
- */
-function extractCandidates(
-  toolOutput: Record<string, unknown>,
-): Array<{ name: string; content: Record<string, unknown>; summary?: string }> {
-  const arrayKeys = ["concepts", "claims", "prompts", "names", "propositions", "ideas", "options"];
-  for (const key of arrayKeys) {
-    const arr = toolOutput[key];
-    if (Array.isArray(arr) && arr.length > 0) {
-      return arr.map((item, i) => {
-        if (typeof item === "string") {
-          return { name: `${key} ${i + 1}`, content: { value: item }, summary: item.slice(0, 200) };
-        }
-        if (item && typeof item === "object") {
-          const obj = item as Record<string, unknown>;
-          const name =
-            (obj.title as string) ?? (obj.name as string) ?? (obj.headline as string) ?? `${key} ${i + 1}`;
-          const summary =
-            (obj.description as string) ?? (obj.summary as string) ?? (obj.tagline as string) ?? undefined;
-          return { name, content: obj, summary };
-        }
-        return { name: `${key} ${i + 1}`, content: { value: item } };
-      });
-    }
-  }
-  // Pas de liste détectée : output unique
-  return [
-    {
-      name: (toolOutput.title as string) ?? (toolOutput.name as string) ?? "output",
-      content: toolOutput,
-      summary: (toolOutput.summary as string) ?? (toolOutput.description as string) ?? undefined,
-    },
-  ];
 }
 
 /**
@@ -420,15 +318,27 @@ export async function chainGloryToPtah(args: {
   tool: NonNullable<ReturnType<typeof getGloryTool>>;
   toolOutput: Record<string, unknown>;
   sourceIntentId: string;
+  sourceBrandAssetId?: string;
   strategyId: string;
   context: SequenceContext;
+  calendarBrief?: import("@/domain/calendar-brief-source").CalendarBriefSource;
+  productionArtwork?:import("@/domain/production-artwork").ProductionArtwork;
+  productionReferences?:ReadonlyArray<import("@/domain/production-image-reference").ProductionImageReference>;
+  productionSourceText?:string;
+  onForgeReceipt?: (status: string) => void;
 }): Promise<string | undefined> {
   const { tool, toolOutput, sourceIntentId, strategyId, context } = args;
   if (!tool.forgeOutput) return undefined;
 
   // Extraire le briefText du tool output selon briefTextPath (default "prompt")
   const briefTextPath = tool.forgeOutput.briefTextPath ?? "prompt";
-  const briefText = extractBriefText(toolOutput, briefTextPath);
+  const structuredQuote = tool.slug === "devis-generator" && typeof toolOutput.devis !== "string";
+  const briefText = structuredQuote ? formatCommercialQuoteBrief(toolOutput.devis) :
+    extractBriefText(toolOutput, briefTextPath) || (tool.slug === "kv-banana-prompt-generator"
+      ? extractBriefText(toolOutput,"kv_prompts_list.prompts[0].prompt") || extractBriefText(toolOutput,"kv_prompts_list[0].prompt") : "");
+  if (structuredQuote && !briefText) {
+    throw new Error("Complétez le devis et ses conditions avant de demander sa mise en page.");
+  }
   if (!briefText) {
     throw new Error(`Glory tool ${tool.slug} forgeOutput briefText path "${briefTextPath}" returned empty`);
   }
@@ -456,10 +366,27 @@ export async function chainGloryToPtah(args: {
     throw new Error(`chainGloryToPtah: strategy ${strategyId} not found`);
   }
   if (!strategy.operatorId) {
+    if(args.onForgeReceipt) throw new Error("Aucun opérateur de forge n’est associé à cette marque.");
     console.warn(`[sequence-executor] chainGloryToPtah skipped: strategy ${strategyId} has no operatorId (Pilier 3 violation)`);
     return undefined;
   }
 
+  const cal=args.calendarBrief;
+  const { wrapUntrusted } = await import("@/server/services/utils/untrusted-content");
+  const materialText=args.productionArtwork ? photoSlotPrompt(args.productionArtwork.photoPolicy, cal, briefText) : [briefText,cal ? wrapUntrusted("BRIEF DU POST · conserver légende, format, piste et direction",cal.text,{max:32000}):"",args.productionSourceText].filter(Boolean).join("\n");
+  const params={...extractForgeParameters(toolOutput)};
+  // Le LLM ne peut attribuer lui-même des médias du coffre au fournisseur.
+  delete params.productionReferences;
+  delete params.productionArtwork;
+  if (args.onForgeReceipt) delete params.referenceImageUrls;
+  if(cal)Object.assign(params,{prompt:materialText,platform:cal.platform,format:cal.format??"",theme:cal.theme??"",angle:cal.angle??"",
+    creativeMode:cal.mode,...(cal.family?{creativeFamily:cal.family}:{}),calendarBriefId:cal.assetId,calendarBriefVersion:cal.version});
+  if(args.productionSourceText)params.prompt=materialText;
+  if(cal && /stor(y|ies)/i.test(cal.format??""))params.size="1024x1536";
+  if(args.productionArtwork){params.productionArtwork=args.productionArtwork;params.prompt=materialText;}
+  // The locked renderer reads its embedded original. Documentary references
+  // remain in the reviewed manifest but are not image-generation inputs.
+  if(args.productionReferences?.length && args.productionArtwork?.photoPolicy!=="LOCKED_MASTER")params.productionReferences=args.productionReferences;
   const { emitIntent } = await import("@/server/services/mestor/intents");
   const result = await emitIntent(
     {
@@ -468,13 +395,16 @@ export async function chainGloryToPtah(args: {
       operatorId: strategy.operatorId,
       // sourceIntentId = vraie IntentEmission INVOKE_GLORY_TOOL ID (hash-chain Mestor)
       sourceIntentId,
+      campaignId: context._campaignId as string | undefined,
+      briefId: context._briefId as string | undefined,
+      sourceBrandAssetId: args.sourceBrandAssetId,
       brief: {
-        briefText,
+        briefText:materialText,
         forgeSpec: {
           kind: tool.forgeOutput.forgeKind,
           providerHint: tool.forgeOutput.providerHint,
           modelHint: tool.forgeOutput.modelHint,
-          parameters: extractForgeParameters(toolOutput),
+          parameters:params,
         },
         pillarSource,
         manipulationMode,
@@ -484,8 +414,28 @@ export async function chainGloryToPtah(args: {
   );
 
   // Mestor renvoie IntentResult avec output.taskId
-  const output = result.output as { taskId?: string } | undefined;
+  const output = result.output as { taskId?: string; status?: string } | undefined;
+  if (args.onForgeReceipt) {
+    if (result.status !== "OK" || !output?.taskId || !output.status) throw new Error(result.summary || "La forge n’a pas émis de reçu de tâche.");
+    args.onForgeReceipt(output.status);
+  }
   return output?.taskId;
+}
+
+/** The provider renders only the photograph. Typography and caption are never
+ * part of this prompt: the immutable master supplies them after generation. */
+export function photoSlotPrompt(policy:"GENERATED_CANDIDATE"|"LOCKED_MASTER",cal:import("@/domain/calendar-brief-source").CalendarBriefSource|undefined, fallback:string) {
+  if(policy==="LOCKED_MASTER")return "Recomposer le master original en conservant sa photographie ; aucune image à générer.";
+  const content:Record<string,unknown>=cal?JSON.parse(cal.text):{};
+  const post=(content.post??{}) as Record<string,unknown>;
+  const evidence={sujet:post.theme??cal?.theme,angle:post.angle??cal?.angle,photographie:post.illustration,
+    directionDeCetteOption:content.treatment,commandeNouvellePhoto:(content.newProposal as {instruction?:string}|undefined)?.instruction,correction:content.correction,option:content.variant,
+    treatmentPhoto:(["A wide establishing view showing the setting as well as all subjects.","Closer three-quarter angle; use visible detail to make the choice legible, while keeping all subjects visible.","Human eye-level viewpoint centered on the documented protagonists, without inventing identities.","An overhead comparison of the documented elements; keep all subjects visible."])[Number(content.variant)-1]};
+  return [ "Produce a standalone editorial PHOTOGRAPH, not a designed social-media post. The finished post is composed outside this tool.",
+    cal?JSON.stringify(evidence):"",
+    "Photographic brief prepared by Glory from the creative direction and source briefs (use the photograph, lighting and subject direction only; template treatments are applied separately):",fallback,
+    "Use the attached photographic reference for the actual depicted subjects and setting. Keep all named subjects recognizable; never replace either by a different subject. Vary photographic composition or viewpoint between options while preserving the brief.",
+    "Instructions about masters, tickets, headlines, logos, frames and typography pertain to a separate overlay and must not be rendered in the photo. No graphic layout, letters, brands, words, labels, CTA, ticket stubs, lettering, watermark or caption on this photo."].join("\n");
 }
 
 function extractBriefText(toolOutput: Record<string, unknown>, path: string): string {
@@ -525,11 +475,12 @@ async function executeArtemisStep(
   }
 
   const result = await executeFramework(ref, strategyId, input);
+  if (!isUsableGeneration(result.output)) {
+    throw new Error("Le diagnostic n’a produit aucun contenu exploitable. Sa tentative a été conservée.");
+  }
   return {
-    analysis: result.output?.analysis,
-    score: result.output?.score,
-    prescriptions: result.output?.prescriptions,
-    confidence: result.output?.confidence,
+    ...result.output,
+    _frameworkResultId: result.resultId,
     ...((result.output?.outputFields as Record<string, unknown>) ?? {}),
   };
 }
@@ -578,15 +529,18 @@ async function executeCalcStep(
     return executeSectionDraftCalc(ref, strategyId);
   }
 
-  // Dynamic import — calculators may not exist yet (Phase 6)
-  try {
-    const calculators = await import("@/server/services/glory-tools/calculators");
-    const calcFn = (calculators as unknown as Record<string, (ctx: SequenceContext) => Record<string, unknown>>)[ref];
-    if (calcFn) return calcFn(context);
-  } catch {
-    // calculators.ts not yet built — return empty
+  if (ref === "pricing-strategy-advisor" || ref === "devis-generator") {
+    // The existing Glory path loads current sources and persists GloryOutput.
+    // Do not run a pricing calculation on arbitrary preceding LLM output.
+    const { executeTool } = await import("./engine");
+    const { outputId, output } = await executeTool(ref, strategyId, (context._commercialInputs ?? {}) as Record<string, string>);
+    return { ...output, _gloryOutputId: outputId };
   }
-  return { _calcNotImplemented: ref };
+
+  const { calculators } = await import("@/server/services/glory-tools/calculators");
+  const calcFn = calculators[ref];
+  if (!calcFn) throw new Error(`Calculateur inconnu : ${ref}`);
+  return calcFn(context);
 }
 
 /**
@@ -683,6 +637,9 @@ async function loadFullStrategyContext(strategyId: string): Promise<SequenceCont
     _strategyDescription: strategy.description,
   };
 
+  const mix = readMixDecision(strategy.manipulationMix);
+  if (mix.primary) ctx.manipulation_mode = { primary: mix.primary, percent: mix.percent };
+
   // Inject ADVE vector scores
   const vec = strategy.advertis_vector as Record<string, number> | null;
   if (vec) {
@@ -705,7 +662,8 @@ async function loadFullStrategyContext(strategyId: string): Promise<SequenceCont
   // The PillarResolver handles deep dot-notation access for pillarBindings.
   // This surfacing ensures the SequenceContext has flat access to every field.
   for (const pillar of strategy.pillars) {
-    const c = (pillar.content as Record<string, unknown>) ?? {};
+    const raw = (pillar.content as Record<string, unknown>) ?? {};
+    const c = pillar.key.toLowerCase() === "v" ? projectFinancialPillar(raw) : raw;
     ctx[`pillar_${pillar.key}`] = c;
     ctx[`pillar_${pillar.key}_confidence`] = pillar.confidence;
 
@@ -778,6 +736,7 @@ async function loadFullStrategyContext(strategyId: string): Promise<SequenceCont
       ctx.aarrr = c.aarrr;
       ctx.kpis = c.kpis;
       ctx.devotionLadder = c.devotionLadder;
+      ctx.devotion_projection = c.devotionProjection;
       ctx.community = c.communityStrategy ?? c.principesCommunautaires;
       ctx.gamification = c.gamification;
       ctx.sacredCalendar = c.sacredCalendar;
@@ -1010,7 +969,9 @@ export async function executeSequence(
   // cachés (toujours frais — l'opérateur veut un nouveau livrable). Cache
   // miss en cas de pillar.updatedAt > cachedAt (invalidation automatique
   // après OPERATOR_AMEND_PILLAR ou RTIS_CASCADE).
-  const isEnrichmentMode = initialContext.mode === "ENRICHMENT";
+  // Commercial quotations depend on caller selection, client and live prices,
+  // not just pillar timestamps. Never reuse another client's cached quotation.
+  const isEnrichmentMode = initialContext.mode === "ENRICHMENT" && key !== "OFFRE-V";
   if (isEnrichmentMode) {
     try {
       const { getCachedSequence } = await import("@/server/services/sequence-vault/cache");
@@ -1066,6 +1027,15 @@ export async function executeSequence(
   const briefContext = options?.briefContext ?? {};
 
   const context: SequenceContext = { ...strategyContext, ...briefContext, ...initialContext };
+  const authorizedCommercialInputs: Record<string, string> = {};
+  if (key === "OFFRE-V") {
+    for (const field of COMMERCIAL_INPUT_FIELDS) {
+      const value = initialContext[field] ?? briefContext[field];
+      if (value !== undefined && value !== null) authorizedCommercialInputs[field] = typeof value === "string" ? value : JSON.stringify(value);
+    }
+    // Retain only caller-supplied owner authorization; never model-produced values.
+    context._commercialInputs = Object.freeze(authorizedCommercialInputs);
+  }
 
   // Layer 3 (ATOMIC): Create resolver for precise pillar variable extraction.
   // Loaded once, reused across all GLORY steps in the sequence.
@@ -1085,6 +1055,7 @@ export async function executeSequence(
   const stepResults: StepResult[] = [];
   const gloryOutputIds: string[] = [];
   let hasFailure = false;
+  let commercialQuoteReady = false;
 
   // PREVIEW depth: identify the first ACTIVE step that produces a deliverable
   // (GLORY > ARTEMIS > MESTOR > PILLAR > CALC). Other steps are skipped.
@@ -1114,6 +1085,7 @@ export async function executeSequence(
   }
 
   for (let i = 0; i < seq.steps.length; i++) {
+    if (key === "OFFRE-V") context._commercialInputs = authorizedCommercialInputs;
     const step = seq.steps[i]!;
     const stepStart = Date.now();
 
@@ -1149,7 +1121,24 @@ export async function executeSequence(
       continue;
     }
 
+    const dependencies = step.type === "GLORY" ? getGloryTool(step.ref)?.dependencies ?? [] : [];
+    const unavailable = stepResults.find(previous => dependencies.includes(previous.ref) && previous.status !== "SUCCESS");
+    if (unavailable) {
+      const reason = `Étape en attente du résultat de ${unavailable.ref}.`;
+      journal.stepSkip(i, step.ref, reason);
+      stepResults.push({ stepIndex: i, ref: step.ref, type: step.type, status: "SKIPPED", output: {}, durationMs: 0, error: reason });
+      hasFailure = true;
+      continue;
+    }
     journal.stepStart(i, step.ref, step.type);
+
+    if (key === "OFFRE-V" && (step.ref === "client-presentation-strategist" || step.ref === "sales-deck-builder")
+      && !commercialQuoteReady) {
+      stepResults.push({ stepIndex: i, ref: step.ref, type: step.type, status: "SKIPPED", output: {}, durationMs: 0,
+        error: "Complétez les données du devis avant de préparer sa présentation commerciale." });
+      hasFailure = true;
+      continue;
+    }
 
     try {
       let output: Record<string, unknown>;
@@ -1175,6 +1164,7 @@ export async function executeSequence(
           break;
         case "CALC":
           output = await executeCalcStep(step.ref, strategyId, context);
+          if (output._gloryOutputId) gloryOutputIds.push(output._gloryOutputId as string);
           break;
         case "SEQUENCE": {
           // Encapsulate a sub-sequence — recursive call with current context
@@ -1226,9 +1216,21 @@ export async function executeSequence(
           output = {};
       }
 
+      if ((step.type === "GLORY" || step.type === "CALC") && !isUsableGeneration(output)) {
+        throw new Error("La production de cette étape n’a pas fourni de contenu exploitable. Consultez l’historique des tentatives.");
+      }
       const stepDuration = Date.now() - stepStart;
       const outputKeyCount = Object.keys(output).filter(k => !k.startsWith("_")).length;
-      journal.stepOk(i, step.ref, step.type, stepDuration, { outputKeys: outputKeyCount });
+      const depositFailure = (output._vaultDeposit as { status?: string; message?: string } | undefined)?.status === "FAILED";
+      if (depositFailure) {
+        hasFailure = true;
+        journal.stepFail(i, step.ref, step.type, stepDuration, "Contenu produit ; dépôt dans le DAM à reprendre.");
+      } else journal.stepOk(i, step.ref, step.type, stepDuration, { outputKeys: outputKeyCount });
+
+      if (key === "OFFRE-V" && step.ref === "devis-generator") {
+        commercialQuoteReady = (output.devis as { status?: string } | undefined)?.status === "READY";
+        if (!commercialQuoteReady) hasFailure = true;
+      }
 
       // Merge step output into accumulative context
       for (const key of step.outputKeys) {
@@ -1243,7 +1245,8 @@ export async function executeSequence(
         stepIndex: i,
         ref: step.ref,
         type: step.type,
-        status: "SUCCESS",
+        status: depositFailure ? "FAILED" : "SUCCESS",
+        ...(depositFailure ? { error: "Contenu produit ; dépôt dans le DAM à reprendre." } : {}),
         output,
         durationMs: stepDuration,
       });
@@ -1278,7 +1281,7 @@ export async function executeSequence(
 
   const successCount = stepResults.filter((s) => s.status === "SUCCESS").length;
   const totalActive = seq.steps.filter((s) => s.status === "ACTIVE").length;
-  const finalStatus = hasFailure ? (successCount > 0 ? "PARTIAL" : "FAILED") : "COMPLETED";
+  let finalStatus: SequenceResult["status"] = hasFailure ? (successCount > 0 ? "PARTIAL" : "FAILED") : "COMPLETED";
 
   journal.end(finalStatus, Date.now() - startTime, successCount, seq.steps.length);
 
@@ -1300,14 +1303,19 @@ export async function executeSequence(
       strategyId,
       sequenceKey: key,
       tier,
-      status: finalStatus,
-      stepResults: stepResults.map(s => ({ ref: s.ref, type: s.type, status: s.status, durationMs: s.durationMs, error: s.error })),
+      status: depth === "PREVIEW" && stepResults.some(step => step.error === "preview-mode") ? "PARTIAL" : finalStatus,
+      stepResults: stepResults.map(s => ({ ref: s.ref, type: s.type, status: s.status, durationMs: s.durationMs, error: s.error,
+        ...(s.output._gloryOutputId ? { gloryOutputId: s.output._gloryOutputId } : {}),
+        ...(s.output._frameworkResultId ? { frameworkResultId: s.output._frameworkResultId } : {}),
+      })),
       finalContext: context,
       totalDurationMs: result.totalDurationMs,
       gloryOutputIds,
       campaignId: options?.campaignId,
     });
   } catch (err) {
+    if (finalStatus === "COMPLETED") result.status = finalStatus = "PARTIAL";
+    journal.warn("Les contenus produits sont conservés. L’édition complète n’a pas pu être enregistrée pour relecture.");
     console.warn("[sequence-executor] Vault recording failed:", err instanceof Error ? err.message : err);
   }
 

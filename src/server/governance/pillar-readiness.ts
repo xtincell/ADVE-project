@@ -36,6 +36,7 @@
 import { db } from "@/lib/db";
 import { ADVE_KEYS, PILLAR_KEYS, PILLAR_STORAGE_KEYS, toCanonical, toStorage, type PillarKey, type PillarStorageKey } from "@/domain";
 import { validatePillarPartial, validatePillarContent } from "@/lib/types/pillar-schemas";
+import { STRICT_CONTENT_PILLARS } from "@/lib/types/pillar-maturity-contracts";
 import { assessPillar } from "@/server/services/pillar-maturity/assessor";
 import { getContracts } from "@/server/services/pillar-maturity/contracts-loader";
 import type { PillarAssessment, MaturityStage } from "@/lib/types/pillar-maturity";
@@ -57,18 +58,21 @@ export interface PillarReadiness {
   /** Canonical 0-100 completion derived from the COMPLETE-stage contract. */
   completionPct: number;
   /** Operator-driven validation state from the DB. */
-  validationStatus: "DRAFT" | "VALIDATED" | "LOCKED";
+  validationStatus: "DRAFT" | "AI_PROPOSED" | "VALIDATED" | "LOCKED";
   /** Field paths still missing for the COMPLETE stage. */
   missing: readonly string[];
   /** Among missing, those that can be auto-filled (Mestor / Artemis). */
   derivable: readonly string[];
   /** Among missing, those that require human input. */
   needsHuman: readonly string[];
+  /** Present paths refused by the pillar's strict schema (S — ADR-0214 amendment).
+   *  Non-empty ⇒ stage below ENRICHED and `ZOD_STRICT_FAILED` on the gates. */
+  invalid: readonly string[];
   /** Notoria-written cache value (canonical: derived from `stage`). */
   cacheLevel: "INCOMPLET" | "COMPLET" | "FULL";
-  /** True iff Notoria's stored cache value matches what the canonical
-   *  evaluator would have written. Divergence ⇒ writePillarAndScore did
-   *  not run on the latest write (D-2 invariant breach). */
+  /** True iff the stored cache matches the canonical evaluator.
+   *  Content writes persist it atomically through writePillar; divergence
+   *  identifies legacy or out-of-gateway metadata (D-2 invariant breach). */
   cacheConsistent: boolean;
   /** Set when the pillar is marked stale by the staleness-propagator. */
   stale: boolean;
@@ -122,8 +126,8 @@ export interface RawPillar {
   key: string;
   content: unknown;
   validationStatus: string | null;
-  /** Notoria-written cache (INCOMPLET | COMPLET | FULL). Re-derived by
-   *  pillar-gateway.writePillarAndScore on every write (D-2). */
+  /** Derived cache (INCOMPLET | COMPLET | FULL), persisted atomically by
+   *  pillar-gateway.writePillar on each content write (D-2). */
   completionLevel?: string | null;
   /** Staleness propagator marker. When set, the pillar's content is
    *  outdated relative to a parent pillar that just changed. */
@@ -157,6 +161,7 @@ export function evaluatePillarReadiness(
         derivable: contract.stages.COMPLETE.filter((r) => r.derivable).map((r) => r.path),
         needsHuman: contract.stages.COMPLETE.filter((r) => !r.derivable).map((r) => r.path),
         optionalFillable: [],
+        invalid: [],
         completionPct: 0,
         readyForGlory: false,
       };
@@ -206,6 +211,11 @@ export function evaluatePillarReadiness(
       ? (["PILLAR_STALE_ADVISORY"] as const)
       : [];
 
+  // Strict-schema pillars (S): a present value refused by the schema caps the
+  // stage below ENRICHED (assessor) — the gates name that cause explicitly.
+  const strictReasons: readonly ReadinessReason[] =
+    assessment.invalid.length > 0 ? (["ZOD_STRICT_FAILED"] as const) : [];
+
   // ── Gate verdicts ──
   const gates: Record<ReadinessGate, GateVerdict> = {
     DISPLAY_AS_COMPLETE: verdict(
@@ -221,6 +231,7 @@ export function evaluatePillarReadiness(
         ...(strictDisplayBar && validationStatus === "DRAFT"
           ? (["VALIDATION_NOT_VALIDATED"] as const)
           : []),
+        ...strictReasons,
         ...staleReasonForBlockingGates,
       ],
     ),
@@ -232,6 +243,7 @@ export function evaluatePillarReadiness(
         ...(stage === "EMPTY" || stage === "INTAKE"
           ? (["STAGE_BELOW_ENRICHED"] as const)
           : []),
+        ...strictReasons,
         ...staleReasonForRefreshGates,
       ],
     ),
@@ -240,6 +252,7 @@ export function evaluatePillarReadiness(
       [
         ...(stage !== "COMPLETE" ? (["STAGE_BELOW_COMPLETE"] as const) : []),
         ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
+        ...strictReasons,
         ...staleReasonForBlockingGates,
       ],
     ),
@@ -251,6 +264,7 @@ export function evaluatePillarReadiness(
         ...(stage === "EMPTY" || stage === "INTAKE"
           ? (["STAGE_BELOW_ENRICHED"] as const)
           : []),
+        ...strictReasons,
         ...staleReasonForRefreshGates,
       ],
     ),
@@ -259,7 +273,8 @@ export function evaluatePillarReadiness(
     ORACLE_EXPORT: verdict(
       (validationStatus === "VALIDATED" || validationStatus === "LOCKED") && !stale,
       [
-        ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
+        ...(validationStatus !== "VALIDATED" && validationStatus !== "LOCKED"
+          ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
         ...staleReasonForBlockingGates,
       ],
     ),
@@ -273,6 +288,7 @@ export function evaluatePillarReadiness(
     missing: assessment.missing,
     derivable: assessment.derivable,
     needsHuman: assessment.needsHuman,
+    invalid: assessment.invalid,
     cacheLevel: canonicalCache,
     cacheConsistent,
     stale,
@@ -287,7 +303,7 @@ function verdict(ok: boolean, reasons: readonly ReadinessReason[]): GateVerdict 
 
 function pickDisplayLabel(
   stage: MaturityStage | "EMPTY",
-  validation: "DRAFT" | "VALIDATED" | "LOCKED",
+  validation: PillarReadiness["validationStatus"],
   stale: boolean,
 ): PillarReadiness["displayLabel"] {
   if (stale) return "Périmé";
@@ -569,6 +585,14 @@ export function consistencyCheck(
     divergences.push(
       `canonical=COMPLETE but zod-partial only ${zodPartial.completionPercentage}%`,
     );
+  }
+
+  // Invariant 4 (ADR-0214 amendment): for a strict-schema pillar (S), a stage at
+  // or above ENRICHED — the composition contract — MUST pass the strict schema.
+  // This is the historical "COMPLETE/100 while the strict schema refuses" defect.
+  if (STRICT_CONTENT_PILLARS.has(toStorage(pillarKey))
+    && (canonical.stage === "ENRICHED" || canonical.stage === "COMPLETE") && !zodStrict.success) {
+    divergences.push(`canonical=${canonical.stage} but zod-strict refuses ${zodStrict.errors?.length ?? 0} path(s)`);
   }
 
   return {

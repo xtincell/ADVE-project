@@ -4,6 +4,7 @@
 **Statut** : accepted
 **Phase de refonte** : phase/2-intents
 **Co-shippé avec** : ADR-0024 (renommage Console oracle namespace)
+**Amendement** : 2026-10-16 — distinction calcul/synthèse qualitative, tranche 6.27.484 en qualification (native copie reçue pour V.businessModel ; CI/livraison non reçues).
 
 ## Contexte
 
@@ -53,7 +54,7 @@ Le compilateur refuse `pillarKey: "r" | "t" | "i" | "s"` — garantit "ADVE only
 |------|-------|----------------|---------------|
 | `PATCH_DIRECT` | Champ scalaire simple, non-LOCKED, non-financial, non-cross-pillar | `OPERATOR` + raison | confidence=1.0, destructive check, financial check si applicable |
 | `LLM_REPHRASE` | Champ texte qualitatif ; user décrit son intention en langage naturel | `OPERATOR` après preview Notoria | `PILLAR_COHERENCE` complet, cost gate Thot pre-flight |
-| `STRATEGIC_REWRITE` | Champ LOCKED, destructif (`d.personas`, `v.unitEconomics`, `v.businessModel.coreEngine`, `a.noyauIdentitaire`), ou impact RTIS étendu | `OPERATOR` + raison ≥20 chars + `overrideLocked:true` | `PILLAR_COHERENCE` strict + double-confirm + audit `LOCKED_OVERRIDE` |
+| `STRATEGIC_REWRITE` | Champ LOCKED, destructif (`d.personas`, `v.unitEconomics`, `v.businessModel.coreEngine`, `a.noyauIdentitaire`), synthèse qualitative ADVE explicitement déclarée dans ce mode, ou impact RTIS étendu | `OPERATOR` + raison ≥20 chars + `overrideLocked:true` | `PILLAR_COHERENCE` strict + double-confirm + audit `LOCKED_OVERRIDE` |
 
 ### 3. Voie unique de mutation
 
@@ -64,7 +65,7 @@ Tous les modes émettent `OPERATOR_AMEND_PILLAR` via `mestor.emitIntent()` → `
 `src/server/services/notoria/gates.ts` exporte `applyPillarCoherenceGate()` qui applique dans l'ordre :
 
 1. **LOCKED check** — refuse sans `overrideLocked`. Avec override + author OPERATOR → audit log + warning.
-2. **Destructive amplifier** — `d.personas`, `v.unitEconomics`, `v.businessModel.coreEngine`, `a.noyauIdentitaire` → force STRATEGIC_REWRITE mode.
+2. **Mode requis / destructive amplifier** — le mode explicite de `variable-bible` est imposé aussi aux sous-chemins via `provenanceTopKey`, sans seconde liste ; `PATCH_DIRECT` qui contourne la réécriture stratégique est refusé avant effet. Les contraintes existantes sur `d.personas`, `v.unitEconomics`, `v.businessModel.coreEngine`, `a.noyauIdentitaire` restent applicables. Complément 6.27.484 en qualification.
 3. **Cross-ADVE warning** — `d.personas` warns about `e.superfanPortrait`. Non-bloquant.
 4. **Financial reuse** — délègue à `validateFinancialReco` existant (gates.ts).
 
@@ -74,11 +75,27 @@ Le dropdown du modal `AmendPillarModal` est alimenté par `trpc.pillar.listEdita
 
 `variable-bible` donne déjà :
 - `description`, `format`, `examples[]`, `minLength`, `maxLength`, `rules[]` → UX riche dans le modal
-- `derivedFrom` → exclusion automatique du dropdown (fields calculés)
+- `derivedFrom` → filiation conservée ; résultat calculé exclu, synthèse qualitative exclue en l’absence d’un mode d’édition explicitement déclaré
 - `feedsInto[]` → preview cascade explicite cross-pilier
 - nouvelle propriété `editableMode` → override de l'heuristique
 
 Le Zod reste utilisé pour la validation runtime côté gateway. Pas de doublon de surface.
+
+#### Clarification du 16 octobre 2026 — calcul et synthèse qualitative
+
+`derivedFrom` ne suffit pas à distinguer un résultat calculé d’une synthèse qualitative du socle. Les calculs demeurent protégés ; RTIS reste hors du contrat de cet Intent. Pour ADVE uniquement, une synthèse qualitative peut être corrigée par l’opérateur disposant des droits actuels si `variable-bible` la déclare explicitement en `STRATEGIC_REWRITE`. Ce mode ne supprime ni sa filiation, ni les schémas, versions, raisons, confirmations et gates existants ; il n’accorde aucun nouveau droit.
+
+La candidate 6.27.484 déclare quinze synthèses :
+
+- D : `personas`, `tonDeVoix`, `archetypalExpression`.
+- V : `businessModel`, `pricingJustification`, `economicModels`, `positioningArchetype`, `salesChannel`, `personaSegmentMap`.
+- E : `promesseExperience`, `superfanPortrait`, `primaryChannel`, `productExperienceMap`, `ladderProductAlignment`, `channelTouchpointMap`.
+
+L’autorisation est explicite par champ, sans rendre éditable toute valeur portant `derivedFrom`. Le traitement utilise la même voie d’amendement ; aucune édition manuelle des calculs ou de RTIS n’est introduite. La correction des identités, rangs, références et la limite du contrat `personas` restent un travail distinct : cette déclaration ne les réconcilie pas.
+
+La gate existante consomme le mode explicite de ce même registre, y compris pour un sous-chemin résolu par `provenanceTopKey`, et refuse le contournement par `PATCH_DIRECT` avant effet. Le modal existant sélectionne le mode requis, désactive les autres choix pour ces champs et utilise l’éditeur structuré existant pour la réécriture manuelle ; assistance IA facultative, aucun composant ajouté. Le contrat/gate sont reçus sur copie au périmètre ci-dessous ; le formulaire natif est reçu sur copie pour V.businessModel, sans qualifier les autres champs réels.
+
+**Réception bornée de l’amendement** : rouges catalogue 3/8 puis gate 3/6, cible finale 82 / 5, DEFAULT 4 743 / 445, gouvernance 1 663 / 167 et tsc/deux lints/cycles verts (24 avertissements historiques par lint), CODE-MAP sans diff. Contrôle voix dérivée exigeant désormais le mode stratégique/RTIS toujours refusés. HTTP copie : champs D/V/E/source fictive DECLARED lus, PATCH_DIRECT V.businessModel refusé avant effet, STRATEGIC_REWRITE v1→v2 OK et valeur enregistrée relue conforme ; aucun modèle externe demandé. Échecs/reprise détaillés dans [REFONTE-PLAN](../REFONTE-PLAN.md), 39 405 ms observés sur copie distante sans SLO. Formulaire natif ADMIN fictif reçu : source lue/citée, mode stratégique imposé, un POST 200/OK à 22 301 ms, v2→v3 relu et autres piliers/coûts inchangés ; source/CI/image/native production 484 non reçus, production 483 HTTP 200. Aucun grant métier réel ni réception du parcours entier, de C2/C5 ou des identités/rangs/références/personas.
 
 ### 6. Cascade & side effects (pattern uniforme, pas d'évangélisme Oracle)
 

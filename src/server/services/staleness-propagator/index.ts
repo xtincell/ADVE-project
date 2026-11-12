@@ -8,6 +8,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { markPillarsStale } from "@/server/services/pillar-gateway/review-invalidation";
 
 interface PropagationResult {
   pillarsMarkedStale: string[];
@@ -85,7 +86,7 @@ export async function propagateFromPillar(
   // 2. For each dependent, check if it needs recalculation
   for (const depKey of dependents) {
     const pillar = await db.pillar.findUnique({
-      where: { strategyId_key: { strategyId, key: depKey } },
+      where: { strategyId_key: { strategyId, key: depKey.toLowerCase() } },
     });
 
     if (!pillar) continue;
@@ -112,10 +113,7 @@ export async function propagateFromPillar(
       result.signalsCreated++;
 
       // Mark the pillar record as stale
-      await db.pillar.updateMany({
-        where: { strategyId, key: depKey.toLowerCase() },
-        data: { staleAt: new Date() },
-      });
+      await db.$transaction(tx => markPillarsStale(tx, strategyId, [depKey]));
 
       // Create a refresh Process so the scheduler/pipeline-orchestrator picks it up
       await db.process.create({
@@ -252,10 +250,7 @@ export async function auditAllStrategies(): Promise<{
           });
 
           // Mark the pillar record as stale
-          await db.pillar.updateMany({
-            where: { strategyId: strategy.id, key: pillar.key.toLowerCase() },
-            data: { staleAt: new Date() },
-          });
+          await db.$transaction(tx => markPillarsStale(tx, strategy.id, [pillar.key]));
 
           // Create a refresh Process for the scheduler/pipeline-orchestrator
           await db.process.create({
@@ -291,7 +286,8 @@ export async function auditAllStrategies(): Promise<{
  */
 export async function checkStaleness(
   strategyId: string,
-  pillarKey: string
+  pillarKey: string,
+  client: Pick<Prisma.TransactionClient, "pillar"> = db,
 ): Promise<{ isStale: boolean; staleDays: number; staleSince: Date | null; dependsOn: string[] }> {
   // Build reverse dependency map: for a given pillar, which pillars does it depend ON?
   // PILLAR_DEPENDENCIES maps source → affected. We need affected → sources.
@@ -309,7 +305,7 @@ export async function checkStaleness(
   }
 
   // Fetch the target pillar
-  const pillar = await db.pillar.findUnique({
+  const pillar = await client.pillar.findUnique({
     where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
   });
   if (!pillar) {
@@ -325,7 +321,7 @@ export async function checkStaleness(
   }
 
   // Fetch all upstream pillars
-  const upstreamPillars = await db.pillar.findMany({
+  const upstreamPillars = await client.pillar.findMany({
     where: {
       strategyId,
       key: { in: upstream.map((k) => k.toLowerCase()) },

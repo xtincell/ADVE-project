@@ -1,3 +1,4 @@
+import { documentEdition } from "@/domain/source-document";
 /**
  * INTAKE_SOURCE_PURGE_AND_REINGEST handler — ADR-0033.
  *
@@ -29,6 +30,7 @@
 
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { invalidateSourceDerivatives } from "@/server/services/ingestion-pipeline/source-usage";
 import { ADVE_KEYS } from "@/domain";
 import type { Intent, IntentResult } from "@/server/services/mestor/intents";
 
@@ -153,7 +155,10 @@ export async function purgeAndReingest(
     //    n'a pas de clé étrangère : sans cette ligne, les fragments survivent au
     //    document et restent récupérables/citables avec une ancre morte
     //    (cf. `ingestion.deleteSource`, même invariant).
-    await tx.brandContextNode.deleteMany({ where: { sourceId } });
+    await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${sourceId} FOR UPDATE`;
+    const current = await tx.brandDataSource.findUniqueOrThrow({ where: { id: sourceId } });
+    if (documentEdition(current.rawData)) throw new Error("Une édition documentaire est conservée. Créez une nouvelle édition.");
+    await invalidateSourceDerivatives(tx, sourceId);
     await tx.brandDataSource.delete({ where: { id: sourceId } });
 
     // 2. Delete the INTAKE_REPORT BrandAsset (deleteMany is idempotent —

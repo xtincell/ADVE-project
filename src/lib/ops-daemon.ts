@@ -39,7 +39,7 @@ const CADENCES: Cadence[] = [
     // round-15b : `social-sync?mode=publish` publie les posts planifiés dus (BrandAction
     // SCHEDULED, ré-émis via mestor.emitIntent + claim atomique round-12) — était documenté
     // (~15 min) mais câblé à AUCUN scheduler → posts fondateurs jamais publiés.
-    paths: ["/api/cron/scheduler", "/api/cron/ptah-download", "/api/cron/social-sync?mode=publish"],
+    paths: ["/api/cron/scheduler", "/api/cron/ptah-download", "/api/cron/social-sync?mode=publish", "/api/cron/argos-hunt?mode=retention"],
   },
   {
     key: "sixhourly", // 0 */6 h : sentinelles + télémétrie + sweep + feeds marché + relance leads
@@ -54,6 +54,7 @@ const CADENCES: Cadence[] = [
       "/api/cron/auto-promotion",
       "/api/cron/ops-sweep",
       "/api/cron/external-feeds",
+      "/api/cron/argos-hunt?mode=corpus", // ADR-0195 : veilles explicitement activées, sans LLM.
     ],
   },
   {
@@ -128,7 +129,7 @@ async function fireCadence(cadence: Cadence, bucket: string): Promise<void> {
     try {
       const res = await fetch(`${baseUrl()}${path}`, {
         headers: secret ? { authorization: `Bearer ${secret}` } : {},
-        signal: AbortSignal.timeout(120_000),
+        signal: AbortSignal.timeout(path === "/api/cron/argos-hunt?mode=corpus" ? 240_000 : 120_000),
       });
       if (!res.ok) {
         console.warn(`[ops-daemon] ${path} → HTTP ${res.status}`);

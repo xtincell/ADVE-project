@@ -15,13 +15,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // streamText est consommé dynamiquement par streaming.ts — le mock du module
 // "ai" intercepte aussi les imports dynamiques.
 const streamTextMock = vi.fn();
+const costCreate = vi.hoisted(() => vi.fn(async (_args: unknown) => ({ id: "receipt" })));
+vi.mock("@/lib/db", () => ({ db: {
+  aICostLog: { create: costCreate }, modelPolicy: { findUnique: vi.fn(async () => null) },
+} }));
+vi.mock("@/server/services/ai-cost-tracker", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/server/services/ai-cost-tracker")>(),
+  checkBudget: vi.fn(async () => ({ allowed: true, remaining: 100, utilization: 0, alertLevel: "none" })),
+}));
 vi.mock("ai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ai")>();
   return { ...actual, streamText: (...args: unknown[]) => streamTextMock(...args) };
 });
 
-import { _resetProvidersForTest } from "@/server/services/llm-gateway";
+import {
+  _resetProvidersForTest, _getProviderStateForTest, callLLM, withRetry,
+  buildTextProviderCandidates, isTextLLMAvailable,
+} from "@/server/services/llm-gateway";
 import { streamChatText } from "@/server/services/llm-gateway/streaming";
+import * as ratePolicy from "@/server/services/llm-gateway/rate-policy";
 
 function textStreamOf(chunks: string[]): ReadableStream<string> {
   let i = 0;
@@ -60,8 +72,26 @@ async function drain(stream: ReadableStream<string>): Promise<string> {
 }
 
 describe("streamChatText — fallback pré-premier-octet", () => {
+  it("does not turn a caller cancellation into a provider failure or circuit opening", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "local-test-access");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true, failureCount: 2 },
+      anthropic: { available: false }, ollama: { available: false }, openrouter: { available: false } });
+    const controller = new AbortController();
+    const acquire = vi.spyOn(ratePolicy, "acquireSlot").mockImplementation(async () => {
+      controller.abort(new DOMException("Caller aborted", "AbortError"));
+      throw controller.signal.reason;
+    });
+    await expect(callLLM({ system: "s", prompt: "Avis ?", caller: "fixture", signal: controller.signal }))
+      .rejects.toMatchObject({ name: "AbortError" });
+    expect(acquire).toHaveBeenCalledOnce();
+    expect(_getProviderStateForTest("openai")).toMatchObject({ failureCount: 2, circuitOpenUntil: 0 });
+    expect(costCreate).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     streamTextMock.mockReset();
+    costCreate.mockClear();
     // openrouter en tête (premium OFF, pas d'ollama) puis anthropic en repli.
     _resetProvidersForTest({
       anthropic: { available: true },
@@ -71,10 +101,138 @@ describe("streamChatText — fallback pré-premier-octet", () => {
     });
     delete process.env.LLM_PRIMARY_PROVIDER;
     delete process.env.LLM_PREMIUM_MODE;
+    delete process.env.OLLAMA_MODEL;
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     _resetProvidersForTest();
+    delete process.env.OLLAMA_MODEL;
+  });
+
+  it.each([
+    { url: "", token: "fixture-only" },
+    { url: "http://127.0.0.1:8646/v1", token: "" },
+    { url: "", token: "" },
+  ])("keeps the explicit subscription closed when relay configuration is incomplete: %j", ({ url, token }) => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", url);
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", token);
+    vi.stubEnv("OPENAI_API_KEY", "embedding-fixture-only");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+
+    expect(isTextLLMAvailable()).toBe(false);
+    expect(buildTextProviderCandidates(true)).toEqual([]);
+    expect(buildTextProviderCandidates(false)).toEqual([]);
+  });
+
+  it.each(["finite", "stream"] as const)("%s does not start another provider when the selected relay loses its credential", async (surface) => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "");
+    vi.stubEnv("OPENAI_API_KEY", "embedding-fixture-only");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    vi.stubEnv("HEADROOM_DISABLED", "1");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+    // Stop before provider work even on the old, incorrect fallback path.
+    const acquire = vi.spyOn(ratePolicy, "acquireSlot")
+      .mockRejectedValue(new ratePolicy.LlmRateWaitExceededError("fixture-tripwire"));
+
+    if (surface === "finite") {
+      await expect(callLLM({ system: "s", prompt: "Avis ?", caller: "fixture" }))
+        .rejects.toThrow("All LLM providers failed");
+    } else {
+      await expect(streamChatText({ system: "s", messages: [{ role: "user", content: "Avis ?" }],
+        caller: "fixture" })).rejects.toThrow("All LLM providers failed before first byte");
+    }
+
+    expect(acquire).not.toHaveBeenCalled();
+    expect(streamTextMock).not.toHaveBeenCalled();
+    expect(costCreate).not.toHaveBeenCalled();
+    for (const provider of ["openai", "anthropic", "ollama", "openrouter"] as const) {
+      expect(_getProviderStateForTest(provider)).toMatchObject({ failureCount: 0, circuitOpenUntil: 0 });
+    }
+  });
+
+  it("local queue expiry does not start, bill or mark an OAuth provider as failed", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://localhost:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "fixture-only");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai"); vi.stubEnv("HEADROOM_DISABLED", "1");
+    _resetProvidersForTest({ anthropic: { available: false }, openai: { available: true },
+      ollama: { available: false }, openrouter: { available: false } });
+    const acquire = vi.spyOn(ratePolicy, "acquireSlot")
+      .mockRejectedValue(new ratePolicy.LlmRateWaitExceededError("gpt-5.6-luna"));
+    const signal = new AbortController().signal;
+    const listener = vi.spyOn(signal, "addEventListener");
+    const removeListener = vi.spyOn(signal, "removeEventListener");
+    await expect(streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "mestor:council:coordinator", strategyId: "brand-a", signal,
+    })).rejects.toBeInstanceOf(ratePolicy.LlmRateWaitExceededError);
+    expect(acquire).toHaveBeenCalledOnce(); expect(streamTextMock).not.toHaveBeenCalled();
+    expect(listener).toHaveBeenCalledOnce(); expect(removeListener).toHaveBeenCalledOnce();
+    expect(removeListener.mock.calls[0]?.[1]).toBe(listener.mock.calls[0]?.[1]);
+    expect(costCreate).not.toHaveBeenCalled();
+    expect(_getProviderStateForTest("openai").failureCount).toBe(0);
+    acquire.mockClear();
+    await expect(callLLM({ system: "s", prompt: "Quiz ?", caller: "fixture" }))
+      .rejects.toBeInstanceOf(ratePolicy.LlmRateWaitExceededError);
+    expect(acquire).toHaveBeenCalledOnce();
+    expect(_getProviderStateForTest("openai").failureCount).toBe(0);
+    expect(costCreate).not.toHaveBeenCalled();
+  });
+
+  it("retry never restarts an expired local queue", async () => {
+    const work = vi.fn(async () => { throw new ratePolicy.LlmRateWaitExceededError("guarded"); });
+    await expect(withRetry(work, { baseDelayMs: 1 }))
+      .rejects.toBeInstanceOf(ratePolicy.LlmRateWaitExceededError);
+    expect(work).toHaveBeenCalledOnce();
+  });
+
+  it("the provider chosen by streaming also owns the cost receipt", async () => {
+    _resetProvidersForTest({ anthropic: { available: false }, openai: { available: false },
+      ollama: { available: true }, openrouter: { available: false } });
+    process.env.OLLAMA_MODEL = "gemma4:31b";
+    streamTextMock.mockReturnValueOnce(mockStreamResult(textStreamOf(["Avis" ]), "Avis"));
+    const result = await streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "mestor:council:coordinator", strategyId: "brand-a" });
+    await drain(result.textStream); await result.finished;
+    await vi.waitFor(() => expect(costCreate).toHaveBeenCalledOnce());
+    expect(costCreate.mock.calls[0]![0]).toMatchObject({ data: {
+      provider: "ollama", model: "gemma4:31b", context: "mestor:council:coordinator:estimated-cost",
+    } });
+  });
+
+  it("routes the explicit OAuth Luna through streaming and journals its actual identity", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "local-test-access");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+    streamTextMock.mockReturnValueOnce(mockStreamResult(textStreamOf(["Avis Luna"]), "Avis Luna"));
+    const result = await streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "mestor:council:coordinator", strategyId: "brand-a" });
+    expect(await drain(result.textStream)).toBe("Avis Luna");
+    expect(await result.finished).toMatchObject({ provider: "openai", model: "gpt-5.6-luna" });
+    await vi.waitFor(() => expect(costCreate).toHaveBeenCalledOnce());
+    expect(costCreate.mock.calls[0]![0]).toMatchObject({ data: { provider: "openai-codex-oauth",
+      model: "gpt-5.6-luna", context: "mestor:council:coordinator:subscription-quota:api-equivalent-estimate" } });
+    vi.unstubAllEnvs();
+  });
+
+  it("does not change model or provider when the explicit OAuth relay fails", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "local-test-access");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+    streamTextMock.mockReturnValue(mockStreamResult(erroringStream("OAuth quota exhausted"), ""));
+    await expect(streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "receipt" })).rejects.toThrow();
+    expect(streamTextMock).toHaveBeenCalledOnce();
+    expect(costCreate).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 
   it("provider 1 échoue au premier read → provider 2 sert le flux entier", async () => {

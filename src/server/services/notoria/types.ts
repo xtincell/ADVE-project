@@ -71,7 +71,7 @@ export interface GenerateBatchResult {
   batchId: string;
   totalRecos: number;
   recosByPillar: Record<string, number>;
-  errors: Array<{ pillarKey: string; error: string }>;
+  errors: Array<{ pillarKey: string; error: string; code?: string; phase?: string; sourcePillar?: string }>;
   /** Recos auto-applied (confidence >= 0.7 + non-destructive + auto policy) */
   autoApplied: number;
 }

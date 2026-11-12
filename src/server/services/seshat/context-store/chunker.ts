@@ -15,81 +15,148 @@ export interface SourceChunk {
   charEnd: number;
 }
 
-/**
- * Split text on paragraph boundaries first; if a paragraph exceeds
- * MAX_CHARS_PER_CHUNK, fall back to sentence boundaries; if a sentence
- * still exceeds, hard-cut at the limit. Whitespace-only chunks are dropped.
+export function normalizeSourceQuery(text: string): string {
+  return text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+}
+
+/** Same words for retrieval and excerpt selection, including BMC and Q6. */
+export function sourceQueryTerms(query: string): string[] {
+  const stop = new Set(["les", "des", "une", "pour", "avec", "dans", "sur", "qui", "que", "est", "sont", "par", "aux", "ces", "ses", "leur", "leurs", "the", "and", "with", "from", "this", "that"]);
+  return [...new Set((query.match(/[\p{L}\p{N}]+/gu) ?? []).map(normalizeSourceQuery)
+    .filter(word => (word.length >= 3 || /\d/.test(word)) && !stop.has(word)))].slice(0, 64);
+}
+
+/** Focus retrieval on the question clause naming this document. The caller's
+ * original question remains intact; this never supplies inferred source text.
  */
-export function chunkText(input: string): SourceChunk[] {
-  const text = (input ?? "").trim();
-  if (!text) return [];
-  if (text.length <= MAX_CHARS_PER_CHUNK) {
-    return [{ index: 0, text, charStart: 0, charEnd: text.length }];
-  }
+export function sourceQueryForDocument(query: string, fileName: string | null, options: { passage?: boolean } = {}): string {
+  const clauses = query.split(/(?<=[.!?。！？])\s+|\n+/u).filter(Boolean);
+  const title = new Set(sourceQueryTerms((fileName ?? "").replace(/\.(?:docx?|pdf|txt|md|xlsx?|csv|pptx?|html?)$/iu, "")));
+  const scores = clauses.map(clause => sourceQueryTerms(clause).reduce((score, term) =>
+    score + (title.has(term) ? /\d/u.test(term) ? 3 : 1 : 0), 0));
+  const best = Math.max(0, ...scores);
+  const focused = clauses.length > 1 && best
+    ? clauses.filter((_, index) => scores[index] === best).join(" ") : query;
+  if (!options.passage) return focused;
+  // The document is already selected. Its title/date identify the piece,
+  // but must not count as new factual coverage in an introductory paragraph.
+  const terms = sourceQueryTerms(focused).filter(term => !title.has(term));
+  const phrases = sourceQueryPhrases(focused);
+  return terms.length || phrases.length ? [...terms, ...phrases.map(phrase => `«${phrase}»`)].join(" ") : focused;
+}
 
-  const paragraphs = text.split(/\n{2,}/);
-  const chunks: SourceChunk[] = [];
-  let buffer = "";
-  let bufferStart = 0;
-  let cursor = 0;
+/** Quoted field names remain phrases, including short words such as "par". */
+export function sourceQueryPhrases(query: string): string[] {
+  return [...new Set([...query.matchAll(/[«“"]([^»”"]+)[»”"]/gu)]
+    .map(match => normalizeSourceQuery(match[1]!).replace(/[^\p{L}\p{N}]+/gu, " ").trim())
+    .filter(phrase => phrase.split(" ").length >= 2 && phrase.length <= 160))].slice(0, 16);
+}
 
-  const pushBuffer = () => {
-    const trimmed = buffer.trim();
-    if (trimmed.length >= MIN_CHARS_PER_CHUNK || (trimmed.length > 0 && chunks.length === 0)) {
-      chunks.push({
-        index: chunks.length,
-        text: trimmed,
-        charStart: bufferStart,
-        charEnd: bufferStart + buffer.length,
-      });
-    } else if (trimmed.length > 0 && chunks.length > 0) {
-      const previous = chunks[chunks.length - 1]!;
-      previous.text = `${previous.text}\n\n${trimmed}`.slice(0, MAX_CHARS_PER_CHUNK * 2);
-      previous.charEnd = bufferStart + buffer.length;
-    }
-    buffer = "";
-  };
+/** Same exact-phrase preference for document ranking and bounded excerpts. */
+export function sourcePhraseScore(text: string, phrases: string[]): number {
+  if (!phrases.length) return 0;
+  const normalized = ` ${normalizeSourceQuery(text).replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
+  return phrases.reduce((score, phrase) => score + (normalized.includes(` ${phrase} `)
+    ? Math.min(40, 8 * phrase.split(" ").length) : 0), 0);
+}
 
-  for (const para of paragraphs) {
-    if (para.length > MAX_CHARS_PER_CHUNK) {
-      pushBuffer();
-      bufferStart = cursor;
-      const sentences = para.split(/(?<=[.!?])\s+/);
-      for (const sentence of sentences) {
-        if (sentence.length > MAX_CHARS_PER_CHUNK) {
-          let i = 0;
-          while (i < sentence.length) {
-            const slice = sentence.slice(i, i + MAX_CHARS_PER_CHUNK);
-            buffer = slice;
-            bufferStart = cursor + i;
-            pushBuffer();
-            i += MAX_CHARS_PER_CHUNK;
-          }
-        } else if (buffer.length + sentence.length + 1 > MAX_CHARS_PER_CHUNK) {
-          pushBuffer();
-          bufferStart = cursor;
-          buffer = sentence;
-        } else {
-          if (buffer.length === 0) bufferStart = cursor;
-          buffer += (buffer.length === 0 ? "" : " ") + sentence;
-        }
+/**
+ * Bound an already selected chunk around the question's words. This only
+ * chooses a contiguous verbatim excerpt; it neither ranks documents nor
+ * changes the persisted index, source authority or citation identity.
+ */
+export function excerptForQuery(text: string, query: string, max: number): string {
+  const budget = Math.max(0, Math.floor(max));
+  if (text.length <= budget) return text;
+  if (!budget) return "";
+  const phrases = sourceQueryPhrases(query);
+  const phraseWords = phrases.map(phrase => phrase.split(" "));
+  const terms = new Set([...sourceQueryTerms(query), ...phraseWords.flat()]);
+  const hits: { word: string; index: number }[] = [];
+  const phraseStarts: number[] = [];
+  const tail: { word: string; index: number }[] = [];
+  const maxPhraseWords = Math.max(0, ...phraseWords.map(words => words.length));
+  for (const match of text.matchAll(/[\p{L}\p{N}]+/gu)) {
+    const word = normalizeSourceQuery(match[0]);
+    if (terms.has(word)) hits.push({ word, index: match.index });
+    if (maxPhraseWords) {
+      tail.push({ word, index: match.index });
+      if (tail.length > maxPhraseWords) tail.shift();
+      for (const words of phraseWords) if (words.at(-1) === word && tail.length >= words.length
+        && words.every((value, offset) => tail[tail.length - words.length + offset]!.word === value)) {
+        phraseStarts.push(tail[tail.length - words.length]!.index);
       }
-      pushBuffer();
-      cursor += para.length + 2;
-      continue;
     }
-
-    if (buffer.length + para.length + 2 > MAX_CHARS_PER_CHUNK) {
-      pushBuffer();
-      bufferStart = cursor;
-      buffer = para;
-    } else {
-      if (buffer.length === 0) bufferStart = cursor;
-      buffer += (buffer.length === 0 ? "" : "\n\n") + para;
-    }
-    cursor += para.length + 2;
   }
-  pushBuffer();
+  let bestStart = 0;
+  let bestScore = -1;
+  let previousStart = -1;
+  let left = 0, right = 0, wordScore = 0;
+  const counts = new Map<string, number>();
+  const weight = (word: string) => /\p{L}/u.test(word) && /\d/.test(word) ? 3 : 1;
+  // Exact fields anchor the window. Otherwise use every query-word position.
+  // Moving pointers avoid rescanning all hits for every candidate in a large source.
+  const starts = phraseStarts.length ? phraseStarts.sort((a, b) => a - b) : hits.map(hit => hit.index);
+  for (const index of starts) {
+    const start = Math.max(0, Math.min(index - Math.floor(budget / 4), text.length - budget));
+    if (start === previousStart) continue;
+    previousStart = start;
+    while (right < hits.length && hits[right]!.index < start + budget) {
+      const word = hits[right++]!.word;
+      const count = counts.get(word) ?? 0;
+      if (!count) wordScore += weight(word);
+      counts.set(word, count + 1);
+    }
+    while (left < right && hits[left]!.index < start) {
+      const word = hits[left++]!.word;
+      const count = counts.get(word)! - 1;
+      if (!count) { counts.delete(word); wordScore -= weight(word); }
+      else counts.set(word, count);
+    }
+    const score = wordScore + (phraseStarts.length ? sourcePhraseScore(text.slice(start, start + budget), phrases) : 0);
+    if (score > bestScore) { bestStart = start; bestScore = score; }
+  }
+  return text.slice(bestStart, bestStart + budget);
+}
 
+/**
+ * Bound contiguous ORIGINAL text, preferring paragraphs, sentences, then words.
+ * Ranges use UTF-16 offsets into the unmodified input (the same units as slice).
+ * Only whitespace between chunks is omitted; no sentence or tail is rewritten.
+ * The optional bound lets other source readers reuse this canonical splitter.
+ */
+export function chunkText(input: string, options: { maxChars?: number } = {}): SourceChunk[] {
+  const text = input ?? "";
+  const max = options.maxChars ?? MAX_CHARS_PER_CHUNK;
+  if (!Number.isSafeInteger(max) || max < 2) throw new RangeError("Source chunk bound must be an integer of at least 2 characters");
+  const chunks: SourceChunk[] = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    while (cursor < text.length && /\s/u.test(text[cursor]!)) cursor++;
+    if (cursor === text.length) break;
+    const start = cursor;
+    let end = Math.min(start + max, text.length);
+    // A hard bound must never split an astral character's surrogate pair.
+    if (end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1]!) && /[\uDC00-\uDFFF]/.test(text[end]!)) end--;
+    if (end < text.length) {
+      const window = text.slice(start, end);
+      const minimum = Math.min(MIN_CHARS_PER_CHUNK, Math.floor(max / 2));
+      const lastBoundary = (pattern: RegExp, afterMatch = false) => {
+        let last = 0;
+        for (const match of window.matchAll(pattern)) {
+          const position = match.index + (afterMatch ? match[0].length : 0);
+          if (position >= minimum) last = position;
+        }
+        return last;
+      };
+      const boundary = lastBoundary(/\r?\n[\t ]*\r?\n+/g)
+        || lastBoundary(/[.!?。！？]["'»”)]?(?=\s)/gu, true)
+        || lastBoundary(/\s+/gu);
+      if (boundary) end = start + boundary;
+    }
+    while (end > start && /\s/u.test(text[end - 1]!)) end--;
+    chunks.push({ index: chunks.length, text: text.slice(start, end), charStart: start, charEnd: end });
+    cursor = end;
+  }
   return chunks;
 }

@@ -1,11 +1,12 @@
 # LLM Cost Model — La Fusée
 
-Source unique de vérité : `src/server/governance/slos.ts` (champ `costP95Usd` par Intent kind).
-Ce document est **lu-seul** — toute mise à jour passe par `slos.ts`, ce fichier se régénère manuellement ou via `scripts/gen-code-map.ts`.
+Les paramètres budgétaires `costP95Usd` par Intent kind ont pour source `src/server/governance/slos.ts` ; leurs valeurs ne se modifient pas dans ce document. `scripts/gen-code-map.ts` génère uniquement `CODE-MAP.md`, pas ce fichier. La prose de routage est maintenue séparément depuis les fonctions du Gateway.
+
+Les tableaux, tarifs, valeurs nommées p95 et scénarios ci-dessous sont des **paramètres ou hypothèses historiques non revalidés** par cette correction documentaire. Ils ne constituent ni mesures p95 reçues, factures, quotas d’abonnement ou coût mensuel complet. Aucun SLO ou montant n’est modifié ici.
 
 ---
 
-## Tarifs LLM providers (2026)
+## Hypothèses tarifaires historiques (2026, non revalidées)
 
 | Provider | Modèle | In ($/M tokens) | Out ($/M tokens) |
 |---|---|---|---|
@@ -15,13 +16,17 @@ Ce document est **lu-seul** — toute mise à jour passe par `slos.ts`, ce fichi
 | OpenRouter | (routing) | variable | variable |
 | Ollama | local | $0.00 | $0.00 |
 
-Cascade provider active : Anthropic → OpenAI → Ollama → OpenRouter (ADR-0067 + PR #258).
+**Routage texte courant — autorisation opérateur Luna (2026-10-15)** : le relais OAuth privé `gpt-5.6-luna` est distinct de la clé API OpenAI réservée aux embeddings. Relais configuré et `LLM_PRIMARY_PROVIDER=openai` donnent un candidat texte unique, ou aucun si son circuit est indisponible ; aucun repli OpenRouter, autre modèle ou crédits API sur ce raccord. Le routage relève de [`buildTextProviderCandidates` et `resolveTextProviderOrder`](../../src/server/services/llm-gateway/index.ts), pas de `slos.ts` ni des lignes legacy `ModelPolicy`.
+
+Budgets, Headroom, rate-policy, validation et ledger restent dans le gestionnaire existant. Le ledger qualifie l’estimation API équivalente du transport d’abonnement ; celle-ci reste distincte d’une facture et du quota réellement disponible. Cette correction ne reçoit aucune nouvelle CI/image/livraison ou qualité.
+
+**Historique de routage** : l’ancienne cascade « Anthropic → OpenAI → Ollama → OpenRouter » renvoyait à ADR-0067/PR #258 ; elle ne décrit pas le raccord texte courant. [Décisions historiques et état courant](context/architecture_llm_decision.md).
 
 ---
 
-## Coûts p95 par Intent kind (non-zéro)
+## Paramètres historiques `costP95Usd` par Intent kind (non-zéro)
 
-> p95 = 95e percentile d'une exécution isolée (un seul Intent, conditions normales).
+> Le nom `costP95Usd` désigne ici un paramètre de budget hérité ; aucune mesure du percentile en conditions réelles n’est reçue par ces tableaux.
 
 ### Mission Tier — Propulsion
 
@@ -71,7 +76,7 @@ Les Intent kinds suivants ont `costP95Usd: 0` parce qu'ils n'appellent **aucun L
 
 ---
 
-## Modèle mensuel type (par profil client)
+## Scénarios mensuels historiques (hypothèses non revalidées)
 
 ### Onboarding one-time (première activation)
 

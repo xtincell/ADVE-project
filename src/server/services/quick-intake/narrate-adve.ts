@@ -10,18 +10,19 @@ import { ADVE_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
  *   reliably honor a verbatim contract on data it just paraphrased into the
  *   prompt — empirical bench (LaPatateChaude) showed 1-2 cites per pillar.
  *
- *   ADVE is the founder's verbatim voice — deterministic data, not LLM
- *   synthesis. We narrate it once here from the raw values, persist to
+ *   ADVE narration distinguishes source evidence from generated proposals. We narrate it once here from the raw values, persist to
  *   Pillar.content.{narrativePreview,narrativeFull}, and read those columns
  *   verbatim at restitution time without any further LLM call.
  *
- * 4× Sonnet calls in parallel (purpose: "extraction"). Idempotent: pillars
+ * Up to four existing model calls (purpose: "extraction"). Idempotent: pillars
  * whose narrative is already present are skipped on re-run.
  */
 
 import { db } from "@/lib/db";
-import { callLLM, extractJSON } from "@/server/services/llm-gateway";
-import { sanitizeInline } from "@/server/services/utils/untrusted-content";
+import { z } from "zod";
+import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
+import { pillarContentLines, INTAKE_EVIDENCE_RULE } from "./report-composer";
+import { wrapUntrusted, UNTRUSTED_NOTICE, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 type AdvePillar = "a" | "d" | "v" | "e";
@@ -63,135 +64,36 @@ export interface NarrateAdveResult {
   e: NarratedPillar;
 }
 
-/** Reserved keys that are not founder values — output of upstream synthesis. */
-const RESERVED_KEYS = new Set([
-  "narrativePreview",
-  "narrativeFull",
-  "score",
-  "confidence",
-  "validationStatus",
-  "currentVersion",
-]);
-
-function collectVerbatimEntries(
-  values: Record<string, unknown>,
-): Array<[string, string | string[]]> {
-  const out: Array<[string, string | string[]]> = [];
-  for (const [field, val] of Object.entries(values)) {
-    if (RESERVED_KEYS.has(field)) continue;
-    if (typeof val === "string") {
-      const trimmed = val.trim();
-      if (trimmed.length > 0) out.push([field, trimmed]);
-    } else if (Array.isArray(val)) {
-      const cleaned = val
-        .map((v) => (typeof v === "string" ? v.trim() : ""))
-        .filter((v) => v.length > 0);
-      if (cleaned.length > 0) out.push([field, cleaned]);
-    }
-  }
-  return out;
-}
-
-/**
- * Word/token budget scales with the count of founder values to cite.
- * Goal: every verbatim value gets quoted. Citing N short values needs roughly
- * 8–15 words of connective tissue per citation, so the paragraph grows with N.
- */
-function pickFullWordRange(valueCount: number): { min: number; max: number } {
-  if (valueCount <= 4) return { min: 100, max: 180 };
-  if (valueCount <= 10) return { min: 180, max: 320 };
-  if (valueCount <= 20) return { min: 320, max: 500 };
-  return { min: 500, max: 800 };
-}
-
+/** Narration uses qualified data, never upgrades a proposal to founder testimony. */
 async function narratePillar(
   pillarKey: AdvePillar,
   values: Record<string, unknown>,
   brandName: string,
+  strategyId: string,
 ): Promise<NarratedPillar> {
-  const verbatimEntries = collectVerbatimEntries(values);
-
-  if (verbatimEntries.length === 0) {
-    return {
-      preview: `Pilier ${PILLAR_NAMES[pillarKey]} non renseigné par la marque.`,
-      full: `Aucune valeur ${PILLAR_NAMES[pillarKey]} n'a été renseignée pendant l'intake. Ce pilier reste à compléter pour produire un diagnostic exploitable.`,
-    };
-  }
-
-  // Count atoms to cite (a string array contributes its length, not 1).
-  const atomCount = verbatimEntries.reduce(
-    (acc, [, val]) => acc + (Array.isArray(val) ? val.length : 1),
-    0,
-  );
-  const { min: fullMin, max: fullMax } = pickFullWordRange(atomCount);
-
-  // LOT 1a — neutralise les valeurs verbatim (anti-injection) sans altérer le
-  // texte légitime : sanitizeInline ne casse que les jetons de rupture de prompt.
-  const valuesBlock = verbatimEntries
-    .map(([field, val]) => {
-      if (Array.isArray(val)) {
-        return `- ${field}: ${val.map((v) => `"${sanitizeInline(v, { max: 600 })}"`).join(", ")}`;
-      }
-      return `- ${field}: "${sanitizeInline(val, { max: 600 })}"`;
-    })
-    .join("\n");
-
-  const prompt = `MARQUE : ${sanitizeInline(brandName, { max: 120 })}
-PILIER : ${PILLAR_NAMES[pillarKey]} (${PILLAR_ANGLE[pillarKey]})
-
-VALEURS VERBATIM RENSEIGNÉES PAR LE FOUNDER (${atomCount} valeur${atomCount > 1 ? "s" : ""} à citer) :
-${valuesBlock}
-
-Ta tâche : produire deux paragraphes qui RESTITUENT EXHAUSTIVEMENT ces valeurs au
-founder en les ancrant dans son discours. Tu DOIS citer entre guillemets CHACUNE
-des ${atomCount} valeurs ci-dessus — pas une sélection, pas un échantillon, TOUTES.
-Tu ne paraphrases pas : les guillemets reproduisent les mots du founder à l'identique,
-caractère pour caractère, accents inclus, ponctuation incluse, casse incluse.
-
-CONTRAINTES :
-- preview : 2-3 phrases (40-80 mots) qui annoncent le pilier en citant ≥3 valeurs entre guillemets.
-- full : 1 paragraphe de ${fullMin}-${fullMax} mots qui développe le pilier en citant
-  les ${atomCount} valeurs verbatim. Adapte la longueur au nombre de valeurs : il y en
-  a ${atomCount}, donc tu auras besoin d'environ ${fullMin}-${fullMax} mots pour les
-  intégrer toutes proprement. Si tu dois choisir entre couper le texte et omettre une
-  valeur, COUPE LE TEXTE — l'exhaustivité prime sur la concision.
-- Pas de jugement de valeur ("c'est bien" / "c'est faible"). Tu décris ce que la marque DIT.
-- Pas de recommandation. La reco est produite ailleurs dans le pipeline.
-- Avant de finir, recompte mentalement : as-tu cité les ${atomCount} valeurs ? Si non,
-  réécris.
-
-Réponds UNIQUEMENT avec ce JSON exact :
-{ "preview": "...", "full": "..." }`;
-
-  // Token budget: ~1.5 tokens/word for French + JSON envelope overhead.
-  // For a 500-word output we need ~750 tokens; we cap at 2× to leave headroom.
-  const maxTokens = Math.max(800, Math.round(fullMax * 3));
-
-  const { text } = await callLLM({
-    caller: `quick-intake:narrate-adve:${pillarKey}`,
-    purpose: "extraction",
-    system: `Tu es Mestor, archiviste de la voix du founder. Tu restitues TOUTES les valeurs ADVE entre guillemets, jamais paraphrasées, jamais omises. Tu produis du JSON pur. Tu acceptes des paragraphes longs si le pilier a beaucoup de valeurs — l'exhaustivité prime.`,
-    prompt,
-    maxOutputTokens: maxTokens,
-  });
-
-  const parsed = extractJSON(text) as { preview?: unknown; full?: unknown };
-  // Minimum length scales with how much we asked for — guards against truncated JSON.
-  const minFullChars = Math.round(fullMin * 4); // ~4 chars/word floor
-  if (
-    !parsed ||
-    typeof parsed.preview !== "string" ||
-    typeof parsed.full !== "string" ||
-    parsed.preview.trim().length < 30 ||
-    parsed.full.trim().length < minFullChars
-  ) {
-    throw new Error(`narrate-adve[${pillarKey}]: invalid shape (full=${typeof parsed?.full === "string" ? parsed.full.length : "n/a"} chars, expected ≥${minFullChars})`);
-  }
-
-  return {
-    preview: parsed.preview.trim(),
-    full: parsed.full.trim(),
+  const lines = pillarContentLines(values, pillarKey);
+  if (lines.length === 0) return {
+    preview: `La fondation ${PILLAR_NAMES[pillarKey]} reste à documenter.`,
+    full: `Le dossier ne contient pas de matière exploitable sur ${PILLAR_ANGLE[pillarKey]}. Cela ne démontre pas une absence dans votre entreprise.`,
   };
+  const { data } = await executeStructuredLLMCall({
+    caller: `quick-intake:narrate-adve:${pillarKey}`,
+    strategyId,
+    purpose: "extraction",
+    schema: z.object({ preview: z.string().min(30).max(800), full: z.string().min(80).max(2400) }).strict(),
+    retries: 0,
+    system: `${UNTRUSTED_NOTICE}\nTu rédiges une lecture factuelle et concise du dossier. ${INTAKE_EVIDENCE_RULE}`,
+    prompt: `MARQUE : ${sanitizeInline(brandName, { max: 120 })}
+FONDATION : ${PILLAR_NAMES[pillarKey]} (${PILLAR_ANGLE[pillarKey]})
+${wrapUntrusted("CHAMPS AVEC ORIGINE", lines.join("\n"), { max: 10000 })}
+Produis preview (1-2 phrases, 30-60 mots) et full (80-140 mots).
+Cite les données utiles sans inventer de citations. Distingue explicitement les données reçues,
+les propositions à valider et les origines inconnues. Pas de citation exhaustive de tous les champs,
+ni de conseil commercial. Explique ce qui est documenté et ce qui reste à confirmer.
+Réponds avec {"preview":"...","full":"..."}.`,
+    maxOutputTokens: 1000,
+  });
+  return { preview: data.preview.trim(), full: data.full.trim() };
 }
 
 /**
@@ -242,7 +144,7 @@ export async function narrateAdvePillars(
       });
       continue;
     }
-    const narrated = await narratePillar(key, current, input.companyName);
+    const narrated = await narratePillar(key, current, input.companyName, input.strategyId);
     items.push({ key, generated: true, narrated });
   }
 

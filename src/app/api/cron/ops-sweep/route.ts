@@ -160,16 +160,24 @@ export async function GET(request: Request) {
     //
     // Ici : le filet pour l'arriéré déjà en base. `embedBrandContext` ne traite
     // que `embeddedAt: null` — sans arriéré, il ne coûte rien ; sans
-    // fournisseur, il compte les fragments en « skipped » et ne fabrique rien.
-    const embedBackfill = { scanned: 0, embedded: 0, skipped: 0, failed: 0 };
+    // fournisseur, il s'arrête au premier vecteur manquant et ne fabrique rien.
+    //
+    // Le passage n'est PAS attendu. Borné et rythmé (jusqu'à 20 min), il
+    // dépasse la patience du déclencheur (ops-daemon, 120 s), qui déclarait le
+    // sweep « injoignable » alors que le travail continuait — constaté en
+    // production le 2026-10-23. Le worker journalise son bilan ; un passage
+    // déjà en cours est rejoint, jamais doublé.
+    const embedBackfill = { requested: false };
     try {
       const { embedBrandContext } = await import("@/server/services/seshat/context-store");
       // `null` = toutes marques confondues ; le plafond borne le coût d'un run.
-      const r = await embedBrandContext(null, { safetyLimit: 2000 });
-      embedBackfill.scanned = r.scanned;
-      embedBackfill.embedded = r.embedded;
-      embedBackfill.skipped = r.skipped;
-      embedBackfill.failed = r.failed;
+      void embedBrandContext(null, { safetyLimit: 2000 }).catch((err) => {
+        console.warn(
+          "[ops-sweep] rattrapage des vecteurs échoué (non bloquant) :",
+          err instanceof Error ? err.message : err,
+        );
+      });
+      embedBackfill.requested = true;
     } catch (err) {
       console.warn(
         "[ops-sweep] rattrapage des vecteurs échoué (non bloquant) :",

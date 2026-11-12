@@ -11,6 +11,9 @@
  *   PROFITABILITY:  project-pnl-calculator, client-profitability-analyzer, utilization-rate-tracker
  */
 
+import { devisGeneratorCalculator, pricingStrategyCalculator } from "@/server/services/artemis/tools/commercial-offer";
+import { calculateBreakeven } from "@/domain/financial-document";
+
 type Ctx = Record<string, unknown>;
 type Result = Record<string, unknown>;
 
@@ -90,12 +93,32 @@ function codbCalculator(ctx: Ctx): Result {
   const codbMonthly = fixedMonthly + variableMonthly;
   const codbAnnual = codbMonthly * 12;
   const costPerHead = headcount > 0 ? Math.round(codbAnnual / headcount) : 0;
-  const breakeven = revenueTarget > 0 ? Math.round(codbAnnual / (revenueTarget / codbAnnual)) : 0;
   const overheadRate = billableRatio > 0 ? Math.round((100 - billableRatio) / billableRatio * 100) : 0;
 
+  // Plan 4.11.b — le seuil n'est plus `codbAnnual / (revenueTarget / codbAnnual)`,
+  // un chiffre qui variait avec l'objectif de CA sans marge de contribution.
+  // Il est délégué au calcul canonique : charges fixes MENSUELLES / (prix − coût
+  // variable unitaires). Sans ces entrées, il reste non calculable (null) ; les
+  // charges fixes absentes ne deviennent pas un zéro. `revenue_target` reste une
+  // entrée du CODB mais ne participe plus au seuil.
+  const seuil = calculateBreakeven({
+    fixedCosts: num(ctx, "fixed_costs", NaN),
+    variableCostPerUnit: num(ctx, "variable_cost_per_unit", NaN),
+    pricePerUnit: num(ctx, "price_per_unit", NaN),
+    costPeriod: "MONTH",
+  });
+  const seuilSummary = seuil.status === "COMPUTED"
+    ? `Seuil : ${seuil.breakEvenUnits} unités/mois, CA ${Math.round(seuil.breakEvenRevenue!)}/mois (devise du modèle)`
+    : `Seuil non calculable : ${seuil.issues.join(" ; ")}`;
+
   return {
-    codbMonthly, codbAnnual, costPerHead, breakeven, overheadRate, headcount,
-    summary: `CODB: ${codbMonthly} XAF/mois (${codbAnnual} XAF/an) | Seuil: ${breakeven} XAF | Overhead: ${overheadRate}%`,
+    codbMonthly, codbAnnual, costPerHead, overheadRate, headcount, revenueTarget,
+    breakeven: seuil.breakEvenRevenue,
+    breakeven_units: seuil.breakEvenUnits,
+    breakeven_period: "MONTH",
+    breakeven_status: seuil.status,
+    breakeven_issues: seuil.issues,
+    summary: `CODB: ${codbMonthly} XAF/mois (${codbAnnual} XAF/an) | ${seuilSummary} | Overhead: ${overheadRate}%`,
   };
 }
 
@@ -318,10 +341,11 @@ function multiYearProjectorCalc(ctx: Ctx): Result {
 function breakEvenCalc(ctx: Ctx): Result {
   const fb = require("@/server/services/financial-brain") as typeof import("@/server/services/financial-brain");
   const be = fb.calculateBreakeven({
-    fixedCosts: num(ctx, "fixed_costs", 0),
-    variableCostPerUnit: num(ctx, "variable_cost_per_unit", 0),
-    pricePerUnit: num(ctx, "price_per_unit", 0),
+    fixedCosts: num(ctx, "fixed_costs", NaN),
+    variableCostPerUnit: num(ctx, "variable_cost_per_unit", NaN),
+    pricePerUnit: num(ctx, "price_per_unit", NaN),
     monthlyVolume: num(ctx, "monthly_volume", 0) || undefined,
+    costPeriod: ctx.cost_period === "MONTH" || ctx.cost_period === "YEAR" ? ctx.cost_period : undefined,
   });
   return {
     break_even_units: be.breakEvenUnits,
@@ -329,7 +353,12 @@ function breakEvenCalc(ctx: Ctx): Result {
     break_even_months: be.breakEvenMonths,
     contribution_margin: be.contributionMargin,
     margin_of_safety: be.marginOfSafety,
-    summary: `Point mort: ${be.breakEvenUnits} unites (${be.breakEvenRevenue.toLocaleString()} FCFA)${be.breakEvenMonths ? ` soit ~${be.breakEvenMonths} mois` : ""}`,
+    status: be.status,
+    issues: be.issues,
+    revenue_at_whole_units: be.revenueAtWholeUnits,
+    summary: be.status === "COMPUTED"
+      ? `Seuil : ${be.breakEvenUnits} unités ; CA théorique ${be.breakEvenRevenue!.toLocaleString()}. Devise et période à lire dans le modèle source.`
+      : `Seuil non calculable : ${be.issues.join(" ; ")}`,
   };
 }
 
@@ -378,6 +407,8 @@ function scenarioModelerCalc(ctx: Ctx): Result {
 // ─── Export map (slug → function) ────────────────────────────────────────────
 
 export const calculators: Record<string, (ctx: Ctx) => Result | Promise<Result>> = {
+  "pricing-strategy-advisor": pricingStrategyCalculator,
+  "devis-generator": devisGeneratorCalculator,
   "roi-calculator": roiCalculator,
   "hourly-rate-calculator": hourlyRateCalculator,
   "codb-calculator": codbCalculator,

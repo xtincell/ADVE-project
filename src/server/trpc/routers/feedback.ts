@@ -45,9 +45,9 @@ export const feedbackRouter = createTRPCRouter({
   }),
 
   list: operatorProcedure
-    .input(z.object({ status: z.enum(["NEW", "TRIAGED", "RESOLVED"]).nullish() }).optional())
+    .input(z.object({ status: z.enum(["NEW", "TRIAGED", "RESOLVED"]).nullish(), search: z.string().max(200).optional(), cursor: z.string().nullish() }).optional())
     .query(async ({ input }) => {
-      const rows = await listFeedback({ status: input?.status ?? undefined });
+      const rows = await listFeedback({ status: input?.status ?? undefined, search: input?.search, cursor: input?.cursor });
       return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), resolvedAt: r.resolvedAt?.toISOString() ?? null }));
     }),
 

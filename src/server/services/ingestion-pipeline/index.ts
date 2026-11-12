@@ -1,3 +1,4 @@
+import { sourceHasRetainedDocument } from "@/domain/source-document";
 import { ADVE_KEYS } from "@/domain";
 
 // ============================================================================
@@ -27,6 +28,7 @@ import { ADVE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { sourceScope } from "./source-usage";
 import { extractAuto } from "./extractors";
 import { analyzeAndMapSources, fillPillar, fillRTISPillar } from "./ai-filler";
 import { scoreObject } from "@/server/services/advertis-scorer";
@@ -47,11 +49,9 @@ export { analyzeAndMapSources } from "./ai-filler";
  * failures are logged and never propagate to the caller, since RAG indexing
  * is auxiliary to the ADVERTIS pillar fill.
  *
- * Vault classification (PROPOSE_VAULT_FROM_SOURCE) requires an operatorId
- * to tag lineage on DRAFT BrandAssets, so the tRPC router fires it
- * explicitly via `ctx.session.user.id` rather than from this background
- * hook. Operators can also retrigger from the Cockpit Propositions vault
- * panel on demand.
+ * Used by the explicitly requested processing pipeline. A plain file/text
+ * deposit stops after deterministic extraction; optional preparation is
+ * dispatched by the router from the user's explicit choice.
  */
 function fireSourceExtractedHooks(strategyId: string, sourceId: string): void {
   void (async () => {
@@ -74,44 +74,7 @@ function fireSourceExtractedHooks(strategyId: string, sourceId: string): void {
 // INGEST FILE — Creates a BrandDataSource and extracts content
 // ============================================================================
 
-export async function ingestFile(
-  strategyId: string,
-  file: { name: string; content: string; type: string },
-): Promise<string> {
-  const source = await db.brandDataSource.create({
-    data: {
-      strategyId,
-      sourceType: "FILE",
-      fileName: file.name,
-      fileType: file.type.toUpperCase(),
-      processingStatus: "EXTRACTING",
-    },
-  });
-
-  try {
-    const result = await extractAuto(file.type, file.content, strategyId);
-    await db.brandDataSource.update({
-      where: { id: source.id },
-      data: {
-        rawContent: result.text,
-        rawData: result.structured as Prisma.InputJsonValue ?? undefined,
-        extractedFields: result.metadata as Prisma.InputJsonValue,
-        processingStatus: "EXTRACTED",
-      },
-    });
-    fireSourceExtractedHooks(strategyId, source.id);
-  } catch (error) {
-    await db.brandDataSource.update({
-      where: { id: source.id },
-      data: {
-        processingStatus: "FAILED",
-        errorMessage: error instanceof Error ? error.message : "Extraction failed",
-      },
-    });
-  }
-
-  return source.id;
-}
+export { retainSourceFile as ingestFile } from "./original";
 
 // ============================================================================
 // INGEST TEXT — Manual text input
@@ -134,7 +97,6 @@ export async function ingestText(
     },
   });
 
-  fireSourceExtractedHooks(strategyId, source.id);
   return source.id;
 }
 
@@ -214,19 +176,12 @@ export async function processStrategy(
       // If no specific sources mapped, use all extracted sources
       const effectiveSourceIds = sourceIds.length > 0
         ? sourceIds
-        : (await db.brandDataSource.findMany({ where: { strategyId, processingStatus: "EXTRACTED" }, select: { id: true } })).map((s) => s.id);
+        : (await db.brandDataSource.findMany({ where: { AND: [await sourceScope(strategyId)], processingStatus: { in: ["EXTRACTED", "PROCESSED"] } }, select: { id: true } })).map((s) => s.id);
 
       try {
         const result = await fillPillar(strategyId, key, effectiveSourceIds);
         status.results.push(result);
 
-        // Mark sources as processed
-        for (const sid of effectiveSourceIds) {
-          await db.brandDataSource.update({
-            where: { id: sid },
-            data: { processingStatus: "PROCESSED" },
-          }).catch((err) => { console.warn("[ingestion] source status update failed:", err instanceof Error ? err.message : err); });
-        }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : "Erreur inconnue";
         status.errors.push(`Remplissage pilier ${key} echoue: ${errMsg}`);
@@ -333,7 +288,7 @@ export async function triggerRTIS(strategyId: string): Promise<void> {
 
 export async function getIngestionStatus(strategyId: string): Promise<IngestionStatus> {
   const sources = await db.brandDataSource.findMany({
-    where: { strategyId },
+    where: await sourceScope(strategyId),
     select: { processingStatus: true },
   });
 
@@ -470,7 +425,7 @@ export async function batchIngest(
   for (const sourceId of sourceIds) {
     try {
       const source = await db.brandDataSource.findUnique({ where: { id: sourceId } });
-      if (!source || source.strategyId !== strategyId) {
+      if (!source || source.strategyId !== strategyId || sourceHasRetainedDocument(source.rawData)) {
         result.errors.push(`Source ${sourceId} introuvable`);
         result.failed++;
         continue;
@@ -524,6 +479,7 @@ export async function incrementalUpdate(
     where: { id: sourceId, strategyId },
   });
   if (!source) throw new Error(`Source ${sourceId} non trouvee`);
+  if (sourceHasRetainedDocument(source.rawData)) throw new Error("Déposez un nouveau fichier pour créer une nouvelle édition.");
 
   // Re-extract content
   const freshExtraction = await extractAuto(

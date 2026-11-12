@@ -52,7 +52,7 @@ describe("Phase 13 R6 — i18n FR/EN keys", () => {
       const forgeKinds = ["image", "video", "audio", "icon", "design"] as const;
       for (const kind of forgeKinds) {
         const key = `oracle.forge.button.${kind}`;
-        expect((fr as Record<string, string>)[key]).toMatch(/^Forger /);
+        expect((fr as Record<string, string>)[key]).toMatch(/^Produire /);
       }
     });
 
@@ -80,8 +80,8 @@ describe("Phase 13 R6 — i18n FR/EN keys", () => {
     });
 
     it("forge button keys traduits", () => {
-      expect((en as Record<string, string>)["oracle.forge.button.image"]).toBe("Forge image");
-      expect((en as Record<string, string>)["oracle.forge.button.design"]).toBe("Forge deck");
+      expect((en as Record<string, string>)["oracle.forge.button.image"]).toBe("Produce an image");
+      expect((en as Record<string, string>)["oracle.forge.button.design"]).toBe("Produce a presentation");
     });
 
     it("EN cap_warning mentionne '7 BRAINS cap preserved'", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { FinancialModelEditor } from "./financial-model-editor";
 import { useState, useCallback } from "react";
 import { type FieldDef, getFieldDef } from "@/lib/types/field-registry";
 import { Save, X, Plus, Trash2, Pencil } from "lucide-react";
@@ -33,10 +34,10 @@ function TextEditor({ value, def, onChange }: { value: unknown; def: Extract<Fie
   return <input type="text" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} maxLength={def.maxLength} placeholder={def.placeholder} className={inputClass} />;
 }
 
-function NumberEditor({ value, def, onChange }: { value: unknown; def: Extract<FieldDef, { kind: "number" }>; onChange: (v: number) => void }) {
+function NumberEditor({ value, def, onChange }: { value: unknown; def: Extract<FieldDef, { kind: "number" }>; onChange: (v: number | null) => void }) {
   return (
     <div className="flex items-center gap-1.5">
-      <input type="number" value={typeof value === "number" ? value : ""} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} min={def.min} max={def.max} className={`${inputClass} flex-1`} />
+      <input type="number" value={typeof value === "number" ? Math.round(value * (def.displayScale ?? 1) * 1e8) / 1e8 : ""} step="any" onChange={(e) => onChange(e.target.value === "" || !Number.isFinite(e.target.valueAsNumber) ? null : e.target.valueAsNumber / (def.displayScale ?? 1))} min={def.min} max={def.max} className={`${inputClass} flex-1`} />
       {def.unit && <span className="text-[10px] text-foreground-muted shrink-0">{def.unit}</span>}
     </div>
   );
@@ -67,7 +68,7 @@ function MultiEnumEditor({ value, def, onChange }: { value: unknown; def: Extrac
               : "bg-background text-foreground-muted border-border hover:text-foreground-secondary"
           }`}
         >
-          {opt}
+          {def.optionLabels?.[opt] ?? opt}
         </button>
       ))}
     </div>
@@ -157,11 +158,12 @@ function AtomicEditor({ value, def, onChange }: { value: unknown; def: FieldDef;
   switch (def.kind) {
     case "enum": return <EnumEditor value={value} def={def} onChange={onChange as (v: string | null) => void} />;
     case "text": return <TextEditor value={value} def={def} onChange={onChange as (v: string) => void} />;
-    case "number": return <NumberEditor value={value} def={def} onChange={onChange as (v: number) => void} />;
+    case "number": return <NumberEditor value={value} def={def} onChange={onChange as (v: number | null) => void} />;
     case "multi-enum": return <MultiEnumEditor value={value} def={def} onChange={onChange as (v: string[]) => void} />;
     case "array-of-strings": return <StringsEditor value={value} def={def} onChange={onChange as (v: string[]) => void} />;
     case "object": return <ObjectEditor value={value} def={def} onChange={onChange as (v: Record<string, unknown>) => void} />;
     case "array-of-objects": return <ArrayOfObjectsEditor value={value} def={def} onChange={onChange as (v: unknown[]) => void} />;
+    case "financial-model": return <FinancialModelEditor value={value} onChange={onChange} />;
     case "json": return <JsonEditor value={value} onChange={onChange} />;
   }
 }
@@ -240,13 +242,16 @@ export function StructuredFieldControl({
   fieldKey,
   value,
   onChange,
+  payerOptions,
 }: {
   pillarKey: string;
   fieldKey: string;
   value: unknown;
   onChange: (v: unknown) => void;
+  payerOptions?: Array<{ id: string; name: string }>;
 }) {
   const def = getFieldDef(pillarKey, fieldKey);
+  if (def.kind === "financial-model") return <FinancialModelEditor value={value} onChange={onChange} payerOptions={payerOptions} />;
   return (
     <div className="rounded-lg border border-border bg-background/30 p-3">
       <AtomicEditor value={value} def={def} onChange={onChange} />

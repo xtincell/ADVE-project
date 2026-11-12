@@ -24,6 +24,7 @@
  * Pur, importable côté lib/tests. Aucune IO, aucune dépendance serveur.
  */
 
+import { FIELD_REPLACEMENT_MARGIN as RULER_REPLACEMENT_MARGIN } from "@/domain/recommendation-comparison";
 import {
   getVariableSpec,
   validateAgainstBible,
@@ -93,7 +94,7 @@ export const RECO_WEIGHTS = {
  * l'ancienne d'au moins cette marge (en points /100) pour remplacer.
  * Évite le churn sur des différences de bruit.
  */
-export const RULER_REPLACEMENT_MARGIN = 2;
+export { FIELD_REPLACEMENT_MARGIN as RULER_REPLACEMENT_MARGIN } from "@/domain/recommendation-comparison";
 
 /** Conversion delta-composite structurel (/200) → points d'impact /100. */
 const IMPACT_POINTS_PER_COMPOSITE_POINT = 10;

@@ -67,3 +67,67 @@ Hook `useCalibrationStream` (`src/hooks/use-calibration-stream.ts`) — SSE cons
 `<OvertonRadar>` (`src/components/neteru/overton-radar.tsx`) — **Phase 23 Epic 7 SHIPPED** : props driven by `ConnectorResult<OvertonRadarSignal>` (view-model in `@/domain`) + `instance` CVA variant (full/teaser) ; A2 split (`@container` queries) ; honest DEFERRED/DEGRADED/per-axis states (`HonestState` + `MetricCell`) ; a11y `<svg role="img">` + offscreen `table.sr-only`. Co-located `overton-radar.manifest.ts` (v2.0.0, `DIRECT_OVERTON`) + `.stories.tsx`. Consommé par la route `/cockpit/intelligence/overton` (Story 7.5) via le wrapper `<OvertonPanel>` (`src/components/cockpit/intelligence/`, Story 7.4) + le teaser dashboard `OvertonTeaser` (Story 7.6). **Reusable Phase-22 patterns** : `HonestState` (degraded/empty, info-tone), `MetricCell` (per-axis partial, no fabricated 0).
 
 Cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [DESIGN-LEXICON.md](DESIGN-LEXICON.md).
+
+## Composition de revue d’identité — 432 livré et reçu, borné (2026-10-09)
+
+`PublicIdentityReview` (`src/components/brand/public-identity-review.tsx`) compose
+Button/Input/Select/Textarea et SourceReadDialog dans la carte publique existante
+de Connexions. Référence consultable, choix explicites par version/usage pour
+palette, typographies/fichiers, poses et citation ; les familles non choisies
+gardent leur présentation locale. Validation de choix avant strategy.update,
+aucune promotion d’actif ou nouvelle primitive/page/permission. Hors table
+auto-générée des primitives ci-dessus ; aucun compte structurel modifié.
+Scans UI/vocab et gestes natifs locaux reçus sur fixture ; gauntlet vert.
+Livraison 432 et gestes natifs réels SPAWT publication/revue sans resélection/
+retour reçus, sans validation de marque entière. Réception partielle C2/C3/C4.
+[ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
+
+## Tracker existant — runtime 435, suivi vide reçu (2026-10-09)
+
+**Composition de validation 436 livrée, hors table auto-générée** : dans la
+page forge existante, formatConfidence réutilise une lecture pure de la mesure :
+null/non fini/hors intervalle = inconnu, vrai zéro = 0 %. Bannière et modal
+existants séparent mesure, composition et décision ; aucune barre fabriquée,
+confiance visible après approbation et erreur serveur en alerte. Bouton désactivé
+si lecture/composition indisponible, confirmation liée à expectedVersion.
+OperatorSurface inchangé, aucune primitive/page nouvelle. Cinq cas natifs
+synthétiques reçus : absence/partiel, confirmations sans modifier la confiance
+et conflit de version/message visible ; source 80e2122f/CI/image/runtime 436
+reçus. Native réelle SPAWT : 91 % conservé et bouton désactivé pour S existant
+AI_PROPOSED v3 non approuvable, aucune production réelle.
+[ADR-0214 Proposed et reçu](RECEPTION-VALIDATION-SYNTHESE.md).
+
+Native réelle 434 : lecture refusée 403 pour compte non affecté, écran non reçu.
+435 livré : canResume dérivé de l’affectation actuelle, sans bouton si absente ;
+lecture seule ADMIN du dossier explicitement choisi, aucune reprise ADMIN sans
+affectation ou droit nouveau. Deux rouges/49 verts puis 51 PG ciblés verts. Native
+locale par URL connue sur deux dossiers : chacun sa tâche, lecture seule, zéro
+bouton Reprendre et secret absent ; Actualiser HTTP 200/zéro exception, fenêtre
+complète. Copie FR finale relue, fixture nettoyée. Sélecteur local 0/0 historique ;
+gauntlet 435 cinq exit 0/gouvernance 1620/166/24 warnings préexistants, PG complet
+seul 274/14/Ptah 51 inclus reçus. CI 435 : 4 180/399 unitaires et 274/14 PG/image/runtime reçus.
+Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu ; fenêtre complète : 63 réponses/
+aucune ≥500/zéro exception/log. Liste du sélecteur et passage par son lien vers le
+portefeuille groupe FrieslandCampina non pilotable reçus en lecture seule,
+portée/ambiguïtés rendues, sans métriques isolées de cette navigation.
+Production/reprise réelle non reçue ; reload local tronqué et timings production
+bornés, sans SLO déduit.
+
+`PtahKilnTracker` (`src/components/neteru/ptah-kiln-tracker.tsx`) est monté dans
+la page forge existante, enveloppée par son layout OperatorSurface ; ce layout
+empêche le montage des hooks si canOperate=false. Composition des primitives
+existantes : liste paginée, attente/état incertain/refus, prix persisté ou
+estimation/inconnu, confirmation de reprise ; textes FR/EN/ZH. Aucun nouveau
+composant primitif/page/droit. Premiers gestes natifs locaux : marque retrouvée
+après fix session 433, même tâche DEFERRED HTTP 200/reçu altéré HTTP 412 et
+dirigeant sans affectation sans Reprendre. Anciens sélecteurs de comptage invalides
+écartés ; nouvelle pagination sur production-tracker/[data-task-id] reçue,
+20 puis 22 uniques/sans page suivante. USER sans affectation : tracker/action
+Reprendre non montés ; tracker EN/ZH rendu et FR restauré, aucune traduction
+intégrale de forge déduite. Fixture native nettoyée. Gauntlet final vert après
+découplage des dates startedAt réel/emittedAt logique ; scénario local
+clôture/durée reçu, pas SLO global.
+stress isolé reçu hors native protégée/Glory phase 3/fournisseur réel, avant les
+dernières gardes de contrat et dates. Suite canonique 4 180/399 et PG 270/14
+finaux post-découplage reçus ; code/CI/runtime 434 reçus, parcours restants non reçus :
+[ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).

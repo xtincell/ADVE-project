@@ -18,8 +18,8 @@ export default function LaGuildePage() {
           </h1>
           <p className="mt-3 max-w-2xl text-foreground-secondary">
             Les marques publient leurs missions. Les freelances et agences de prod candidatent.
-            La Fusée orchestre la mise en relation, le contrôle qualité et les paiements en mobile
-            money.
+            Chaque mission est relue par l&apos;équipe avant mise en ligne ; La Fusée suit ensuite la
+            mise en relation, le contrôle qualité et les paiements mobile money via les moyens activés.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link

@@ -1,3 +1,4 @@
+import { projectFinancialPillar, resolveUnitEconomics, unitEconomicsMetricRows, unitEconomicsNote } from "@/domain/unit-economics";
 import { ADVE_STORAGE_KEYS } from "@/domain";
 
 /**
@@ -25,6 +26,9 @@ import { PillarTSchema } from "@/lib/types/pillar-schemas";
 import { loadCountrySectorIntelligence } from "@/server/services/seshat/knowledge/access";
 import type { TamSamSom, TrendTrackerExtraction } from "@/server/services/seshat/knowledge/schemas";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { serializePillar, serializePillars } from "@/server/services/utils/pillar-context";
+import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { parseAndValidateLLM } from "@/server/services/llm-gateway/parse-validate";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (9 champs) est ÉCLATÉ en
 // 4 sous-appels focalisés ; `.pick().partial()` valide strictement chaque champ
@@ -100,7 +104,9 @@ async function loadExternalSaasSignals(strategyId?: string): Promise<Array<Recor
     orderBy: { createdAt: "desc" },
     take: 20,
   });
-  return signals.map((s) => ({ type: s.type, data: s.data, createdAt: s.createdAt }));
+  // This projection enters Pillar.content and the strict JSON audit diff.
+  // Prisma dates must cross that boundary as timestamps, never Date objects.
+  return signals.map((s) => ({ id: s.id, type: s.type, data: s.data, createdAt: s.createdAt.toISOString() }));
 }
 
 /** Nombre de variables Trend Tracker effectivement renseignées (valeur non-nulle). */
@@ -144,10 +150,8 @@ function applyVerifiedTam(trackAnalysis: Record<string, unknown>, verified: TamS
 }
 
 async function loadCompetitorData(strategyId: string): Promise<Array<Record<string, unknown>>> {
-  const snapshots = await db.competitorSnapshot.findMany({
-    orderBy: { measuredAt: "desc" },
-    take: 10,
-  });
+  const { loadScopedCompetitors } = await import("@/server/services/seshat/creative-intelligence/competition");
+  const snapshots = await loadScopedCompetitors(strategyId);
   return snapshots.map(s => ({
     name: s.name,
     sector: s.sector,
@@ -198,9 +202,9 @@ function buildTriangulation(
   if (trendAnalysis) sourcedFields++; else aiFields++;
 
   // financialBenchmarks — depuis V.unitEconomics
-  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
+  const ue = resolveUnitEconomics(v);
   const financialBenchmarks = (typeof ue.cac === "number" || typeof ue.ltv === "number")
-    ? `CAC: ${ue.cac ?? "N/A"}, LTV: ${ue.ltv ?? "N/A"}, ratio: ${typeof ue.ltvCacRatio === "number" ? ue.ltvCacRatio.toFixed(1) : "N/A"}.`
+    ? [...unitEconomicsMetricRows(ue).filter(r => r.value !== "—").map(r => `${r.label} : ${r.value}`), unitEconomicsNote(ue)].filter(Boolean).join("\n")
     : undefined;
   if (financialBenchmarks) sourcedFields++; else aiFields++;
 
@@ -234,8 +238,6 @@ async function callTrackJSON(args: {
 }): Promise<Record<string, unknown>> {
   // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
   // + fallback provider + substitution Ollama locale + budget/cost tracking.
-  const { callLLM } = await import("@/server/services/llm-gateway");
-  const { extractJSON, parseAndValidateLLM } = await import("@/server/services/utils/llm");
   try {
     const { text } = await callLLM({
       caller: `mestor:protocole-track:${args.label}`,
@@ -281,7 +283,9 @@ async function generateTrackAnalysis(
   riskContent: Record<string, unknown> | null,
   intelligence: Intelligence,
   competitorData: Array<Record<string, unknown>>,
+  externalSignals: Array<Record<string, unknown>>,
   strategyId: string,
+  documentaryContext = "",
 ): Promise<Record<string, unknown>> {
 
   const a = pillars.a ?? {};
@@ -290,17 +294,14 @@ async function generateTrackAnalysis(
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
   // piliers ADVE dérive de la saisie fondateur → chaque bloc encadré comme
   // DONNÉE (jamais instruction).
-  const context = [...ADVE_STORAGE_KEYS]
-    .map(k => {
-      const c = pillars[k];
-      if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      return wrapUntrusted(`PILIER ${k.toUpperCase()}`, JSON.stringify(c, null, 2), { max: 8000 });
-    })
-    .join("\n\n");
+  const context = serializePillars([...ADVE_STORAGE_KEYS].map(k => [k.toUpperCase(), pillars[k]]));
 
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le pilier R dérive
   // lui aussi de l'ADVE fondateur.
-  const rContext = riskContent ? wrapUntrusted("PILIER R", JSON.stringify(riskContent, null, 2), { max: 8000 }) : "[R] Vide";
+  const rContext = serializePillar("R", riskContent);
+  const observations = externalSignals.length
+    ? `\n\nSignaux collectés pour cette marque, avec leurs identités et dates. Ils ne constituent pas une validation ni un résultat commercial à eux seuls :\n${serializePillar("OBSERVATIONS", { observations: externalSignals })}`
+    : "\n\nAucun signal récent de cette marque n’est disponible.";
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : données marché
   // Seshat = contenu externe (études, feeds, signaux) → encadré comme DONNÉE.
   // L'étiquette de chaque bloc conserve la consigne d'usage ; seul le payload
@@ -332,7 +333,7 @@ RÈGLES CRITIQUES:
 
 Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
-  const baseData = `Données ADVE + R:\n\n${context}\n\n${rContext}${seshatContext}${competitorContext}`;
+  const baseData = `Données ADVE + R:\n\n${context}\n\n${rContext}${seshatContext}${competitorContext}${observations}\n\n${documentaryContext}`;
 
   // Mega-appel (9 champs, 6000 tokens) ÉCLATÉ en 4 sous-appels focalisés.
   // L'invariant « le LLM ne valide jamais une hypothèse » (VALIDATED → TESTING)
@@ -397,7 +398,7 @@ function calculateBMF(trackContent: Record<string, unknown>): number {
 
 // ── Public API ────────────────────────────────────────────────────────
 
-export async function executeProtocoleTrack(strategyId: string): Promise<ProtocoleTrackResult> {
+export async function executeProtocoleTrack(strategyId: string, opts: { documentaryContext?: string } = {}): Promise<ProtocoleTrackResult> {
   try {
     // Load all pillars A-R
     const dbPillars = await db.pillar.findMany({
@@ -405,7 +406,8 @@ export async function executeProtocoleTrack(strategyId: string): Promise<Protoco
     });
     const pillars: Record<string, Record<string, unknown> | null> = { a: null, d: null, v: null, e: null, r: null };
     for (const p of dbPillars) {
-      pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+      const content = (p.content ?? null) as Record<string, unknown> | null;
+      pillars[p.key] = p.key === "v" && content ? projectFinancialPillar(content) : content;
     }
 
     const a = pillars.a ?? {};
@@ -426,7 +428,7 @@ export async function executeProtocoleTrack(strategyId: string): Promise<Protoco
     const { triangulation, sourcedFields, aiFields } = buildTriangulation(pillars, intelligence);
 
     // Step 3 — Analyse Track (MESTOR_ASSIST) AVEC les données vérifiées en contexte.
-    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, intelligence, competitorData, strategyId);
+    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, intelligence, competitorData, externalSignals, strategyId, opts.documentaryContext);
 
     // Step 3b — Override DÉTERMINISTE : si Seshat a un TAM/SAM/SOM vérifié, il
     // écrase l'estimation LLM (source=verified). Le LLM ne reste qu'un fallback.

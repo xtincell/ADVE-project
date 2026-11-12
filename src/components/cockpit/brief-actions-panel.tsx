@@ -85,7 +85,7 @@ export function BriefActionsPanel() {
   };
 
   const retainAll = async () => {
-    for (const a of proposed) await select.mutateAsync({ strategyId, actionId: a.id, selected: true });
+    for (const a of proposed) await select.mutateAsync({ strategyId, actionId: a.id, preference: "FAVORITE" });
     refetch();
   };
 
@@ -100,7 +100,7 @@ export function BriefActionsPanel() {
           Un brief, des actions.
         </h1>
         <p className="mt-3 max-w-[64ch] text-foreground-secondary" style={{ fontSize: "var(--text-lg)" }}>
-          Décris l&rsquo;intention et le budget : l&rsquo;IA formalise des actions concrètes <span className="font-serif italic">ancrées dans ta marque réelle</span> (ADVE + R + T). Tu <span className="text-accent">retiens</span> celles qui alimentent la roadmap.
+          Décris l&rsquo;intention et le budget : l&rsquo;IA formalise des actions concrètes <span className="font-serif italic">ancrées dans ta marque réelle</span> (ADVE + R + T). Tu indiques tes <span className="text-accent">favoris</span> ; la stratégie compose ensuite les scénarios.
         </p>
       </header>
 
@@ -180,9 +180,9 @@ export function BriefActionsPanel() {
                 const ch = typeof meta.channel === "string" ? meta.channel : null;
                 const pillar = typeof meta.pilierImpact === "string" ? meta.pilierImpact : null;
                 return (
-                  <div key={a.id} className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${a.selected ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"}`}>
-                    <button type="button" onClick={() => select.mutate({ strategyId, actionId: a.id, selected: !a.selected })} title={a.selected ? "Retirer de la roadmap" : "Retenir pour la roadmap"} className="mt-0.5 flex-shrink-0">
-                      <Star className={`h-3.5 w-3.5 ${a.selected ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />
+                  <div key={a.id} className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${a.preference === "FAVORITE" ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"}`}>
+                    <button type="button" onClick={() => select.mutate({ strategyId, actionId: a.id, preference: a.preference === "FAVORITE" ? "NEUTRAL" : "FAVORITE" })} title={a.preference === "FAVORITE" ? "Retirer des favoris" : "Ajouter aux favoris"} className="mt-0.5 flex-shrink-0">
+                      <Star className={`h-3.5 w-3.5 ${a.preference === "FAVORITE" ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />
                     </button>
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-foreground">{a.title}</span>
@@ -200,10 +200,10 @@ export function BriefActionsPanel() {
             </div>
           )}
 
-          {summary && summary.selectedCount > 0 ? (
+          {summary && summary.currentSelectedCount > 0 ? (
             <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/[0.04] px-3 py-2 text-2xs text-accent">
               <Star className="h-3.5 w-3.5 fill-accent" />
-              <span><strong>{summary.selectedCount}</strong> action(s) retenue(s) alimentent la roadmap (pilier&nbsp;S) — budget {fcfa(summary.totalSelectedBudget)}.</span>
+              <span><strong>{summary.currentSelectedCount}</strong> action(s) retenue(s) dans le catalogue courant — recalculez le plan pour y intégrer ces choix.</span>
             </div>
           ) : null}
         </div>

@@ -4,6 +4,8 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { db } from "@/lib/db";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import {
@@ -18,6 +20,13 @@ import {
 } from "@/server/services/sequence-vault";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
+
+/** Resolve the actual brand before the governed ownership and collaborator checks. */
+async function withExecutionScope<T extends { executionId: string }>(input: T) {
+  const execution = await db.sequenceExecution.findUnique({ where: { id: input.executionId }, select: { strategyId: true } });
+  if (!execution) throw new TRPCError({ code: "NOT_FOUND", message: "Édition introuvable." });
+  return { ...input, strategyId: execution.strategyId };
+}
 
 export const sequenceVaultRouter = createTRPCRouter({
   /** List all sequence executions for a strategy */
@@ -45,7 +54,7 @@ export const sequenceVaultRouter = createTRPCRouter({
     inputSchema: z.object({
       executionId: z.string(),
       notes: z.string().optional(),
-    }),
+    }).transform(withExecutionScope),
 
     caller: "sequence-vault:accept",
 
@@ -63,7 +72,7 @@ export const sequenceVaultRouter = createTRPCRouter({
     inputSchema: z.object({
       executionId: z.string(),
       reason: z.string(),
-    }),
+    }).transform(withExecutionScope),
 
     caller: "sequence-vault:reject",
 
@@ -78,7 +87,7 @@ export const sequenceVaultRouter = createTRPCRouter({
     kind: "LEGACY_SEQUENCE_VAULT_DELETE",
     requireOperator: true,
 
-    inputSchema: z.object({ executionId: z.string() }),
+    inputSchema: z.object({ executionId: z.string() }).transform(withExecutionScope),
 
     caller: "sequence-vault:delete",
 

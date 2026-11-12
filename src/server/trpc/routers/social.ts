@@ -19,10 +19,15 @@
 // ============================================================================
 
 import { z } from "zod";
+import { prepareSocialPublication } from "@/domain/social-publication-package";
 import type { InputJsonValue as PrismaInputJson } from "@prisma/client/runtime/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { accessible } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un driver inconnu et le driver d'une autre marque reçoivent le même 404. */
+const DRIVER_NOT_FOUND = "Canal introuvable.";
 
 /** Engagement rate thresholds by platform (%) */
 const ENGAGEMENT_THRESHOLDS: Record<string, { low: number; good: number; excellent: number }> = {
@@ -52,10 +57,10 @@ export const socialRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       // Store connection metadata on the Driver
-      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
       // IDOR (round-10) : keyé sur driverId, aucune garde de tête → vérifier que
       // le driver appartient à une marque du caller avant d'y écrire.
-      await assertStrategyAccess(ctx, driver.strategyId);
+      const driver = await accessible(ctx.db.driver.findUnique({ where: { id: input.driverId } }), DRIVER_NOT_FOUND,
+        async (driver) => { await assertStrategyAccess(ctx, driver.strategyId); });
       const existing = (driver.constraints as Record<string, unknown>) ?? {};
       return ctx.db.driver.update({
         where: { id: input.driverId },
@@ -192,9 +197,9 @@ export const socialRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
       // IDOR (round-10) : keyé sur driverId, aucune garde de tête.
-      await assertStrategyAccess(ctx, driver.strategyId);
+      const driver = await accessible(ctx.db.driver.findUnique({ where: { id: input.driverId } }), DRIVER_NOT_FOUND,
+        async (driver) => { await assertStrategyAccess(ctx, driver.strategyId); });
       const existing = (driver.constraints as Record<string, unknown>) ?? {};
       const socialConnections = (existing.socialConnections as Array<Record<string, unknown>>) ?? [];
 
@@ -755,6 +760,46 @@ export const socialRouter = createTRPCRouter({
     }),
 
   /** Publie (ou planifie via le calendrier) au nom de la marque. */
+  listPublicationPackages: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { listPublicationPackages } = await import("@/server/services/anubis/publication-package");
+      return listPublicationPackages(input.strategyId, ctx.session.user.id);
+    }),
+
+  getPublicationPackage: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), packageId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { getPublicationPackage } = await import("@/server/services/anubis/publication-package");
+      return getPublicationPackage(input.strategyId, input.packageId, ctx.session.user.id);
+    }),
+
+  preparePublicationPackage: governedProcedure({
+    kind: "ANUBIS_PREPARE_SOCIAL_POST", inputSchema: prepareSocialPublication,
+    caller: "social:preparePublicationPackage",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { preparePublicationPackage } = await import("@/server/services/anubis/publication-package");
+    return preparePublicationPackage(input, ctx.session.user.id, ctx.intentId);
+  }),
+
+  publishPreparedPackage: governedProcedure({
+    kind: "ANUBIS_PUBLISH_SOCIAL_POST",
+    caller: "social:publishPreparedPackage",
+    inputSchema: z.object({ strategyId: z.string().min(1), packageId: z.string().min(1),
+      contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+      target: z.object({ connectionId: z.string().min(1), accountId: z.string().min(1) }),
+      scheduleAt: z.string().datetime().optional(), confirmed: z.literal(true) }).strict(),
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { publishSocialPost } = await import("@/server/services/anubis/social-publish");
+    return publishSocialPost({ strategyId: input.strategyId, userId: ctx.session.user.id,
+      publicationPackageId: input.packageId, publicationPackageHash: input.contentHash,
+      publicationTarget: input.target, scheduleAt: input.scheduleAt, targets: [], text: "" });
+  }),
+
   publishPost: governedProcedure({
     kind: "ANUBIS_PUBLISH_SOCIAL_POST",
     inputSchema: z.object({

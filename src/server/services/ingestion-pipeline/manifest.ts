@@ -16,7 +16,7 @@ export const manifest = defineManifest({
   service: "ingestion-pipeline",
   governor: "MESTOR",
   version: "1.1.0",
-  acceptsIntents: ["INGEST_BRAND_DATA"],
+  acceptsIntents: ["INGEST_BRAND_DATA", "INGEST_BARRE_CAMPAIGN_REVIEW"],
   capabilities: [
     {
       name: "ingestFile",
@@ -42,6 +42,26 @@ export const manifest = defineManifest({
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification:
         "Ingestion text raw permet copier-coller direct depuis briefs externes — réduit friction onboarding vs upload de fichiers.",
+    },
+    {
+      name: "ingestBarreCampaignReview",
+      inputSchema: z.object({
+        strategyId: StringId,
+        operatorId: StringId,
+        instance: StringId,
+        review: z.unknown(),
+      }).passthrough(),
+      outputSchema: z.object({
+        sourceId: StringId,
+        edition: z.number().int().positive(),
+        version: z.number().int().positive(),
+        alreadyReceived: z.boolean(),
+      }).passthrough(),
+      sideEffects: ["DB_WRITE"],
+      idempotent: true,
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification:
+        "Range le bilan arrêté d'une campagne La Barre dans les documents de la marque (ADR-0244) : sans lui, la campagne suivante repart sans son diagnostic.",
     },
     {
       name: "processStrategy",

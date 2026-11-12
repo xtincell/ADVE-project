@@ -395,9 +395,11 @@ function BrandPickerModal({
           <div>
             <h2 className="text-base font-semibold text-white">Sélectionner une marque</h2>
             <p className="text-xs text-foreground-muted">
+              {isLoading ? "Chargement des marques…" : isError ? "Marques indisponibles" : <>
               {filtered.length} sur {tiles.length} marque{tiles.length > 1 ? "s" : ""}
               {" · "}
               {tiles.filter((t) => t.strategyId).length} pilotable{tiles.filter((t) => t.strategyId).length > 1 ? "s" : ""}
+              </>}
             </p>
           </div>
           <button

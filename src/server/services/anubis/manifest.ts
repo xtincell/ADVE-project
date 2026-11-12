@@ -10,6 +10,7 @@
  * Cf. PANTHEON.md §2.7, ADR-0011 + ADR-0020 + ADR-0021.
  */
 import { z } from "zod";
+import { prepareSocialPublication } from "@/domain/social-publication-package";
 import { defineManifest } from "@/server/governance/manifest";
 
 const StringId = z.string().min(1);
@@ -22,6 +23,7 @@ export const manifest = defineManifest({
   governor: "ANUBIS",
   version: "1.0.0",
   acceptsIntents: [
+    "ANUBIS_PREPARE_SOCIAL_POST",
     "ANUBIS_DRAFT_COMMS_PLAN",
     "ANUBIS_BROADCAST_MESSAGE",
     "ANUBIS_BUY_AD_INVENTORY",
@@ -56,6 +58,9 @@ export const manifest = defineManifest({
     "MCP_SERVER_REGISTERED",
   ],
   capabilities: [
+    { name: "preparePublication", inputSchema: prepareSocialPublication,
+      outputSchema: z.object({ packageId: StringId, actionId: StringId, version: z.number().int().positive() }),
+      sideEffects: ["DB_READ", "DB_WRITE"], qualityTier: "A", latencyBudgetMs: 25000, idempotent: true },
     {
       name: "draftCommsPlan",
       inputSchema: z.object({

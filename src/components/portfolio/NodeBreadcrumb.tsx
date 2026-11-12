@@ -37,7 +37,7 @@ export function NodeBreadcrumb({ nodeId }: NodeBreadcrumbProps) {
 
   return (
     <nav className="flex flex-wrap items-center gap-1 text-sm text-foreground-secondary" aria-label="Breadcrumb">
-      <Link href="/cockpit/portfolio" className="hover:text-foreground hover:underline">
+      <Link href={`/cockpit/portfolio?operator=${encodeURIComponent(current.operatorId)}`} className="hover:text-foreground hover:underline">
         Portfolio
       </Link>
       {compact.map((node, i) => (
@@ -51,7 +51,7 @@ export function NodeBreadcrumb({ nodeId }: NodeBreadcrumbProps) {
             </span>
           ) : (
             <Link
-              href={`/cockpit/portfolio/${node.slug}`}
+              href={`/cockpit/portfolio/${node.slug}?operator=${encodeURIComponent(current.operatorId)}`}
               className="hover:text-foreground hover:underline"
               title={node.nodeKind}
             >

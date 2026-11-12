@@ -22,10 +22,11 @@
  * (STOP-à-Jehuty préservé au point qui compte : l'écriture ADVE).
  */
 
+import { brandMarketScope } from "@/domain/brand-market-scope";
 import type { PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
-import { getOrBuildBrandFeed, type BrandFeedArticle } from "@/server/services/seshat/external-feeds/brand-feed";
+import { getOrBuildBrandFeed, loadWatchSubjects, type BrandFeedArticle } from "@/server/services/seshat/external-feeds/brand-feed";
 import { runDiagnostic } from "@/server/services/diagnostic-engine";
 
 export type GazetteSection =
@@ -127,7 +128,7 @@ export async function refreshBrandGazette(
   opts: { force?: boolean; withRecos?: boolean; client?: PrismaClient } = {},
 ): Promise<RefreshGazetteResult> {
   const prisma = opts.client ?? db;
-  const withRecos = opts.withRecos ?? true;
+  const withRecos = opts.withRecos ?? false;
   const sections: GazetteSectionResult[] = [];
 
   const strategy = await prisma.strategy.findUnique({
@@ -135,21 +136,26 @@ export async function refreshBrandGazette(
     select: {
       id: true,
       name: true,
+      countryCode: true,
+      businessContext: true,
       advertis_vector: true,
-      client: { select: { sector: true, country: true } },
+      client: { select: { sector: true } },
     },
   });
   if (!strategy) throw new Error("Strategy introuvable");
 
-  const sector = strategy.client?.sector ?? null;
-  const countryCode = strategy.client?.country ?? "CM";
+  const context = (strategy.businessContext ?? {}) as Record<string, unknown>;
+  const sector = typeof context.sector === "string" ? context.sector : strategy.client?.sector ?? null;
+  const {countryCode,region:marketRegion} = brandMarketScope(strategy);
 
   // ── 1. Le monde dehors — veille externe réelle (RSS/Google News) ──────────
   let articles: BrandFeedArticle[] = [];
   try {
+    const { countryDisplayNameFr } = await import("@/server/services/seshat/external-feeds/watch-subjects");
+    const watch = await loadWatchSubjects(prisma, strategyId, strategy.businessContext, marketRegion ?? countryDisplayNameFr(countryCode));
     const feed = await getOrBuildBrandFeed(
       prisma,
-      { strategyId, name: strategy.name, countryCode, sector },
+      { strategyId, name: strategy.name, countryCode, marketRegion, sector, extraSubjects: watch.subjects },
       { force: opts.force ?? true },
     );
     articles = feed.articles;
@@ -392,7 +398,7 @@ async function refreshWeakSignals(
 
   const since = new Date(Date.now() - 20 * 60 * 60 * 1000);
   const existing = await prisma.signal.findFirst({
-    where: { strategyId, type: "WEAK_SIGNAL_ALERT", createdAt: { gte: since } },
+    where: { strategyId, type: "WEAK_SIGNAL_ALERT", createdAt: { gte: since }, data: { path: ["source"], equals: "gazette_refresh_feed_terms" } },
     select: { id: true },
   });
   if (existing) return ok("WEAK_SIGNAL", 0, "Signal faible déjà relevé aujourd'hui.");
@@ -407,6 +413,8 @@ async function refreshWeakSignals(
         content: `Le terme « ${best.term} » revient dans ${best.n} article(s) de votre veille du jour — un frémissement à surveiller dans votre secteur.`,
         thesis: best.term,
         occurrences: best.n,
+        sources: articles.filter(article => article.title.toLowerCase().split(/[^\p{L}\p{N}]+/u).includes(best.term))
+          .map(article => ({ url: article.link, title: article.title, source: article.source, publishedAt: article.publishedAt })),
       },
     },
   });

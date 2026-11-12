@@ -134,3 +134,19 @@ describe("deliverable-orchestrator/vault-matcher", () => {
     });
   });
 });
+
+describe("Périmètre et validité d'un brief actif",()=>{
+  const base={id:"brand-brief",kind:"BIG_IDEA",name:"Idée approuvée",version:4,state:"ACTIVE",staleAt:null,campaignId:null,
+    metadata:{},content:{idea:"Raconter le vrai prix"},sourceIntentId:null,sourceGloryOutputId:null,mimeType:null};
+  it("préfère l’actif de la campagne et conserve son empreinte, même si l'actif de marque est plus récent",async()=>{
+    findManyMock.mockResolvedValueOnce([base,{...base,id:"local",campaignId:"c"}]);
+    const result=await matchVault("strategy",["BIG_IDEA"],"c");
+    expect(result[0]).toMatchObject({assetId:"local",status:"ACTIVE_REUSE",assetVersion:4,assetFingerprint:expect.stringMatching(/^[a-f0-9]{64}$/)});
+    expect(findManyMock.mock.calls.at(-1)![0].where.OR).toEqual([{campaignId:"c"},{campaignId:null}]);
+  });
+  it("prévoit un nouveau brief au lieu de réutiliser un échec déguisé en version active",async()=>{
+    findManyMock.mockResolvedValueOnce([{...base,content:{status:"FAILED",errorMessage:"solde"}}]);
+    expect((await matchVault("strategy",["BIG_IDEA"]))[0]).toMatchObject({status:"STALE_REFRESH",assetId:"brand-brief"});
+    expect(findManyMock.mock.calls.at(-1)![0].where.campaignId).toBeNull();
+  });
+});

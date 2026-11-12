@@ -13,6 +13,7 @@ import { Prisma } from "@prisma/client";
 import { collectMarketSignals, type CollectionStrategy } from "./signal-collector";
 import { analyzeWeakSignals, buildSearchContext, type WeakSignal } from "./weak-signal-analyzer";
 import { reportRefusedWrite } from "../../pillar-gateway/refusal";
+import { signalSourceUrl } from "@/domain/signal-provenance";
 
 // ── Campaign capture sessions API (Phase 19, ADR-0052 Cluster D support) ──
 // Câblage Seshat Tarsis pour la promotion `culture.tarsisBridge` STUB → MVP
@@ -199,7 +200,7 @@ export async function runMarketIntelligence(
   // de contenu récupéré → encadrés comme donnée.
   const marketDataSection = sectorReused
     ? `## DONNÉES SECTEUR RÉUTILISÉES (fraîches, même secteur)\n${wrapUntrusted("DONNÉES SECTEUR", JSON.stringify(existingData.slice(0, 3), null, 2), { max: 12_000 })}`
-    : `## SIGNAUX MARCHÉ COLLECTÉS (${freshSignals.length} signaux)\n${wrapUntrusted("SIGNAUX MARCHÉ", freshSignals.map(s => `- ${s.title}: ${s.content}`).join("\n"), { max: 12_000 })}`;
+    : `## ENTRÉES MARCHÉ (${freshSignals.length} signaux)\n${wrapUntrusted("SIGNAUX MARCHÉ", freshSignals.map(s => `- [${s.provenanceKind ?? (s.sourceType === "INFERRED" ? "INFERRED" : "UNSPECIFIED")}] ${s.title}: ${s.content}`).join("\n"), { max: 12_000 })}`;
 
   const weakSignalsSection = weakSignals.length > 0
     ? `## SIGNAUX FAIBLES DÉTECTÉS (${weakSignals.length} thèses)\n${wrapUntrusted("SIGNAUX FAIBLES", weakSignals.map(ws =>
@@ -216,6 +217,7 @@ Tu es un analyste stratégique senior spécialisé en intelligence de marché.
 Tu produis le pilier T (Track) du protocole ADVE-RTIS : triangulation marché, validation d'hypothèses, TAM/SAM/SOM, et score brand-market fit.
 
 IMPORTANT : Base-toi sur les DONNÉES RÉELLES fournies. Ne les invente pas.
+Les entrées INFERRED sont des hypothèses produites par modèle, pas des actualités collectées. UNSPECIFIED indique une provenance non établie. Ne les présente jamais comme des faits observés ou des preuves de validation.
 Les signaux faibles doivent être intégrés dans l'analyse de tendances et les hypothèses.
 
 Format JSON strict conforme au schema PillarT :
@@ -271,7 +273,7 @@ Format JSON strict conforme au schema PillarT :
   if (!pillarContent.marketReality || typeof pillarContent.marketReality !== "object") {
     const edTyped = existingData as Array<{ type?: string; title?: string }>;
     const macroRaw: string[] = (freshSignals.length > 0
-      ? freshSignals.slice(0, 5).map((s) => s.title)
+      ? freshSignals.slice(0, 5).map((s) => s.provenanceKind === "INFERRED" || s.sourceType === "INFERRED" ? `Hypothèse : ${s.title}` : s.title)
       : edTyped.slice(0, 5).map((e) => e.title ?? String(e.type ?? "")))
       .filter((t): t is string => Boolean(t));
     const weakRaw: string[] = weakSignals.slice(0, 3).map((ws) => ws.thesis).filter(Boolean);
@@ -293,12 +295,13 @@ Format JSON strict conforme au schema PillarT :
   }
   // Only write marketDataSources when non-empty — empty array would overwrite a
   // previously-persisted non-empty list via MERGE_DEEP on a re-run with no signals.
-  const marketSources = freshSignals.map(s => ({
-    sourceType: s.sourceType,
-    title: s.title,
-    collectedAt: s.collectedAt ?? new Date().toISOString(),
-    reliability: s.relevance,
-  }));
+  const marketSources = freshSignals.map(s => {
+    const provenanceKind = s.provenanceKind ?? (s.sourceType === "INFERRED" ? "INFERRED" : "UNSPECIFIED");
+    const sourceUrl = provenanceKind !== "INFERRED" ? signalSourceUrl(s.sourceUrl) : undefined;
+    return { ...(s.id ? { id: s.id } : {}), sourceType: s.sourceType,
+      title: s.title, provenanceKind, ...(sourceUrl ? { sourceUrl } : {}),
+      collectedAt: s.collectedAt ?? new Date().toISOString(), reliability: s.relevance };
+  });
   if (marketSources.length > 0) {
     pillarContent.marketDataSources = marketSources;
   }

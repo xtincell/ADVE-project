@@ -4,8 +4,47 @@
 
 import type { JehutyFeedItem, JehutyCategory, JehutyCurationAction } from "@/lib/types/jehuty";
 import { computePriority } from "@/lib/types/jehuty";
+import { signalObservation } from "@/domain/signal-observation";
 
 type CurationRecord = { action: string; note?: string | null } | undefined;
+
+function declaredConfidence(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1 ? value : null;
+}
+
+function declaredQualification(data: Record<string, unknown>): Pick<JehutyFeedItem, "urgency" | "impact"> {
+  const rawUrgency = typeof data.urgency === "string" ? data.urgency.toUpperCase() : "";
+  const severity = typeof data.severity === "string" ? data.severity.toLowerCase() : "";
+  const urgencyByValue: Record<string, JehutyFeedItem["urgency"]> = {
+    NOW: "NOW", SOON: "SOON", LATER: "LATER", CRITICAL: "NOW", HIGH: "NOW", MEDIUM: "SOON", LOW: "LATER",
+  };
+  const urgencyBySeverity: Record<string, JehutyFeedItem["urgency"]> = {
+    critical: "NOW", high: "NOW", medium: "SOON", low: "LATER",
+  };
+  const impactBySeverity: Record<string, JehutyFeedItem["impact"]> = {
+    critical: "HIGH", high: "HIGH", medium: "MEDIUM", low: "LOW",
+  };
+  const impact = data.impact === "LOW" || data.impact === "MEDIUM" || data.impact === "HIGH"
+    ? data.impact : impactBySeverity[severity] ?? null;
+  return { urgency: urgencyByValue[rawUrgency] ?? urgencyBySeverity[severity] ?? null, impact };
+}
+
+/** Editorial previews never replace the complete source observation. */
+export function editorialExcerpt(text: string, max = 300): string {
+  const clean = text.trim().replace(/\s+/g, " ");
+  if (text.trim().length <= max) return text.trim();
+  const cut = clean.slice(0, max - 1);
+  const boundary = cut.lastIndexOf(" ");
+  return `${cut.slice(0, boundary > 0 ? boundary : cut.length)}…`;
+}
+
+export function signalHeadline(title: string, data: Record<string, unknown>, type: string): string {
+  if (title.length <= 110) return title;
+  const clause = title.split(/[,;!?]|\.\s/)[0]?.trim();
+  if (clause && clause.length >= 15 && clause.length <= 110) return clause;
+  const pillar = typeof data.pillar === "string" ? ` — pilier ${data.pillar.toUpperCase()}` : "";
+  return `${type === "WEAK_SIGNAL_ALERT" ? "Point de vigilance" : "Signal à examiner"}${pillar}`;
+}
 
 // ── Signal → FeedItem ─────────────────────────────────────────────
 
@@ -18,6 +57,7 @@ const SIGNAL_TYPE_TO_CATEGORY: Record<string, JehutyCategory> = {
   STRONG: "EXTERNAL_SIGNAL",
   WEAK: "WEAK_SIGNAL",
   METRIC: "MARKET_SIGNAL",
+  EXTERNAL_METRIC: "MARKET_SIGNAL",
 };
 
 export function mapSignalToFeedItem(
@@ -34,25 +74,19 @@ export function mapSignalToFeedItem(
   const data = (signal.data ?? {}) as Record<string, unknown>;
   const category = SIGNAL_TYPE_TO_CATEGORY[signal.type] ?? "EXTERNAL_SIGNAL";
 
-  const VALID_URGENCIES = ["NOW", "SOON", "LATER"];
-  const rawUrgency = String(data.urgency ?? "");
-  const urgency = VALID_URGENCIES.includes(rawUrgency) ? rawUrgency : (signal.type.includes("DECLINE") ? "NOW" : "SOON");
-  const rawSeverity = String(data.severity ?? "");
-  const impact = (rawSeverity === "critical" || rawSeverity === "high") ? "HIGH"
-    : rawSeverity === "medium" ? "MEDIUM"
-      : "LOW";
-  const confidence = typeof data.confidence === "number" && Number.isFinite(data.confidence) ? data.confidence : 0.5;
+  const { urgency, impact } = declaredQualification(data);
+  const confidence = declaredConfidence(data.confidence);
 
-  const title = (data.title as string) ?? (data.thesis as string) ?? `Signal ${signal.type}`;
-  const summary = (data.content as string) ?? (data.recommendedAction as string) ?? (data.brandImpact as string) ?? "";
+  const { title, observation: summary } = signalObservation(signal);
 
   return {
     id: `signal:${signal.id}`,
     sourceType: "SIGNAL",
     sourceId: signal.id,
     category,
-    title: title.slice(0, 120),
-    summary: summary.slice(0, 300),
+    title: signalHeadline(title, data, signal.type),
+    summary: editorialExcerpt(summary),
+    observation: summary,
     pillarKey: (data.relatedPillars as string[] | undefined)?.[0] ?? (data.pillar as string) ?? undefined,
     strategyId: signal.strategyId,
     strategyName,
@@ -64,7 +98,11 @@ export function mapSignalToFeedItem(
     disadvantages: (data.disadvantages as string[]) ?? undefined,
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: signal.createdAt.toISOString(),
-    source: signal.type,
+    sources: signalSourceLinks(data),
+    source: signal.type === "EXTERNAL_METRIC"
+      ? typeof data.sourceLabel === "string" && data.sourceLabel.trim() ? data.sourceLabel.trim() : "Mesures reçues"
+      : signal.type === "WEAK_SIGNAL_ALERT" ? "Analyse des signaux de la marque"
+        : signal.type.startsWith("SCORE_") ? "Calcul des piliers de la marque" : "Données de la marque",
   };
 }
 
@@ -105,8 +143,8 @@ export function mapRecoToFeedItem(
     strategyName,
     urgency: reco.urgency as JehutyFeedItem["urgency"],
     impact: reco.impact as JehutyFeedItem["impact"],
-    confidence: reco.confidence,
-    priority: computePriority(reco.urgency, reco.impact, reco.confidence, reco.createdAt),
+    confidence: declaredConfidence(reco.confidence),
+    priority: computePriority(reco.urgency, reco.impact, declaredConfidence(reco.confidence), reco.createdAt),
     advantages: Array.isArray(reco.advantages) ? reco.advantages as string[] : undefined,
     disadvantages: Array.isArray(reco.disadvantages) ? reco.disadvantages as string[] : undefined,
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
@@ -147,9 +185,7 @@ export function mapDiagnosticToFeedItem(
   strategyName?: string,
 ): JehutyFeedItem {
   const data = (entry.data ?? {}) as Record<string, unknown>;
-  const severity = (data.severity as string) ?? "medium";
-  const urgency = severity === "critical" || severity === "high" ? "NOW" : "SOON";
-  const impact = severity === "critical" ? "HIGH" : severity === "high" ? "HIGH" : "MEDIUM";
+  const { urgency, impact } = declaredQualification(data);
 
   // ── Titre PERSONNALISÉ + synthèse réelle (fix 2026-07-20) ──
   // La gazette affichait « Diagnostic NETERU » ×7 (jargon mythologique
@@ -176,9 +212,12 @@ export function mapDiagnosticToFeedItem(
         ? "Examen de votre marque : rien d'alarmant détecté"
         : "Examen de votre marque");
   const frameworksUsed = Array.isArray(data.frameworksUsed) ? (data.frameworksUsed as string[]) : [];
+  const findings = Array.isArray(data.diagnosis) ? data.diagnosis as Array<Record<string, unknown>> : [];
+  const prescriptions = Array.isArray(data.prescriptions) ? data.prescriptions.filter((v): v is string => typeof v === "string") : [];
+  const detail = [...findings.map(f => [f.pillar, f.issue, f.rootCause].filter(Boolean).join(" — ")), ...prescriptions].join("\n\n");
   const summary =
-    (data.prescription as string) ??
-    (data.diagnostic as string) ??
+    detail || (data.prescription as string) ||
+    (data.diagnostic as string) ||
     [
       symptoms !== null
         ? `${symptoms} symptôme(s) relevé(s) lors de l'examen automatique de vos fondations.`
@@ -195,14 +234,15 @@ export function mapDiagnosticToFeedItem(
     sourceId: entry.id,
     category: "DIAGNOSTIC",
     title,
-    summary,
+    summary: editorialExcerpt(summary),
+    observation: summary,
     pillarKey: entry.pillarFocus ?? undefined,
     strategyId,
     strategyName,
     urgency: urgency as JehutyFeedItem["urgency"],
     impact: impact as JehutyFeedItem["impact"],
-    confidence: typeof data.confidence === "number" ? data.confidence : 0.6,
-    priority: computePriority(urgency, impact, 0.6, entry.createdAt),
+    confidence: declaredConfidence(data.confidence),
+    priority: computePriority(urgency, impact, declaredConfidence(data.confidence), entry.createdAt),
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: entry.createdAt.toISOString(),
     source: "Examen automatique",
@@ -217,7 +257,7 @@ export function mapDiagnosticToFeedItem(
  * EXTERNAL_SIGNAL — titre = l'article réel, source = le média.
  */
 export function mapExternalArticleToFeedItem(
-  article: { title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string },
+  article: { title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string },
   strategyId: string,
   digestCreatedAt: Date,
   curation: CurationRecord,
@@ -229,17 +269,36 @@ export function mapExternalArticleToFeedItem(
     sourceType: "SIGNAL",
     sourceId: article.link ?? "",
     category: "EXTERNAL_SIGNAL",
-    title: (article.title ?? "").slice(0, 120),
-    summary: article.source ? `Vu chez ${article.source}. À lire si votre marché en parle autour de vous.` : "",
+    title: article.title ?? "",
+    summary: article.summary ? editorialExcerpt(article.summary) : article.source ? `Article publié par ${article.source}. Ouvrir la source pour le lire.` : "Ouvrir l’article original.",
+    ...(article.summary ? { observation: article.summary } : {}),
     strategyId,
-    urgency: "LATER",
-    impact: "LOW",
-    confidence: 1,
-    priority: computePriority("LATER", "LOW", 1, createdAt),
+    urgency: null,
+    impact: null,
+    confidence: null,
+    priority: computePriority(null, null, null, createdAt),
     externalUrl: article.link,
+    dateKind: article.publishedAt && !Number.isNaN(Date.parse(article.publishedAt)) ? "PUBLISHED" : "COLLECTED",
     ...(article.imageUrl ? { imageUrl: article.imageUrl } : {}),
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: createdAt.toISOString(),
     source: article.source ?? "Veille de marque",
   };
+}
+
+/** Only expose URLs actually carried by a signal, never infer a publication. */
+export function signalSourceLinks(data: Record<string, unknown>): Array<{ url: string; title: string }> {
+  const values = [data.sourceUrl, ...(Array.isArray(data.sources) ? data.sources : []), ...(Array.isArray(data.evidence) ? data.evidence : [])];
+  const links = new Map<string, { url: string; title: string }>();
+  for (const value of values) {
+    const entry = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const raw = typeof value === "string" ? value : entry.url ?? entry.link ?? entry.sourceUrl;
+    if (typeof raw !== "string") continue;
+    try {
+      const url = new URL(raw);
+      if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) continue;
+      links.set(url.href, { url: url.href, title: typeof entry.title === "string" ? entry.title : url.hostname });
+    } catch { /* Not a public source URL. */ }
+  }
+  return [...links.values()];
 }

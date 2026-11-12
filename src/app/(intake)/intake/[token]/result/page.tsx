@@ -37,7 +37,11 @@ import { ForceSection } from "./force-section";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
+import { getFieldLabel } from "@/lib/types/field-labels";
+import { coerceProvenance, type FieldProvenance } from "@/domain/field-provenance";
 import { useT } from "@/lib/i18n/use-t";
+import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
+import { ReceivedIntakeDocuments } from "@/components/intake/received-documents";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -109,6 +113,7 @@ interface DiagnosticRecommendation {
 }
 
 interface Diagnostic {
+  reportEvidenceVersion?: number;
   classification?: string;
   summary?: string;
   narrativeReport?: NarrativeReport;
@@ -190,18 +195,13 @@ const CLASSIFICATION_RETAINER_PITCH: Record<string, string> = {
 };
 
 // ── Formatting helpers ─────────────────────────────────────────────
-function humanizeKey(key: string): string {
-  return key
-    .replace(/([A-Z])/g, " $1")
-    .replace(/[._-]/g, " ")
-    .toLowerCase()
-    .replace(/^./, (c) => c.toUpperCase())
-    .trim();
-}
+function humanizeKey(key: string): string { return getFieldLabel(key); }
+
+type ReportField = { key: string; value: string; origin: FieldProvenance };
 
 function flattenValue(value: unknown, depth = 0): string {
   if (value == null) return "";
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return /^[A-Z][A-Z_]+$/.test(value.trim()) ? getFieldLabel(value.trim()) : value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) {
     if (value.length === 0) return "";
@@ -215,7 +215,7 @@ function flattenValue(value: unknown, depth = 0): string {
     // le humanize borné du composer produit du texte lisible à toute profondeur.
     if (depth > 1) return humanizeValue(value) ?? "";
     const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => v != null && v !== "")
+      .filter(([key, v]) => !key.startsWith("_") && !HIDDEN_FIELDS.has(key) && v != null && v !== "")
       .map(([k, v]) => {
         const formatted = flattenValue(v, depth + 1);
         return formatted ? `${humanizeKey(k)} : ${formatted}` : "";
@@ -226,12 +226,12 @@ function flattenValue(value: unknown, depth = 0): string {
   return "";
 }
 
-function flattenContent(content: Record<string, unknown>): Array<{ key: string; value: string }> {
+function flattenContent(content: Record<string, unknown>, origins: Record<string, string>): ReportField[] {
   return Object.entries(content)
     // Champs méta/techniques (narrativeFull dupliqué, webPresence JSON,
     // fieldCertainty…) — même liste que le composer (audit 2026-07-16).
-    .filter(([k]) => !HIDDEN_FIELDS.has(k))
-    .map(([k, v]) => ({ key: humanizeKey(k), value: flattenValue(v) }))
+    .filter(([k]) => !k.startsWith("_") && !HIDDEN_FIELDS.has(k))
+    .map(([k, v]) => ({ key: humanizeKey(k), value: flattenValue(v), origin: coerceProvenance(origins[k]) }))
     .filter((entry) => entry.value && entry.value.length > 0);
 }
 
@@ -271,7 +271,8 @@ function formatVerbatim(
       ? [{ pillar: t("intakeResult.verbatim.freeText"), entries: [{ q: t("intakeResult.verbatim.freeDesc"), a: intake.rawText }] }]
       : [];
   }
-  const groups: Array<{ pillar: string; entries: Array<{ q: string; a: string }> }> = [];
+  const groups: Array<{ pillar: string; entries: Array<{ q: string; a: string }> }> = intake.rawText
+    ? [{ pillar: t("intakeResult.verbatim.freeText"), entries: [{ q: t("intakeResult.verbatim.freeDesc"), a: intake.rawText }] }] : [];
   const order = ["biz", "a", "d", "v", "e"];
   for (const k of order) {
     const v = responses[k];
@@ -307,13 +308,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const { token } = use(params);
   const searchParams = useSearchParams();
   const paymentRef = searchParams.get("ref");
-  const paymentStatus = searchParams.get("status");
-
-  const [unlockedByPayment, setUnlockedByPayment] = useState(false);
   const [paywallLoading, setPaywallLoading] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const [activated, setActivated] = useState<{ clientName: string; userEmail: string } | null>(null);
+  const [activated, setActivated] = useState<{ clientName: string; userEmail: string; alreadyClaimed: boolean } | null>(null);
+  const [prepareAssistance, setPrepareAssistance] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
   const { data: me } = trpc.auth.me.useQuery();
@@ -324,14 +323,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     { enabled: !!token, retry: 2, staleTime: 0 },
   );
 
-  const { data: pillarsData } = trpc.quickIntake.getPillarsByToken.useQuery(
+  const { data: pillarsData, isFetching: pillarsFetching, refetch: refetchPillars } = trpc.quickIntake.getPillarsByToken.useQuery(
     { token },
     { enabled: !!intake?.convertedToId, staleTime: 0 },
   );
 
+  const effectivePaymentRef = paymentRef ?? intake?.reportAccess.reference;
   const { data: paymentData } = trpc.payment.verifyPayment.useQuery(
-    { reference: paymentRef ?? "" },
-    { enabled: !!paymentRef && paymentStatus === "paid", retry: 1 },
+    { reference: effectivePaymentRef ?? "", intakeToken: token },
+    { enabled: !!effectivePaymentRef, retry: 1 },
   );
 
   const { data: pricing } = trpc.payment.getPricing.useQuery(
@@ -346,8 +346,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   );
 
   useEffect(() => {
-    if (paymentData?.paid === true) setUnlockedByPayment(true);
-  }, [paymentData]);
+    if (paymentData?.paid === true) { void refetch(); void refetchPillars(); }
+  }, [paymentData?.paid, refetch, refetchPillars]);
 
   // F1 async : pendant un traitement de fond (statut PROCESSING), la page
   // suit l'avancement — refetch 4 s jusqu'à l'état terminal réel en base.
@@ -357,7 +357,12 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     return () => window.clearInterval(id);
   }, [intake?.status, refetch]);
 
-  const isPaid = isAdmin || unlockedByPayment || paymentData?.paid === true;
+  const isPaid = intake?.reportAccess.unlocked === true;
+  const activeAccount = activated ?? (intake?.status === "CONVERTED" ? {
+    clientName: intake.companyName,
+    userEmail: intake.contactEmail,
+    alreadyClaimed: null,
+  } : null);
   // Use the canonical localized price (handles ALL currencies, not just XAF/XOF/EUR).
   // Default = paid (false) while pricing is loading/erroring — never claim "Gratuit"
   // before the pricing query has actually resolved.
@@ -411,7 +416,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
   const activateMutation = trpc.quickIntake.activateBrand.useMutation({
     onSuccess: (data) => {
-      setActivated({ clientName: data.clientName, userEmail: data.userEmail });
+      setActivated({ clientName: data.clientName, userEmail: data.userEmail, alreadyClaimed: data.alreadyClaimed });
       void refetch();
     },
   });
@@ -599,9 +604,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   // lafusee:allow-adhoc-completion: intake wizard progress percentage (questionnaire step counter, not pillar completion)
   const levelProgressPct = levelIdx >= 0 ? Math.round(((levelIdx + 1) / LEVEL_ORDER.length) * 100) : 0;
 
-  const extractedByKey: Record<string, Array<{ key: string; value: string }>> = {};
+  const extractedByKey: Record<string, ReportField[]> = {};
   for (const p of pillarsData?.pillars ?? []) {
-    extractedByKey[p.key] = flattenContent(p.content as Record<string, unknown>);
+    extractedByKey[p.key] = flattenContent(p.content as Record<string, unknown>, diagnostic?.reportEvidenceVersion === 1 ? p.origins
+      : Object.fromEntries(Object.entries(p.origins).map(([key, origin]) => [key, origin === "HUMAN" ? origin : "UNKNOWN"])));
   }
 
   // Page-only previews: 2 ADVE values per pillar, all 4 RTIS pillars
@@ -616,7 +622,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const reportDate = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 
   return (
-    <main className="min-h-screen bg-background pb-24 print:bg-white print:pb-0">
+    <main className="min-h-screen bg-background pb-24 print:bg-white print:pb-0"
+      data-intake-report-ready={isPaid && pillarsData && !pillarsFetching ? "true" : undefined}>
       <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8 sm:py-12 print:px-6 print:py-0">
 
         {/* ════════════════════════════════════════════════════════════
@@ -810,6 +817,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </p>
         </header>
 
+        <div className="print:hidden"><ReceivedIntakeDocuments documents={intake.documents} /></div>
+        <p className="mb-6 rounded-lg border border-border-subtle bg-card p-4 text-sm leading-relaxed text-foreground-secondary">{t("intakeResult.report.readingGuide")}</p>
+        {diagnostic?.reportEvidenceVersion !== 1 && <p className="mb-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">{t("intakeResult.report.legacy")}</p>}
+
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Intro + Contexte business
         ════════════════════════════════════════════════════════════ */}
@@ -819,7 +830,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         </section>
 
         {bizContext.length > 0 && (
-          <section className="hidden print:block print:mb-8 print:break-after-page">
+          <section className="hidden print:block print:mb-8">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.bizTitle")}</h2>
             <p className="mb-4 text-sm text-foreground-muted">
               {t("intakeResult.pdf.bizSub")}
@@ -839,7 +850,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             PDF-ONLY: Niveau actuel + trajectoire vers ICONE
         ════════════════════════════════════════════════════════════ */}
         {brandLevel && (
-          <section className="hidden print:block print:mb-8 print:break-after-page">
+          <section className="hidden print:block print:mb-8">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.levelTitle")}</h2>
             <div className="mb-6 rounded-lg border-2 border-foreground p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-foreground-muted">
@@ -944,9 +955,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             la preuve publique captée. Lecture seule, honnête (couverture +
             palier suivant). Le classement public reste un choix (payant/opérateur).
         ════════════════════════════════════════════════════════════ */}
-        <p className="mx-auto mt-10 max-w-[60ch] text-center text-sm text-foreground-secondary">
-          {t("intakeResult.bridge.force")}
-        </p>
+        {/* La phrase-pont vers la force /200 est rendue par ForceSection,
+            seulement quand une force est affichée (recette F16). */}
+        <div className="mt-10" />
         <ForceSection token={token} />
 
 
@@ -1025,7 +1036,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <header className="mb-2 flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-foreground">{t("intakeResult.adve.title")}</h2>
             <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
-              {t("intakeResult.adve.badge")}
+              {t(isPaid ? "intakeResult.report.complete" : "intakeResult.adve.badge")}
             </span>
           </header>
           <p className="mb-6 text-sm text-foreground-muted">
@@ -1036,7 +1047,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             {ADVE_PILLARS.map((meta) => {
               const allExtracted = extractedByKey[meta.key] ?? [];
               const previewExtracted = allExtracted.slice(0, PAGE_VALUES_PER_PILLAR);
-              const moreCount = Math.max(0, allExtracted.length - PAGE_VALUES_PER_PILLAR);
+              const totalFields = pillarsData?.pillars.find(p => p.key === meta.key)?.totalFields ?? allExtracted.length;
+              const moreCount = isPaid ? 0 : Math.max(0, totalFields - PAGE_VALUES_PER_PILLAR);
               const reportPillar = report?.adve?.find((p) => p.key === meta.key);
               const score = cap(vector[meta.key] ?? 0);
               return (
@@ -1057,7 +1069,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   <div className="mb-4">
                     <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                       <Database className="h-3.5 w-3.5" />
-                      {t("intakeResult.adve.extracted")} ({allExtracted.length})
+                      {t("intakeResult.adve.extracted")} ({totalFields})
                     </h4>
                     {allExtracted.length === 0 ? (
                       <p className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-foreground-muted">
@@ -1072,10 +1084,21 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                               className="grid grid-cols-1 gap-1 rounded-lg border border-border-subtle bg-background p-3 sm:grid-cols-[180px_1fr] sm:gap-4"
                             >
                               <dt className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{entry.key}</dt>
-                              <dd className="text-sm leading-relaxed text-foreground">{entry.value}</dd>
+                              <dd className="text-sm leading-relaxed text-foreground"><span className="mb-1 block text-xs text-foreground-muted">{t(`intakeResult.origin.${entry.origin}`)}</span>{entry.value}</dd>
                             </div>
                           ))}
                         </dl>
+                        {isPaid && allExtracted.length > PAGE_VALUES_PER_PILLAR && (
+                          <details className="mt-3 rounded-lg border border-border-subtle p-3">
+                            <summary className="cursor-pointer text-sm font-medium text-foreground">{t("intakeResult.report.details")} ({allExtracted.length - PAGE_VALUES_PER_PILLAR})</summary>
+                            <dl className="mt-3 space-y-3">
+                              {allExtracted.slice(PAGE_VALUES_PER_PILLAR).map((entry, idx) => <div key={idx}>
+                                <dt className="text-xs font-semibold text-foreground-muted">{entry.key} · {t(`intakeResult.origin.${entry.origin}`)}</dt>
+                                <dd className="mt-1 whitespace-pre-line text-sm text-foreground">{entry.value}</dd>
+                              </div>)}
+                            </dl>
+                          </details>
+                        )}
                         {moreCount > 0 && (
                           <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
                             <Lock className="h-3 w-3" />
@@ -1091,11 +1114,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                         {t("intakeResult.adve.strategicRead")}
                       </h4>
-                      <p className="text-sm leading-relaxed text-foreground">{reportPillar.preview}</p>
-                      <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{isPaid && reportPillar.full ? reportPillar.full : reportPillar.preview}</p>
+                      {!isPaid && <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
                         <Lock className="h-3 w-3" />
                         {t("intakeResult.adve.deepDive")}
-                      </p>
+                      </p>}
                     </div>
                   )}
                 </article>
@@ -1107,7 +1130,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             ADVE — print (FULL: all values + full narrative)
         ════════════════════════════════════════════════════════════ */}
-        <section className="hidden print:block print:mb-8 print:break-after-page">
+        {isPaid && <section className="hidden print:block print:mb-8">
           <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.adveTitle")}</h2>
           <div className="space-y-6">
             {ADVE_PILLARS.map((meta) => {
@@ -1130,10 +1153,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                         {t("intakeResult.adve.extracted")}
                       </h4>
                       <dl className="mb-4 space-y-1">
-                        {allExtracted.map((entry, idx) => (
+                        {allExtracted.slice(0, PAGE_VALUES_PER_PILLAR).map((entry, idx) => (
                           <div key={idx} className="grid grid-cols-[160px_1fr] gap-3 py-1">
                             <dt className="text-xs font-semibold text-foreground-muted">{entry.key}</dt>
-                            <dd className="text-sm text-foreground">{entry.value}</dd>
+                            <dd className="text-sm text-foreground"><span className="block text-xs text-foreground-muted">{t(`intakeResult.origin.${entry.origin}`)}</span>{entry.value}</dd>
                           </div>
                         ))}
                       </dl>
@@ -1145,15 +1168,14 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground-muted">
                         {t("intakeResult.adve.strategicRead")}
                       </h4>
-                      <p className="text-sm leading-relaxed text-foreground">{reportPillar.preview}</p>
-                      <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{reportPillar.full}</p>
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{reportPillar.full || reportPillar.preview}</p>
                     </>
                   )}
                 </div>
               );
             })}
           </div>
-        </section>
+        </section>}
 
         {/* ════════════════════════════════════════════════════════════
             RTIS — page (1 pilier preview, others teased)
@@ -1163,7 +1185,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <header className="mb-2 flex items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-foreground">{t("intakeResult.rtis.title")}</h2>
               <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
-                {t("intakeResult.rtis.badge")}
+                {t(isPaid ? "intakeResult.report.complete" : "intakeResult.rtis.badge")}
               </span>
             </header>
             <p className="mb-6 text-sm text-foreground-muted">{report.rtis.framing}</p>
@@ -1192,12 +1214,12 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     </p>
                   )}
                   <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
-                    {p.full.split("\n").slice(0, 9).join("\n") || p.preview}
+                    {(isPaid ? p.full : p.full.split("\n").slice(0, 9).join("\n")) || p.preview}
                   </p>
-                  <p className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-foreground-muted">
+                  {!isPaid && <p className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-foreground-muted">
                     <Lock className="h-3 w-3" />
                     {t("intakeResult.rtis.lock")}
-                  </p>
+                  </p>}
                 </article>
               ))}
             </div>
@@ -1207,8 +1229,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             RTIS — print (FULL: 4 piliers R/T/I/S complete)
         ════════════════════════════════════════════════════════════ */}
-        {report?.rtis && (
-          <section className="hidden print:block print:mb-8 print:break-after-page">
+        {isPaid && report?.rtis && (
+          <section className="hidden print:block print:mb-8">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.rtisTitle")}</h2>
             <p className="mb-4 text-sm italic text-foreground-secondary">{report.rtis.framing}</p>
             <div className="space-y-6">
@@ -1227,8 +1249,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       {t("intakeResult.rtis.keyMove")} {p.keyMove}
                     </p>
                   )}
-                  <p className="text-sm leading-relaxed text-foreground">{p.preview}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{p.full}</p>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{p.full || p.preview}</p>
                 </div>
               ))}
             </div>
@@ -1399,7 +1420,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Conclusion + CTA retainer
         ════════════════════════════════════════════════════════════ */}
-        <section className="hidden print:block print:mb-8 print:break-after-page">
+        <section className="hidden print:block print:mb-8">
           <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.conclusionTitle")}</h2>
           <p className="text-base leading-relaxed text-foreground">{retainerPitch}</p>
           <div className="mt-6 rounded-lg border-2 border-primary p-5">
@@ -1423,6 +1444,17 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Annexe — verbatim
         ════════════════════════════════════════════════════════════ */}
+        {isPaid && <section className="hidden print:block print:mb-6">
+          <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.report.details")}</h2>
+          <p className="mb-4 text-xs text-foreground-muted">{t("intakeResult.report.readingGuide")}</p>
+          {ADVE_PILLARS.map(meta => <div key={meta.key} className="mb-5">
+            <h3 className="mb-2 text-lg font-bold text-foreground">{t(meta.name)}</h3>
+            <dl className="space-y-2">{(extractedByKey[meta.key] ?? []).map((entry, i) => <div key={i} className="border-l-2 border-border-subtle pl-3">
+              <dt className="text-xs font-semibold text-foreground-muted">{entry.key} · {t(`intakeResult.origin.${entry.origin}`)}</dt>
+              <dd className="mt-1 whitespace-pre-line text-sm text-foreground">{entry.value}</dd>
+            </div>)}</dl>
+          </div>)}
+        </section>}
         {verbatim.length > 0 && (
           <section className="hidden print:block print:mb-4">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.annexTitle")}</h2>
@@ -1522,12 +1554,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               brandName={intake.companyName}
               classification={classification}
               centralTension={report?.centralTension}
-              authVerbatimSample={
-                // Surface a slice of the founder's actual ADVE narrative — read
-                // from the persisted Pillar.content[a].narrativeFull (V3 path)
-                // or from the executive summary as a fallback.
-                report?.adve?.[0]?.full ?? report?.executiveSummary
-              }
+              hasRecommendation={Boolean(report?.recommendation)}
+              authVerbatimSample={intake.rawText ?? undefined}
               unlockPriceLabel={
                 isFree
                   ? t("intakeResult.paywall.free")
@@ -1632,7 +1660,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           );
         })()}
 
-        {isPaid && !activated && (
+        {isPaid && !activeAccount && (
           <section className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/5 to-card p-6 sm:p-8 print:hidden">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-primary/10 p-2"><Rocket className="h-5 w-5 text-primary" /></div>
@@ -1659,9 +1687,19 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               </li>
             </ul>
 
+            <div className="mt-5">
+              <SourcePreparationOption
+                checked={prepareAssistance}
+                onChange={setPrepareAssistance}
+                disabled={activateMutation.isPending}
+                label={t("intakeResult.activate.assistanceTitle")}
+                description={t("intakeResult.activate.assistanceDescription")}
+              />
+            </div>
+
             <button
               type="button"
-              onClick={() => activateMutation.mutate({ token })}
+              onClick={() => activateMutation.mutate({ token, inferMissingFields: prepareAssistance })}
               disabled={activateMutation.isPending}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1677,23 +1715,28 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </section>
         )}
 
-        {activated && (
+        {activeAccount && (
           <section className="mt-10 rounded-2xl border border-primary/50 bg-primary/5 p-6 sm:p-8 print:hidden">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-primary/15 p-2"><ShieldCheck className="h-6 w-6 text-primary" /></div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.activated.titleBefore")} {activated.clientName}</h2>
+                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.activated.titleBefore")} {activeAccount.clientName}</h2>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  {t("intakeResult.activated.subBefore")} <span className="font-mono text-foreground">{activated.userEmail}</span> {t("intakeResult.activated.subAfter")}
+                  {t("intakeResult.activated.subBefore")} <span className="font-mono text-foreground">{activeAccount.userEmail}</span> {t("intakeResult.activated.subAfter")}
                 </p>
               </div>
             </div>
             <Link
-              href={`/register?email=${encodeURIComponent(activated.userEmail)}`}
+              href={activeAccount.alreadyClaimed ? "/login" : `/forgot-password?setup=1&email=${encodeURIComponent(activeAccount.userEmail)}`}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
-              {t("intakeResult.activated.cta")} <ArrowRight className="h-4 w-4" />
+              {t(activeAccount.alreadyClaimed ? "intakeResult.activated.loginCta" : "intakeResult.activated.cta")} <ArrowRight className="h-4 w-4" />
             </Link>
+            {activeAccount.alreadyClaimed === null && (
+              <Link href="/login" className="mt-3 inline-flex text-sm font-medium text-primary hover:underline">
+                {t("intakeResult.activated.loginCta")}
+              </Link>
+            )}
           </section>
         )}
       </div>
@@ -1721,7 +1764,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
       {/* Sticky CTA — present on every viewport size, hidden when the user
           has already unlocked or activated. Pushes itself above mobile
           home-indicator via env(safe-area-inset-bottom). Hidden in print. */}
-      {!isPaid && !activated && tierGrid && tierGrid.length > 0 && (() => {
+      {!isPaid && !activeAccount && tierGrid && tierGrid.length > 0 && (() => {
         const recommended = tierGrid.find((t) => t.definition.key === "ORACLE_FULL");
         const cheapest = tierGrid.find((t) => t.definition.key === "INTAKE_PDF");
         return (

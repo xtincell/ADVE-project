@@ -6,7 +6,7 @@
  * « Le système n'improvise pas » : limites déclarées, respectées.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   resolveRatePolicy,
   acquireSlot,
@@ -17,7 +17,11 @@ import {
   _getBucketForTest,
 } from "@/server/services/llm-gateway/rate-policy";
 
-afterEach(() => _resetRateLimiterForTest());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+  _resetRateLimiterForTest();
+});
 
 describe("rate-policy — résolution par modèle", () => {
   it("résout exact, puis sous-chaîne, puis défaut", () => {
@@ -64,6 +68,9 @@ describe("rate-policy — application", () => {
   });
 
   it("borne le RPM : au-delà de rpm départs dans la fenêtre, l'acquisition attend", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-14T14:00:00Z"));
+    vi.stubEnv("LLM_RATE_MAX_WAIT_MS", "80");
     _setRatePolicyForTest(
       { burst: { rpm: 2, maxConcurrent: 10, minIntervalMs: 0 } },
       { rpm: 1000, maxConcurrent: 10, minIntervalMs: 0 },
@@ -75,12 +82,41 @@ describe("rate-policy — application", () => {
 
     // Le 3e dépasse rpm=2 sur 60s → reste en attente.
     let third = false;
-    void acquireSlot("burst").then((k) => {
+    const pending = acquireSlot("burst").then((k) => {
       third = true;
       releaseSlot(k);
-    });
-    await new Promise((r) => setTimeout(r, 80));
+      return "ADMITTED";
+    }, (error: Error) => error.message);
+    await vi.advanceTimersByTimeAsync(60);
     expect(third).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await pending).toContain("LLM_RATE_WAIT_EXCEEDED");
+    expect(_getBucketForTest("burst")).toMatchObject({ active: 0, recent: 2 });
+  });
+
+  it.each([
+    ["concurrency", { rpm: 1000, maxConcurrent: 1, minIntervalMs: 0 }, true],
+    ["rpm", { rpm: 1, maxConcurrent: 8, minIntervalMs: 0 }, false],
+    ["interval", { rpm: 1000, maxConcurrent: 8, minIntervalMs: 10_000 }, false],
+  ] as const)("refuses an expired %s queue without provider work or a counted start", async (_name, policy, held) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-14T14:00:00Z"));
+    vi.stubEnv("LLM_RATE_MAX_WAIT_MS", "50");
+    _setRatePolicyForTest({ guarded: policy });
+    const first = await acquireSlot("guarded");
+    if (!held) releaseSlot(first);
+    const work = vi.fn(async () => "provider answer");
+    const pending = runWithRateLimit("guarded", work).then(
+      () => "ADMITTED", (error: Error) => error.message,
+    );
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await pending).toContain("LLM_RATE_WAIT_EXCEEDED");
+    expect(work).not.toHaveBeenCalled();
+    expect(_getBucketForTest("guarded")).toMatchObject({ active: held ? 1 : 0, recent: 1 });
+    if (held) releaseSlot(first);
+    await vi.advanceTimersByTimeAsync(60_001);
+    releaseSlot(await acquireSlot("guarded"));
+    expect(_getBucketForTest("guarded")).toMatchObject({ active: 0, recent: 1 });
   });
 
   it("runWithRateLimit relâche le slot même si fn jette", async () => {

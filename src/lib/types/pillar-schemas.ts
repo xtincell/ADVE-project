@@ -7,6 +7,11 @@
 import { z } from "zod";
 import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
 import { ProductSystemSchema } from "@/domain/product-system";
+import { OvertonConceptSchema } from "@/domain/overton-positioning";
+import { DevotionProjectionSchema } from "@/domain/devotion-ladder";
+import { creativeDirectionDoctrine } from "@/domain/creative-direction";
+import { BRAND_ACTOR_ROLES } from "@/domain/brand-actors";
+import { StrategyBudgetModelSchema, StrategyBudgetEnvelopeSchema, FinancialWorkingModelSchema } from "@/domain/financial-document";
 import {
   ARCHETYPES, SCHWARTZ_VALUES, LIFE_FORCE_8, AARRR_STAGES,
   DEVOTION_LEVELS, CHANNELS, TOUCHPOINT_TYPES, RITUAL_TYPES,
@@ -104,6 +109,11 @@ const CommunityLevelSchema = z.object({
 
 /** PILIER A COMPLET */
 export const PillarASchema = z.object({
+  // Three distinct positions; a planning postulate is not an observation.
+  overtonPositions: z.array(OvertonConceptSchema).superRefine((rows, ctx) => {
+    if (new Set(rows.map(row => row.id)).size !== rows.length) ctx.addIssue({ code: "custom", message: "Chaque position doit conserver un identifiant distinct." });
+    if (rows.length >= 3 && ["CONVICTION", "CATEGORY", "BRAND"].some(kind => !rows.some(row => row.kind === kind))) ctx.addIssue({ code: "custom", message: "Un cadrage complet distingue conviction, catégorie et marque." });
+  }).optional(),
   // ── Fondamentaux (migrés de Strategy — Chantier -1 §-1.2) ────────────
   nomMarque: z.string().min(1),                           // Le nom de la marque
   accroche: z.string().max(100).optional(),                // Phrase identitaire < 15 mots (pas le slogan pub de D)
@@ -199,6 +209,7 @@ export const PillarASchema = z.object({
   equipeDirigeante: z.array(z.object({
     nom: textShort,
     role: textShort,                        // CEO, CTO, CMO, COO, CFO, etc.
+    responsabilites: textShort.optional(), // documented contribution, not an action assignment
     bio: textMedium,                         // Parcours en 2-3 phrases
     experiencePasse: z.array(z.string().min(1)).min(1),  // Postes/entreprises precedents
     competencesCles: z.array(z.string().min(1)).min(2),  // Skills techniques et business
@@ -279,6 +290,7 @@ export const PillarASchema = z.object({
 const PersonaSchema = z.object({
   id: entityId.optional(),                                  // FK target for I.PotentialAction.targetsPersonaIds (ADR-0088)
   name: textShort,
+  actorRoles: z.array(z.enum(BRAND_ACTOR_ROLES)).optional(),
   age: z.number().int().min(1).max(120).optional(),
   csp: textShort.optional(),
   location: textShort.optional(),
@@ -310,7 +322,7 @@ const PersonaSchema = z.object({
   decisionProcess: textShort.optional(),
   devotionPotential: z.enum(DEVOTION_LEVELS).optional(),
 
-  rank: rank, // 1 = primary persona
+  rank: rank.optional(), // 1 = primary when established; absent priority stays unknown
 });
 
 /** Concurrent */
@@ -332,8 +344,8 @@ export const PillarDSchema = z.object({
     emotionalRegister: z.string().min(1).optional(),       // Le registre émotionnel dérivé
   }).optional(),
 
-  // Personas (2-5)
-  personas: z.array(PersonaSchema).min(2).max(5),
+  // Preserve every documented audience of the brand, including two-sided products.
+  personas: z.array(PersonaSchema).min(2),
 
   // Paysage concurrentiel (3+ concurrents)
   paysageConcurrentiel: z.array(CompetitorSchema).min(3),
@@ -365,6 +377,7 @@ export const PillarDSchema = z.object({
 
   // Direction artistique (BRAND pipeline outputs — remplis progressivement par GLORY)
   directionArtistique: z.object({
+    doctrine: creativeDirectionDoctrine.optional(),
     // Forme compacte (canon / humain) — la matière réelle d'un Brand Book
     // (énoncé d'univers + principes directeurs). Coexiste avec les sous-objets
     // riches ci-dessous (sortie des Glory créatifs). Cf. renderer pillar-d-fields.
@@ -513,6 +526,7 @@ const ProduitServiceSchema = z.object({
   nom: textShort,
   categorie: z.enum(PRODUCT_CATEGORIES),
   prix: currency.optional(),
+  conditionsTarifaires: z.string().min(1).optional(), // Périodes, HT/TTC, options et état de l'offre ; aucune coercition numérique
   cout: currency.optional(),
   margeUnitaire: currency.optional(), // Derived: prix - cout
 
@@ -562,7 +576,8 @@ const UnitEconomicsSchema = z.object({
   ltvCacRatio: z.number().optional(), // Derived
   pointMort: textShort.optional(),
   margeNette: z.number().optional(), // Derived
-  roiEstime: percentage.optional(),
+  // A return is expressed in percentage points, not a bounded share.
+  roiEstime: z.number().finite().optional(),
   paybackPeriod: z.number().optional(), // months
   budgetCom: currency, // V7 — annual marketing budget
   caVise: currency, // V8 — targeted annual revenue
@@ -588,6 +603,10 @@ export const PillarVSchema = z.object({
     productNames: z.array(z.string().min(1)),                // Ref V.produitsCatalogue[].nom
     devotionLevel: z.enum(DEVOTION_LEVELS).optional(),       // Quel niveau Devotion ce persona peut atteindre
     revenueContributionPct: z.number().min(0).max(100).optional(),
+    valueToBrand: z.array(z.string().min(1)).optional(),
+    valueToActor: z.array(z.string().min(1)).optional(),
+    actorCosts: z.array(z.string().min(1)).optional(),
+    dependencyConditions: z.array(z.string().min(1)).optional(),
   })).optional(),
 
   // Catalogue produits (1-50)
@@ -598,6 +617,8 @@ export const PillarVSchema = z.object({
 
   // Unit Economics
   unitEconomics: UnitEconomicsSchema,
+  financialModel: FinancialWorkingModelSchema.optional(),
+  strategyBudgetModel: StrategyBudgetModelSchema.optional(),
 
   // ── Système produit (ADR-0170 — « penser produit dans le pilier Valeur ») ──
   // Le MÉCANISME interne du produit (axes, archétypes, progression, modes,
@@ -709,12 +730,22 @@ const RitualSchema = z.object({
 const KPISchema = z.object({
   name: textShort,
   metricType: z.enum(["ENGAGEMENT", "FINANCIAL", "BEHAVIORAL", "SATISFACTION"]),
-  target: z.number(),
-  frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY"]),
+  // A documented indicator can precede the decision on its target/cadence.
+  // Explicit null is not zero and still fails the completion contract.
+  // Keep these keys required for maturity introspection (not optional leaves).
+  target: z.union([z.number().finite(), z.string().trim().min(1), z.null()]),
+  frequency: z.union([z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]), z.null()]),
+  qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+  definition: textMedium.optional(),
+  unit: textShort.optional(),
+  observationWindow: textShort.optional(),
+  targetContext: textShort.optional(),
+  sourceNotes: textMedium.optional(),
 });
 
 /** PILIER E COMPLET */
 export const PillarESchema = z.object({
+  devotionProjection: DevotionProjectionSchema.optional(),
   // ── Fondamentaux engagement (Chantier -1 §-1.2) ─────────────────────
   promesseExperience: z.string().min(1).optional(),          // L'expérience que chaque interaction garantit
   primaryChannel: z.enum(CHANNELS).optional(),               // Canal principal d'engagement (migré de Strategy)
@@ -1146,13 +1177,41 @@ export const PillarTSchema = z.object({
 // Initiative workflow (ADR-0088). DRAFT → RECOMMENDED (AI/Notoria) →
 // SELECTED_FOR_ROADMAP (operator picks for S) | REJECTED. Pillar S aggregates
 // budgets/coverage over SELECTED_FOR_ROADMAP initiatives only.
+// Catalogue preference is independent of execution/plan status. Legacy choices
+// are projected as preferences; a recommendation alone is not a human favorite.
+export const INITIATIVE_PREFERENCES = ["FAVORITE", "NEUTRAL", "REJECTED"] as const;
+export type InitiativePreference = (typeof INITIATIVE_PREFERENCES)[number];
+export function initiativePreference(value: unknown): InitiativePreference {
+  const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  if ((INITIATIVE_PREFERENCES as readonly unknown[]).includes(row.preference)) return row.preference as InitiativePreference;
+  return row.status === "REJECTED" ? "REJECTED" : row.status === "SELECTED_FOR_ROADMAP" ? "FAVORITE" : "NEUTRAL";
+}
 export const INITIATIVE_STATUSES = ["DRAFT", "RECOMMENDED", "SELECTED_FOR_ROADMAP", "REJECTED"] as const;
 export const INITIATIVE_TIMEFRAMES = ["SPRINT_90", "PHASE_1", "PHASE_2", "LONG_TERM"] as const;
+export const CAMPAIGN_CANON_TYPES = ["GTM_90", "ANNUAL", "ALWAYS_ON", "PUNCTUAL"] as const;
+export const INITIATIVE_CADENCES = ["ONE_SHOT", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY", "ROLLING"] as const;
+export const INITIATIVE_BUDGET_PERIODS = ["ONE_OFF", "PER_OCCURRENCE", "MONTHLY", "QUARTERLY", "YEARLY", "UNSPECIFIED"] as const;
+export const InitiativeBudgetRangeSchema = z.object({ min: currency, max: currency }).refine(v => v.max >= v.min, "La borne haute doit être supérieure ou égale à la borne basse");
 
 // Three roadmap trajectories (ADR-0088) — Conservateur / Cible (recommandé) /
 // Ambitieux. Projections are PURE-COMPUTED (no LLM) from the relational
 // backbone ; only genuinely generative content (narrative) may invoke an LLM.
 export const ROADMAP_ROUTE_KEYS = ["CONSERVATIVE", "TARGET", "AMBITIOUS"] as const;
+
+/** Derived coverage of existing initiative budgets, never a measured expense. */
+export const InitiativeBudgetSummarySchema = z.object({
+  plan: StrategyBudgetEnvelopeSchema.optional(),
+  knownSubtotal: currency.nullable(), // null when different budget periods cannot be summed
+  declaredSubtotal: currency.nullable(),
+  estimatedSubtotal: currency.nullable(),
+  declaredCount: z.number().int().min(0),
+  estimatedCount: z.number().int().min(0),
+  unknownCount: z.number().int().min(0),
+  unassignedTimeframeCount: z.number().int().min(0),
+  amountGroups: z.array(z.object({ period: z.enum(INITIATIVE_BUDGET_PERIODS), min: currency, max: currency,
+    rangeCount: z.number().int().min(0), knownCount: z.number().int().min(0), unknownCount: z.number().int().min(0) })).optional(),
+});
+export type InitiativeBudgetSummary = z.infer<typeof InitiativeBudgetSummarySchema>;
 
 /** N2 — Action Potentielle / Initiative (catalogue, pas planifiee) */
 const PotentialActionSchema = z.object({
@@ -1164,8 +1223,13 @@ const PotentialActionSchema = z.object({
   overtonShift: z.string().min(1).optional(),                // Comment cette action déplace la perception
   // ── Structured backbone (ADR-0088) — optional for back-compat, backfilled ──
   id: entityId.optional(),                                   // stable identity, referenced by S.sourceInitiativeId
+  preference: z.enum(INITIATIVE_PREFERENCES).optional(),       // operator catalogue preference, never scheduling
   status: z.enum(INITIATIVE_STATUSES).optional(),            // selection workflow
   budget: currency.optional(),                               // numeric — feeds S.computed.totalBudget
+  budgetRange: InitiativeBudgetRangeSchema.optional(),        // source bounds; never collapsed to a midpoint
+  budgetPeriod: z.enum(INITIATIVE_BUDGET_PERIODS).optional(),  // monetary unit, independent of campaign cadence
+  campaignCanonType: z.enum(CAMPAIGN_CANON_TYPES).optional(),
+  cadence: z.enum(INITIATIVE_CADENCES).optional(),
   budgetEstime: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),// qualitative anchor → numeric budget (normalizeInitiative)
   channel: textShort.optional(),                             // self-describing canal (sinon = clé du conteneur)
   timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(),       // roadmap phase, feeds S.computed.budgetByPhase
@@ -1319,7 +1383,7 @@ export const PillarSSchema = z.object({
     ecart: textMedium.optional(),                            // @derived T.perceptionGap
     strategieDeplacement: z.array(z.object({
       etape: textShort,
-      action: textShort,
+      action: textMedium,
       canal: textShort.optional(),
       horizon: textShort.optional(),
       devotionTarget: z.enum(DEVOTION_LEVELS).optional(),    // Quel niveau Devotion cette étape cible
@@ -1327,7 +1391,7 @@ export const PillarSSchema = z.object({
       riskId: entityId.optional(),                           // FK → R.overtonBlockers[].id mitigé
       hypothesisRef: z.string().optional(),                  // @deprecated (ADR-0088) — use hypothesisId
       hypothesisId: entityId.optional(),                     // FK → T.hypothesisValidation[].id validé
-    })).min(3),
+    })).min(1),
   }).optional(),
 
   // ── Vision & Axes ─────────────────────────────────────────────────────
@@ -1341,7 +1405,7 @@ export const PillarSSchema = z.object({
     axe: textShort,
     pillarsLinked: z.array(z.enum(PILLAR_KEYS)).min(2),
     kpis: z.array(textShort).min(1),
-  })).min(3),
+  })).min(1),
 
   facteursClesSucces: z.array(textShort).min(3),
 
@@ -1355,17 +1419,21 @@ export const PillarSSchema = z.object({
     devotionImpact: z.enum(DEVOTION_LEVELS).optional(),      // Quel niveau Devotion cette action cible
     sourceRef: z.string().optional(),                        // @deprecated (ADR-0088) — text path, use sourceInitiativeId
     sourceInitiativeId: entityId.optional(),                 // FK → I PotentialAction.id (data lineage)
-  })).min(5),
+  })).min(1),
 
   // ── Roadmap orientée superfan (jalons temporels) ──────────────────────
   roadmap: z.array(z.object({
     phase: textShort,
-    objectif: textShort,
+    objectif: textMedium,
     objectifDevotion: z.string().min(1).optional(),          // Ex: "spectateur → intéressé"
-    actions: z.array(textShort).optional(),
+    actions: z.array(z.string().min(1)).optional(),
     budget: currency.optional(),
+    budgetSummary: InitiativeBudgetSummarySchema.optional(),
+    canonType: z.enum(CAMPAIGN_CANON_TYPES).optional(),
+    cadence: z.enum(INITIATIVE_CADENCES).optional(),
+    actionRefs: z.array(z.string().min(1)).optional(),
     duree: textShort.optional(),
-  })).min(3).optional(),
+  })).min(1).optional(),
 
   // ── Budget alloue (sous-ensemble de I.potentielBudget) ────────────────
   globalBudget: currency.optional(),
@@ -1392,6 +1460,12 @@ export const PillarSSchema = z.object({
     pillar: z.enum(PILLAR_KEYS),
     target: textShort,
     frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]),
+    qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+    definition: textMedium.optional(),
+    unit: textShort.optional(),
+    observationWindow: textShort.optional(),
+    targetContext: textShort.optional(),
+    sourceNotes: textMedium.optional(),
   })).min(5).optional(),
 
   // ── Score de coherence ────────────────────────────────────────────────
@@ -1411,6 +1485,9 @@ export const PillarSSchema = z.object({
     reason: z.string().min(1),                               // Pourquoi pas maintenant
   })).optional(),
   devotionFunnel: z.array(z.object({
+    qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+    cohort: z.string().optional(), cohortPersonaId: z.string().optional(),
+    observationWindow: z.string().optional(), note: z.string().optional(), source: z.unknown().optional(),
     phase: z.string().min(1),                                // Phase roadmap
     spectateurs: z.number().optional(),
     interesses: z.number().optional(),
@@ -1420,6 +1497,9 @@ export const PillarSSchema = z.object({
     evangelistes: z.number().optional(),
   })).optional(),
   overtonMilestones: z.array(z.object({
+    conceptId: z.string().optional(),
+    zone: z.enum(["UNTHINKABLE", "RADICAL", "ACCEPTABLE", "SENSIBLE", "POPULAR", "POLICY"]).optional(),
+    basis: z.literal("PLANNING").optional(),
     phase: z.string().min(1),
     currentPerception: z.string().min(1),
     targetPerception: z.string().min(1),
@@ -1433,8 +1513,14 @@ export const PillarSSchema = z.object({
   }).optional(),
   northStarKPI: z.object({
     name: z.string().min(1),                                 // Ex: "Progression Devotion Ladder"
-    target: z.string().min(1),
-    frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]),
+    target: z.union([z.string().min(1), z.null()]),
+    qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+    definition: textMedium.optional(),
+    unit: textShort.optional(),
+    observationWindow: textShort.optional(),
+    targetContext: textShort.optional(),
+    sourceNotes: textMedium.optional(),
+    frequency: z.union([z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]), z.null()]),
     currentValue: z.string().optional(),
   }).optional(),
 
@@ -1443,7 +1529,8 @@ export const PillarSSchema = z.object({
   // Every field here is derived from A/D/V/E/R/T/I — see variable-bible BIBLE_S
   // (each carries `derivedFrom`, keeping listEditableFields("s") === []).
   computed: z.object({
-    totalBudget: currency.optional(),                        // Σ budget des initiatives status=SELECTED_FOR_ROADMAP
+    totalBudget: currency.optional(),                        // complete sum only; absent when a budget is unknown
+    budgetSummary: InitiativeBudgetSummarySchema.optional(),
     budgetByPhase: z.union([z.record(z.enum(INITIATIVE_TIMEFRAMES), currency), z.record(z.string(), z.unknown()), z.array(z.unknown())]).optional(), // record (computed) OU formes héritées (canon S stale, ADR-0172)
     riskCoverage: percentage.optional(),                     // % risques R couverts par une initiative sélectionnée
     mitigatedRiskIds: z.array(entityId).optional(),          // union des mitigatesRiskIds des initiatives sélectionnées
@@ -1465,7 +1552,12 @@ export const PillarSSchema = z.object({
       target: z.string().min(1),
       gapScore: percentage.optional(),
     })).optional(),
-    coherenceScore: percentage.optional(),                   // dérivé R.coherenceRisks
+    coherenceScore: percentage.optional(),                   // existing cross-validator passed/applicable ratio
+    coherenceSummary: z.object({ total: z.number().int().nonnegative(), valid: z.number().int().nonnegative(),
+      invalid: z.number().int().nonnegative(), skipped: z.number().int().nonnegative(), score: percentage }).optional(),
+    coherenceChecks: z.array(z.object({ rule: z.string(), ruleId: z.number().int(), from: z.string(), to: z.string(),
+      status: z.enum(["VALID", "INVALID", "SKIPPED"]), message: z.string() })).optional(),
+    coherenceIssueCount: z.number().int().nonnegative().optional(),
     // 3 trajectoires de roadmap (ADR-0088) — projections PURES, jamais LLM.
     // ADR-0089 : chaque route porte aussi son JEU DE STRATÉGIE calculé
     // (sous-ensemble d'initiatives + enveloppe budget + posture risque) —
@@ -1475,15 +1567,28 @@ export const PillarSSchema = z.object({
       label: z.string().min(1),
       recommended: z.boolean(),
       selected: z.boolean().optional(),                      // ambition retenue par l'opérateur (ADR-0089)
-      projectedGrowthPct: z.number(),                        // ex: +22 / +58 / +115
+      projectedGrowthPct: z.number().optional(),                        // ex: +22 / +58 / +115
       projectedRevenue: currency.optional(),                 // CA projeté 12 mois (si baseRevenue connu)
-      targetCultIndex: percentage,                           // Cult Index cible 0-100
+      targetCultIndex: percentage.optional(),                           // Cult Index cible 0-100
       description: z.string().min(1),                         // résumé court (template déterministe)
+      projectionAssumptions: z.object({
+        riskCoverage: percentage.optional(),
+        baseCultIndex: percentage.optional(),
+      }).optional(),                                        // absent baselines used by the existing scenario policy
       // ── Jeu de stratégie par route (ADR-0089, pure-computed) ──
-      initiativeIds: z.array(entityId).optional(),           // initiatives du jeu (FK → I PotentialAction.id)
+      initiativeIds: z.array(z.string().min(1)).optional(),           // initiatives du jeu (FK → I PotentialAction.id)
       initiativeCount: z.number().int().min(0).optional(),
+      selectionBasis: z.literal("CATALOGUE_COVERAGE_RULES_V1").optional(),
+      initiatives: z.array(z.object({ id: z.string().min(1), action: z.string(), objectif: z.string().optional(),
+        channel: z.string().optional(), preference: z.enum(INITIATIVE_PREFERENCES), budget: currency.optional(),
+        budgetBasis: z.string().optional(), budgetRange: InitiativeBudgetRangeSchema.optional(), budgetPeriod: z.enum(INITIATIVE_BUDGET_PERIODS).optional(),
+        campaignCanonType: z.enum(CAMPAIGN_CANON_TYPES).optional(), cadence: z.enum(INITIATIVE_CADENCES).optional(),
+        timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(), mitigatesRiskIds: z.array(z.string()),
+      })).optional(),
+      selectionReasons: z.array(z.object({ initiativeId: z.string().min(1), reasons: z.array(z.string()) })).optional(),
       totalBudget: currency.optional(),                      // Σ budget du jeu
-      budgetByPhase: z.record(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(),
+      budgetSummary: InitiativeBudgetSummarySchema.optional(),
+      budgetByPhase: z.partialRecord(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(), // absent phase is not zero
       riskCoverage: percentage.optional(),                   // % risques R couverts par le jeu
     })).length(3).optional(),
     // ADR-0089 — ambition retenue (sélection opérateur via Intent gouverné
@@ -1497,7 +1602,7 @@ export const PillarSSchema = z.object({
   // ── Legacy compat ─────────────────────────────────────────────────────
   // @deprecated as operator INPUT (ADR-0088) — superseded by `computed`.
   recommandationsPrioritaires: z.array(z.object({
-    recommendation: textShort,
+    recommendation: textMedium,
     source: z.enum(PILLAR_KEYS).optional(),
     priority: rank.optional(),
   })).optional(),
@@ -1539,6 +1644,22 @@ export type PillarContent =
   | PillarIContent
   | PillarSContent;
 
+/** The working model is the financial input contract when present. Stored
+ * legacy metrics remain inspectable, but are not a second calculation basis. */
+function validationSchemaFor(key: PillarKey, content: unknown): z.ZodObject {
+  return key === "V" && content && typeof content === "object"
+    && (content as Record<string, unknown>).financialModel !== undefined
+    ? PillarVSchema.omit({ unitEconomics: true }) : PILLAR_SCHEMAS[key];
+}
+
+function retainLegacyFinancialRows(key: PillarKey, content: unknown, parsed: Record<string, unknown>) {
+  if (key === "V" && content && typeof content === "object"
+    && Object.hasOwn(content, "financialModel") && Object.hasOwn(content, "unitEconomics")) {
+    return { ...parsed, unitEconomics: (content as Record<string, unknown>).unitEconomics };
+  }
+  return parsed;
+}
+
 /**
  * Validate pillar content against its schema
  * Returns { success: true, data } or { success: false, errors }
@@ -1552,11 +1673,11 @@ export function validatePillarContent(key: PillarKey, content: unknown): {
   data?: PillarContent;
   errors?: Array<{ path: string; message: string; code?: string; expected?: string; received?: string }>;
 } {
-  const schema = PILLAR_SCHEMAS[key];
+  const schema = validationSchemaFor(key, content);
   const result = schema.safeParse(content);
 
   if (result.success) {
-    return { success: true, data: result.data as PillarContent };
+    return { success: true, data: retainLegacyFinancialRows(key, content, result.data) as PillarContent };
   }
 
   return {
@@ -1581,22 +1702,26 @@ export function validatePillarPartial(key: PillarKey, content: unknown): {
   errors?: Array<{ path: string; message: string }>;
   completionPercentage: number;
 } {
-  const schema = PILLAR_SCHEMAS[key];
+  const schema = validationSchemaFor(key, content);
   const partialSchema = schema.partial();
   const result = partialSchema.safeParse(content);
 
-  // Calculate completion percentage
-  const totalFields = Object.keys(schema.shape).length;
+  // Structural schema coverage only. Runtime readiness comes from the
+  // maturity contract; metadata and legacy extras are not schema fields.
+  const schemaKeys = Object.keys(PILLAR_SCHEMAS[key].shape);
+  const totalFields = schemaKeys.length;
   const filledFields = content && typeof content === "object"
-    ? Object.entries(content as Record<string, unknown>).filter(([, v]) =>
-        v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
-      ).length
+    ? schemaKeys.filter((field) => {
+        if (!Object.hasOwn(content, field)) return false;
+        const value = (content as Record<string, unknown>)[field];
+        return value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0);
+      }).length
     : 0;
   // lafusee:allow-adhoc-completion: schema-level percentage validator constant (Zod validator, not runtime completion)
   const completionPercentage = Math.round((filledFields / totalFields) * 100);
 
   if (result.success) {
-    return { success: true, data: result.data as Partial<PillarContent>, completionPercentage };
+    return { success: true, data: retainLegacyFinancialRows(key, content, result.data) as Partial<PillarContent>, completionPercentage };
   }
 
   return {
@@ -1672,8 +1797,14 @@ export interface NormalizedInitiative {
   objectif: string;
   channel: string;
   status: (typeof INITIATIVE_STATUSES)[number];
-  timeframe: (typeof INITIATIVE_TIMEFRAMES)[number];
-  budget: number;
+  preference: InitiativePreference;
+  timeframe?: (typeof INITIATIVE_TIMEFRAMES)[number];
+  budget?: number;
+  budgetRange?: z.infer<typeof InitiativeBudgetRangeSchema>;
+  budgetPeriod?: (typeof INITIATIVE_BUDGET_PERIODS)[number];
+  campaignCanonType?: (typeof CAMPAIGN_CANON_TYPES)[number];
+  cadence?: (typeof INITIATIVE_CADENCES)[number];
+  budgetBasis: "DECLARED" | "DECLARED_RANGE" | "QUALITATIVE_ESTIMATE" | "UNKNOWN";
   budgetEstime?: "LOW" | "MEDIUM" | "HIGH";
   pilierImpact?: (typeof ADVE_KEYS)[number];
   devotionImpact?: string;
@@ -1696,7 +1827,7 @@ const isNonEmptyStr = (v: unknown): v is string => typeof v === "string" && v.le
 /** Normalise une action brute vers le format étendu unifié. */
 export function normalizeInitiative(
   raw: unknown,
-  ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string } = {},
+  ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string; sourceProvenance?: unknown } = {},
 ): NormalizedInitiative {
   // Forme compacte (union ADR-0168) : une action écrite en chaîne nue. On la lit
   // comme le texte de l'action (sinon toutes les chaînes s'effondraient sur un même
@@ -1707,18 +1838,25 @@ export function normalizeInitiative(
     o.budgetEstime === "LOW" || o.budgetEstime === "MEDIUM" || o.budgetEstime === "HIGH"
       ? o.budgetEstime
       : undefined;
+  const unverifiedZero = o.budget === 0 && ctx.sourceProvenance === "INFERRED";
+  const parsedRange = InitiativeBudgetRangeSchema.safeParse(o.budgetRange);
+  const budgetRange = parsedRange.success
+    && !(ctx.sourceProvenance === "INFERRED" && parsedRange.data.min === 0 && parsedRange.data.max === 0)
+    ? parsedRange.data : undefined;
   const budget =
-    typeof o.budget === "number" && Number.isFinite(o.budget)
+    !unverifiedZero && typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
       ? o.budget
-      : budgetEstime
+      : !budgetRange && budgetEstime
         ? BUDGET_ESTIME_FCFA[budgetEstime]
-        : 0;
+        : undefined;
+  const budgetBasis = !unverifiedZero && typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
+    ? "DECLARED" : budgetRange ? "DECLARED_RANGE" : budgetEstime ? "QUALITATIVE_ESTIMATE" : "UNKNOWN";
   const status = (INITIATIVE_STATUSES as readonly string[]).includes(o.status as string)
     ? (o.status as NormalizedInitiative["status"])
     : "DRAFT";
   const timeframe = (INITIATIVE_TIMEFRAMES as readonly string[]).includes(o.timeframe as string)
     ? (o.timeframe as NormalizedInitiative["timeframe"])
-    : "LONG_TERM";
+    : undefined;
   const channel = isNonEmptyStr(o.channel)
     ? o.channel
     : ctx.channel ?? (ctx.devotionLevel ? "DEVOTION" : ctx.overtonPhase ? "OVERTON" : "GENERAL");
@@ -1731,8 +1869,14 @@ export function normalizeInitiative(
     objectif: isNonEmptyStr(o.objectif) ? o.objectif : "",
     channel,
     status,
+    preference: initiativePreference(o),
     timeframe,
     budget,
+    budgetBasis,
+    ...(budgetRange ? { budgetRange } : {}),
+    ...((INITIATIVE_BUDGET_PERIODS as readonly unknown[]).includes(o.budgetPeriod) ? { budgetPeriod: o.budgetPeriod as NormalizedInitiative["budgetPeriod"] } : {}),
+    ...((CAMPAIGN_CANON_TYPES as readonly unknown[]).includes(o.campaignCanonType) ? { campaignCanonType: o.campaignCanonType as NormalizedInitiative["campaignCanonType"] } : {}),
+    ...((INITIATIVE_CADENCES as readonly unknown[]).includes(o.cadence) ? { cadence: o.cadence as NormalizedInitiative["cadence"] } : {}),
     ...(budgetEstime ? { budgetEstime } : {}),
     ...(isNonEmptyStr(o.pilierImpact) ? { pilierImpact: o.pilierImpact as NormalizedInitiative["pilierImpact"] } : {}),
     ...(devotionImpact ? { devotionImpact } : {}),
@@ -1744,29 +1888,76 @@ export function normalizeInitiative(
   };
 }
 
+/** Visit all three existing I collections without fuzzy matching or reordering. */
+export function mapInitiativeEntries(content: Record<string, unknown>, map: (raw: unknown, rootKey: string) => unknown): void {
+  for (const key of ["catalogueParCanal", "actionsByDevotionLevel"]) {
+    const groups = content[key];
+    if (groups && typeof groups === "object" && !Array.isArray(groups)) {
+      for (const [group, entries] of Object.entries(groups)) if (Array.isArray(entries)) {
+        (groups as Record<string, unknown>)[group] = entries.map(raw => map(raw, key));
+      }
+    }
+  }
+  if (Array.isArray(content.actionsByOvertonPhase)) for (const phase of content.actionsByOvertonPhase) {
+    if (phase && typeof phase === "object" && Array.isArray(phase.actions)) {
+      phase.actions = phase.actions.map((raw: unknown) => map(raw, "actionsByOvertonPhase"));
+    }
+  }
+}
+
 /** Aplati + normalise toutes les initiatives de I (dédupliquées par id). */
 export function collectNormalizedInitiatives(iContent: unknown): NormalizedInitiative[] {
   if (!iContent || typeof iContent !== "object") return [];
   const c = iContent as Record<string, unknown>;
   const byId = new Map<string, NormalizedInitiative>();
+  const provenance = (c._fieldProvenance ?? {}) as Record<string, unknown>;
   const add = (raw: unknown, ctx: Parameters<typeof normalizeInitiative>[1]) => {
     const n = normalizeInitiative(raw, ctx);
+    if (ctx?.sourceProvenance === "INFERRED" && raw && typeof raw === "object" && Object.hasOwn(raw, "preference")
+      && provenance[`initiatives.${n.id}.preference`] !== "HUMAN") {
+      const { preference: _unconfirmedPreference, ...definition } = raw as Record<string, unknown>;
+      n.preference = initiativePreference(definition);
+    }
+    if (!n.action.trim()) return; // Read projection skips invalid entries; the original source stays intact.
     if (!byId.has(n.id)) byId.set(n.id, n); // catalogue d'abord → le canal réel gagne
   };
   const cat = (c.catalogueParCanal as Record<string, unknown>) ?? {};
   for (const [channel, arr] of Object.entries(cat)) {
-    if (Array.isArray(arr)) for (const raw of arr) add(raw, { channel });
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { channel, sourceProvenance: provenance.catalogueParCanal });
   }
   const dev = (c.actionsByDevotionLevel as Record<string, unknown>) ?? {};
   for (const [level, arr] of Object.entries(dev)) {
-    if (Array.isArray(arr)) for (const raw of arr) add(raw, { devotionLevel: level });
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { devotionLevel: level, sourceProvenance: provenance.actionsByDevotionLevel });
   }
   if (Array.isArray(c.actionsByOvertonPhase)) {
     for (const ph of c.actionsByOvertonPhase as Array<Record<string, unknown>>) {
-      if (Array.isArray(ph?.actions)) for (const raw of ph.actions) add(raw, { overtonPhase: isNonEmptyStr(ph.phase) ? ph.phase : "" });
+      if (Array.isArray(ph?.actions)) for (const raw of ph.actions) add(raw, { overtonPhase: isNonEmptyStr(ph.phase) ? ph.phase : "", sourceProvenance: provenance.actionsByOvertonPhase });
     }
   }
   return [...byId.values()];
+}
+
+/** Carry explicit human preferences into a regenerated catalogue by exact ID.
+ * The normal provenance guard still rejects contradictory unprepared writes. */
+export function retainHumanInitiativePreferences(previous: Record<string, unknown>, candidate: Record<string, unknown>): Record<string, unknown> {
+  const output = structuredClone(candidate);
+  const provenance = (previous._fieldProvenance ?? {}) as Record<string, unknown>;
+  for (const prior of collectNormalizedInitiatives(previous)) {
+    if (provenance[`initiatives.${prior.id}.preference`] !== "HUMAN") continue;
+    let found = false;
+    mapInitiativeEntries(output, raw => {
+      if (normalizeInitiative(raw).id !== prior.id) return raw;
+      found = true; return { ...(typeof raw === "object" && raw ? raw : { action: raw }), preference: prior.preference };
+    });
+    if (!found) {
+      const original = collectInitiatives(previous).find(raw => normalizeInitiative(raw).id === prior.id);
+      const catalogue = (output.catalogueParCanal ?? {}) as Record<string, unknown>;
+      if (!catalogue || Array.isArray(catalogue) || typeof catalogue !== "object" || (catalogue[prior.channel] !== undefined && !Array.isArray(catalogue[prior.channel]))) throw new Error("INITIATIVE_SOURCE_SHAPE_INVALID");
+      catalogue[prior.channel] = [...(catalogue[prior.channel] as unknown[] ?? []), original];
+      output.catalogueParCanal = catalogue;
+    }
+  }
+  return output;
 }
 
 /**

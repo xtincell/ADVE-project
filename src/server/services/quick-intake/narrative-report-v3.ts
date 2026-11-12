@@ -25,6 +25,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { pillarContentLines, INTAKE_EVIDENCE_RULE } from "./report-composer";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { getOracleBrandContextByQuery } from "@/server/services/seshat/context-store";
@@ -133,7 +134,7 @@ async function loadAdveNarrated(strategyId: string): Promise<AdveLoaded> {
     for (const [field, val] of Object.entries(c)) {
       if (!ADVE_RESERVED_KEYS.has(field)) verbatim[field] = val;
     }
-    adveByPillar[key] = verbatim;
+    adveByPillar[key] = { ...verbatim, _fieldProvenance: c._fieldProvenance };
     if (typeof c.narrativePreview === "string" && typeof c.narrativeFull === "string") {
       narrated[key] = {
         preview: c.narrativePreview,
@@ -165,8 +166,10 @@ async function synthesizeCentralTension(
   const prompt = `MARQUE: ${sanitizeInline(input.companyName, { max: 120 })}
 SECTEUR: ${sanitizeInline(input.sector ?? "—", { max: 80 })}
 
-ADVE (extraits) :
-${wrapUntrusted("ADVE (extraits)", JSON.stringify(adveByPillar).slice(0, 2400), { max: 2400 })}
+${INTAKE_EVIDENCE_RULE}
+
+ADVE (données qualifiées) :
+${wrapUntrusted("ADVE (extraits)", ADVE_STORAGE_KEYS.map(k => `[${k}] ${pillarContentLines(adveByPillar[k], k).join("; ")}`).join("\n"), { max: 2400 })}
 
 RTIS DRAFT (déjà calculé, RAG-grounded) :
 ${wrapUntrusted("RTIS DRAFT R", JSON.stringify(rtisDrafts.r).slice(0, 600), { max: 600 })}
@@ -224,13 +227,13 @@ async function writeFinalDeliverable(
   // (l'enveloppe remplace l'ancien encadrement """ non sécurisé).
   const adveContextBlock = (ADVE_STORAGE_KEYS)
     .map((k) => {
-      const verbatim = JSON.stringify(adveByPillar[k], null, 2);
+      const verbatim = pillarContentLines(adveByPillar[k], k).join("\n");
       const narrated = adveNarrated[k].full;
       return `=== ${PILLAR_NAMES_ADVE[k]} (${k.toUpperCase()}) ===
-Valeurs verbatim founder :
-${wrapUntrusted(`Valeurs verbatim ${k.toUpperCase()}`, verbatim, { max: 4000 })}
+Données avec origine, sans garantie de citation littérale :
+${wrapUntrusted(`Données qualifiées ${k.toUpperCase()}`, verbatim, { max: 4000 })}
 
-Paragraphe ADVE déjà rédigé en amont (déterministe, persisté en base — ne pas le réécrire) :
+Lecture déjà rédigée en amont (synthèse persistée, pas une source indépendante) :
 ${wrapUntrusted(`Paragraphe ADVE ${k.toUpperCase()}`, narrated, { max: 4000 })}`;
     })
     .join("\n\n");
@@ -245,6 +248,8 @@ ${wrapUntrusted(`Paragraphe ADVE ${k.toUpperCase()}`, narrated, { max: 4000 })}`
 SECTEUR : ${sanitizeInline(input.sector ?? "non précisé", { max: 80 })}
 PAYS : ${sanitizeInline(input.country ?? "non précisé", { max: 60 })}
 CLASSIFICATION : ${input.classification}
+
+${INTAKE_EVIDENCE_RULE}
 
 TENSION CENTRALE (à citer verbatim dans recommendation.foundedOnTension) :
 "${sanitizeInline(centralTension, { max: 400 })}"

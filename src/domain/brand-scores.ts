@@ -41,6 +41,15 @@ export const CULT_INDEX_MAX = 100;
 /** Plafond de la force révélée (5 arènes × 40). */
 export const REVEALED_FORCE_MAX = 200;
 
+/** Coverage of a weighted measurement, distinct from its score and raw weight. */
+export function measuredScoreCoverage(dimensions: readonly { weight: number; measured: boolean; score: number | null }[]): number {
+  const total = dimensions.reduce((sum, dimension) => sum + dimension.weight, 0);
+  if (!Number.isFinite(total) || total <= 0 || dimensions.some(dimension => !Number.isFinite(dimension.weight) || dimension.weight < 0)) return 0;
+  const measured = dimensions.filter(dimension => dimension.measured && dimension.score !== null && Number.isFinite(dimension.score))
+    .reduce((sum, dimension) => sum + dimension.weight, 0);
+  return Math.round(measured / total * 100);
+}
+
 /**
  * Clé canonique du composite dans `Strategy.advertis_vector`, telle qu'écrite
  * par `advertis-scorer`. Exportée pour que le test de gouvernance puisse

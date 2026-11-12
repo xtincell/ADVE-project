@@ -43,6 +43,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+import { db } from "@/lib/db";
+
 import {
   lookupCountry,
   requireCountry,
@@ -54,6 +56,26 @@ import {
 
 describe("country-registry", () => {
   beforeEach(() => refreshCache());
+
+  it("completes a partial registry with known countries and currencies", async () => {
+    const country = await lookupCountry("CI");
+    expect(country).toMatchObject({ code: "CI", currencyCode: "XOF", currency: { code: "XOF", decimalPlaces: 0 } });
+    expect(await lookupCurrency("XOF")).toMatchObject({ code: "XOF", decimalPlaces: 0 });
+  });
+
+  it("keeps database overrides while filling only absent codes", async () => {
+    const currency = { code: "EUR", name: "Euro opérateur", symbol: "EUR-OP", decimalPlaces: 2, usdRate: 0.95 };
+    vi.mocked(db.currency.findMany).mockResolvedValueOnce([currency] as any);
+    vi.mocked(db.country.findMany).mockResolvedValueOnce([{
+      code: "CM", name: "Cameroun opérateur", primaryLanguage: "en", currencyCode: "EUR",
+      purchasingPowerIndex: 123, region: "AFRICA_CENTRAL", isFictional: false, currency,
+    }] as any);
+    expect(await lookupCountry("CM")).toMatchObject({
+      name: "Cameroun opérateur", primaryLanguage: "en", currencyCode: "EUR", purchasingPowerIndex: 123, currency,
+    });
+    expect(await lookupCurrency("EUR")).toEqual(currency);
+    expect(await lookupCountry("CI")).toMatchObject({ currencyCode: "XOF" });
+  });
 
   it("looks up by ISO-2 code", async () => {
     const c = await lookupCountry("CM");

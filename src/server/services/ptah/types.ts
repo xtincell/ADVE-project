@@ -38,7 +38,7 @@ export const FORGE_KINDS: readonly ForgeKind[] = [
   "design",
 ] as const;
 
-export type ProviderName = "magnific" | "adobe" | "figma" | "canva" | "openai";
+export type ProviderName = "magnific" | "adobe" | "figma" | "canva" | "openai" | "master";
 
 export const PROVIDER_NAMES: readonly ProviderName[] = [
   "magnific",
@@ -46,6 +46,7 @@ export const PROVIDER_NAMES: readonly ProviderName[] = [
   "figma",
   "canva",
   "openai",
+  "master",
 ] as const;
 
 /**
@@ -85,6 +86,11 @@ export interface ForgeBrief {
  */
 export interface MaterializeBriefPayload {
   strategyId: string;
+  /** Existing task only; its original emission remains authoritative. */
+  resumeTaskId?: string;
+  campaignId?: string | null;
+  briefId?: string | null;
+  sourceBrandAssetId?: string | null;
   /** intentId du INVOKE_GLORY_TOOL Artemis qui a produit le brief. */
   sourceIntentId: string;
   brief: ForgeBrief;
@@ -105,9 +111,15 @@ export interface ForgeTaskCreated {
    * persistée (trace + retry) mais forge() n'est PAS appelé — ship-able sans
    * clés (ADR-0021). L'opérateur saisit les credentials puis relance.
    */
-  status: "CREATED" | "IN_PROGRESS" | "DEFERRED";
+  status: "CREATED" | "IN_PROGRESS" | "DEFERRED" | "COMPLETED";
+  /** A submission was reserved but no provider receipt is persisted; never resend it. */
+  submissionUnknown?: boolean;
   /** Pour webhook providers (Magnific) — secret unique de cette task. */
   webhookSecret: string;
+  /** True only for the invocation that reserved a new external submission. */
+  submissionReserved?: boolean;
+  /** Existing material receipts returned only for an already completed task. */
+  assetVersionIds?: string[];
 }
 
 /**
@@ -134,11 +146,13 @@ export interface ForgeProvider {
    * Lance la forge. Renvoie un task créé + estimation coût.
    * L'asset est livré plus tard (webhook ou polling reconcile).
    */
-  forge(brief: ForgeBrief, webhookUrl?: string): Promise<{
+  forge(brief: ForgeBrief, webhookUrl?: string, artwork?: {original: Buffer; slot: import("@/domain/production-artwork").ProductionArtwork; taskId:string}): Promise<{
     providerTaskId: string;
     providerModel: string;
     estimatedCostUsd: number;
     webhookSecret: string;
+    /** Synchronous material receipt, separate from the indexed provider identity. */
+    synchronousResult?: { resultUrls: string[]; realisedCostUsd: number };
   }>;
   /**
    * Réconcilie un task à partir d'un payload webhook (ou polling sync).
@@ -167,8 +181,8 @@ export interface ForgeProvider {
   isAvailable(): Promise<boolean>;
   /**
    * Provider SYNCHRONE : `forge()` produit le résultat immédiatement (pas de
-   * webhook). Dans ce cas `forge()` pose l'URL résultat dans `providerTaskId`
-   * et `materializeBrief` réconcilie inline (OpenAI images). Async par défaut.
+   * webhook). Its synchronousResult is persisted with its short provider identity
+   * before inline reconciliation. Async providers remain unchanged.
    */
   readonly sync?: boolean;
 }

@@ -11,10 +11,12 @@
  *      "their narrative emphasizes X").
  *   2. `preciseFields` — exact values pulled DIRECTLY from Postgres tables
  *      (Pillar.content, Strategy.financialCapacity, MarketBenchmark, etc.).
- *      Use these for verbatim citations, numbers, calculations.
+ *      Stored values keep their editing authority, identity and edition.
+ *      Verbatim storage is not proof of a measured or validated outcome.
  *
  * The LLM prompt MUST reference both: "Use NARRATIVE for context, but cite
- * PRECISE FIELDS verbatim and never rephrase numbers."
+ * PRECISE FIELDS with their origin and edition; never rephrase numbers or
+ * promote objectives/derived assertions into measured outcomes."
  *
  * This eliminates the "lossy summary used as ground truth" failure mode
  * that pure-vector RAG suffers from.
@@ -23,6 +25,10 @@
 import { db } from "@/lib/db";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
+import { currentDocumentNodes, listDocumentCandidates, rankDocumentNodes } from "./ranker";
+import { sourceQueryForDocument } from "./chunker";
+import type { SourceCertainty } from "@/domain/source-certainty";
+import { coerceProvenance, fieldStatusFor, type FieldProvenance } from "@/domain/field-provenance";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -33,7 +39,13 @@ export interface PreciseField {
   field: string;
   /** EXACT value as stored — string, number, object, never paraphrased */
   value: unknown;
-  /** When this exact value was last written (for staleness checks) */
+  /** Stored Pillar/Strategy identity, not a generated citation identifier. */
+  sourceId: string | null;
+  /** Pillar edition; null for unversioned Strategy fields or legacy records. */
+  sourceVersion: number | null;
+  /** Editing authority, never proof that the stored claim is measured/true. */
+  provenance: FieldProvenance;
+  /** Source record edit time, not a field-specific change or measurement time. */
   lastWrittenAt?: Date | null;
 }
 
@@ -42,6 +54,10 @@ export interface PreciseField {
 export interface SourceReference {
   /** BrandDataSource id */
   sourceId: string;
+  /** Current document fingerprint, verified against its authorized source. */
+  contentHash: string;
+  /** Declared source status; neither human approval nor deployed capability. */
+  certainty: SourceCertainty | null;
   /** Originating fileName, sourceType, etc. */
   fileName: string | null;
   sourceType: string | null;
@@ -50,6 +66,8 @@ export interface SourceReference {
   chunkIndex: number | null;
   /** Verbatim chunk text */
   text: string;
+  /** Current edition/status and operator clarification; not original source text. */
+  documentNotice?: string;
   /** Cosine similarity if vector search was used */
   similarity?: number;
 }
@@ -92,6 +110,34 @@ function nodeToLine(node: {
 
 // ── Precise field loaders (DIRECT DB reads, lossless) ────────────────
 
+/** Shared projection for Oracle and framework consumers; no IO or inference. */
+export function pillarPreciseFields(pillar: {
+  id?: string; key: string; currentVersion?: number; content: unknown;
+  fieldCertainty?: unknown; updatedAt?: Date;
+}): PreciseField[] {
+  const content = pillar.content && typeof pillar.content === "object" && !Array.isArray(pillar.content)
+    ? pillar.content as Record<string, unknown> : {};
+  const certainty = pillar.fieldCertainty && typeof pillar.fieldCertainty === "object" && !Array.isArray(pillar.fieldCertainty)
+    ? Object.fromEntries(Object.entries(pillar.fieldCertainty).filter((entry): entry is [string, string] => typeof entry[1] === "string"))
+    : null;
+  const status = fieldStatusFor(certainty, pillar.key, content._fieldProvenance);
+  return Object.entries(content)
+    .filter(([field, value]) => !field.startsWith("_") && value !== null && value !== undefined && value !== ""
+      && !(Array.isArray(value) && value.length === 0))
+    .map(([field, value]) => ({
+      source: pillar.key, field, value, sourceId: pillar.id ?? null,
+      sourceVersion: pillar.currentVersion ?? null,
+      provenance: coerceProvenance(status(field)), lastWrittenAt: pillar.updatedAt,
+    }));
+}
+
+/** Strategy has no per-field author/edition contract: do not invent either. */
+export function strategyPreciseField(strategyId: string, source: string, field: string,
+  value: unknown, updatedAt?: Date): PreciseField {
+  return { source, field, value, sourceId: strategyId, sourceVersion: null,
+    provenance: "UNKNOWN", lastWrittenAt: updatedAt };
+}
+
 /**
  * Load EXACT values from authoritative tables for a strategy.
  * These bypass embeddings entirely — for citation and calculation.
@@ -108,20 +154,10 @@ async function loadPreciseFields(
       strategyId,
       ...(pillarKey ? { key: pillarKey } : {}),
     },
-    select: { key: true, content: true, updatedAt: true },
+    select: { id: true, key: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true },
   });
   for (const p of pillars) {
-    const content = (p.content as Record<string, unknown> | null) ?? {};
-    for (const [field, value] of Object.entries(content)) {
-      if (value === null || value === undefined || value === "") continue;
-      if (Array.isArray(value) && value.length === 0) continue;
-      out.push({
-        source: p.key,
-        field,
-        value,
-        lastWrittenAt: p.updatedAt,
-      });
-    }
+    out.push(...pillarPreciseFields(p));
   }
 
   // 2. Strategy-level structured fields (financialCapacity, businessContext, score)
@@ -138,49 +174,26 @@ async function loadPreciseFields(
   });
   if (strategy) {
     if (strategy.financialCapacity) {
-      out.push({
-        source: "thot",
-        field: "financialCapacity",
-        value: strategy.financialCapacity,
-        lastWrittenAt: strategy.updatedAt,
-      });
+      out.push(strategyPreciseField(strategyId, "thot", "financialCapacity", strategy.financialCapacity, strategy.updatedAt));
     }
     if (strategy.businessContext) {
-      out.push({
-        source: "biz",
-        field: "businessContext",
-        value: strategy.businessContext,
-        lastWrittenAt: strategy.updatedAt,
-      });
+      out.push(strategyPreciseField(strategyId, "biz", "businessContext", strategy.businessContext, strategy.updatedAt));
     }
     if (strategy.advertis_vector) {
-      out.push({
-        source: "score",
-        field: "advertisVector",
-        value: strategy.advertis_vector,
-        lastWrittenAt: strategy.updatedAt,
-      });
+      out.push(strategyPreciseField(strategyId, "score", "advertisVector", strategy.advertis_vector, strategy.updatedAt));
     }
     if (strategy.brandNature) {
-      out.push({
-        source: "biz",
-        field: "brandNature",
-        value: strategy.brandNature,
-      });
+      out.push(strategyPreciseField(strategyId, "biz", "brandNature", strategy.brandNature, strategy.updatedAt));
     }
     if (strategy.primaryChannel) {
-      out.push({
-        source: "biz",
-        field: "primaryChannel",
-        value: strategy.primaryChannel,
-      });
+      out.push(strategyPreciseField(strategyId, "biz", "primaryChannel", strategy.primaryChannel, strategy.updatedAt));
     }
   }
 
   return out;
 }
 
-function formatPreciseFields(fields: PreciseField[]): string {
+export function formatPreciseFields(fields: PreciseField[]): string {
   if (fields.length === 0) return "(aucune valeur structurée disponible)";
   const lines = fields.map((f) => {
     const valStr =
@@ -188,15 +201,18 @@ function formatPreciseFields(fields: PreciseField[]): string {
         ? f.value
         : JSON.stringify(f.value);
     // No truncation here — verbatim is the whole point
-    return `  ${f.source}.${f.field} = ${valStr}`;
+    const reference = f.sourceId ?? "inconnue";
+    const version = f.sourceVersion ?? "inconnue";
+    const date = f.lastWrittenAt?.toISOString() ?? "inconnue";
+    return `  ${f.source}.${f.field} [référence: ${reference} ; version d’édition: ${version} ; origine: ${f.provenance} ; édité le: ${date} (pas une date de mesure)] = ${valStr}`;
   });
   return lines.join("\n");
 }
 
-function formatSourceReferences(refs: SourceReference[]): string {
+export function formatSourceReferences(refs: SourceReference[]): string {
   if (refs.length === 0) return "";
   const blocks = refs.map((r) => {
-    const head = `[${r.sourceType ?? "SRC"}: ${r.fileName ?? r.sourceId}#${r.chunkIndex ?? 0}${
+    const head = `[${r.sourceType ?? "SRC"}: ${r.fileName ?? r.sourceId}#${r.chunkIndex ?? 0}, source:${r.sourceId}, certitude:${r.certainty ?? "non renseignée"}, empreinte:${r.contentHash}${
       typeof r.similarity === "number" ? ` sim=${r.similarity.toFixed(3)}` : ""
     }]`;
     return `${head}\n${r.text}`;
@@ -206,19 +222,46 @@ function formatSourceReferences(refs: SourceReference[]): string {
 
 function nodeToSourceReference(node: {
   sourceId: string | null;
+  sourceCertainty: SourceCertainty | null;
   payload: unknown;
   similarity?: number;
 }): SourceReference {
   const p = (node.payload ?? {}) as Record<string, unknown>;
   return {
     sourceId: node.sourceId ?? "",
+    contentHash: typeof p.sourceContentHash === "string" ? p.sourceContentHash : "",
+    certainty: node.sourceCertainty,
     fileName: typeof p.fileName === "string" ? p.fileName : null,
     sourceType: typeof p.sourceType === "string" ? p.sourceType : null,
     fileType: typeof p.fileType === "string" ? p.fileType : null,
     chunkIndex: typeof p.chunkIndex === "number" ? p.chunkIndex : null,
     text: typeof p.text === "string" ? p.text : JSON.stringify(p).slice(0, 800),
+    ...(typeof p.documentNotice === "string" && p.documentNotice ? { documentNotice: p.documentNotice } : {}),
     ...(typeof node.similarity === "number" ? { similarity: node.similarity } : {}),
   };
+}
+
+/** Reuse already authorized candidates. Multiple passages are an explicit
+ * reader choice; ordinary consumers retain their existing reference limit.
+ */
+function selectSourceReferences<T extends Parameters<typeof nodeToSourceReference>[0]>(
+  nodes: T[], query: string, limit: number, passagesPerSource = 1, keepSemanticMatches = false,
+): SourceReference[] {
+  const ranked = rankDocumentNodes(nodes, query, limit, { keepSemanticMatches });
+  const count = Number.isFinite(passagesPerSource) ? Math.max(1, Math.min(3, Math.floor(passagesPerSource))) : 1;
+  if (count === 1) return ranked.map(nodeToSourceReference);
+  const selected = new Set<string>();
+  return ranked.flatMap(node => {
+    if (!node.sourceId || selected.has(node.sourceId)) return [];
+    selected.add(node.sourceId);
+    const name = (node.payload as Record<string, unknown> | null)?.fileName;
+    const passages = rankDocumentNodes(nodes.filter(candidate => candidate.sourceId === node.sourceId),
+      sourceQueryForDocument(query, typeof name === "string" ? name : null, { passage: true }), count,
+      { keepSemanticMatches });
+    // A title-only match still identifies a selected document. Focusing its
+    // body may refine passages, never silently revoke that existing selection.
+    return (passages.length ? passages : [node]).map(nodeToSourceReference);
+  });
 }
 
 // ── Public API ───────────────────────────────────────────────────────
@@ -226,7 +269,8 @@ function nodeToSourceReference(node: {
 const HYBRID_HEADER = `--- CONTEXTE MARQUE (Seshat — RAG hybride) ---
 RÈGLE D'USAGE :
   • NARRATIF = orientation sémantique uniquement (compressé). Ne le cite jamais verbatim.
-  • PRÉCIS  = sources de vérité directes. Cite verbatim. Calcule sur ces nombres.`;
+  • PRÉCIS  = valeur stockée exacte ≠ résultat validé. Cite avec référence, version, champ et origine ; une édition n'est pas une mesure.
+  • UNKNOWN = origine inconnue ; INFERRED = déduction ; HUMAN/SOURCE = autorité d'édition, pas une validation de résultat.`;
 
 /**
  * Build a HYBRID context block for a given pillar:
@@ -237,8 +281,8 @@ RÈGLE D'USAGE :
  */
 export async function getOracleBrandContext(
   strategyId: string,
-  pillarKey: string,
-  options: { limit?: number; includeSources?: boolean; sourcesLimit?: number } = {},
+  pillarKey?: string,
+  options: { limit?: number; includeSources?: boolean; sourcesLimit?: number; query?: string; passagesPerSource?: number } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 12;
   const sourcesLimit = options.sourcesLimit ?? 6;
@@ -247,16 +291,19 @@ export async function getOracleBrandContext(
   const rows = await db.brandContextNode.findMany({
     where: {
       strategyId,
-      OR: [
+      kind: { notIn: ["BRAND_SOURCE", "SOURCE_CHUNK"] },
+      ...(pillarKey ? { OR: [
         { pillarKey },
         { kind: "BRANDLEVEL" },
         { kind: "NARRATIVE", pillarKey },
-      ],
+      ] } : {}),
     },
     take: limit,
     orderBy: { createdAt: "desc" },
-    select: { kind: true, pillarKey: true, field: true, payload: true },
+    select: { kind: true, pillarKey: true, field: true, sourceId: true, payload: true },
   });
+  // Documentary chunks belong in the cited section, never in lossy narrative.
+  const narrativeRows = rows.filter((r) => r.kind !== "BRAND_SOURCE" && r.kind !== "SOURCE_CHUNK");
 
   // Precise (lossless) — always loaded
   const precise = await loadPreciseFields(strategyId, pillarKey);
@@ -264,22 +311,15 @@ export async function getOracleBrandContext(
   // Source references (operator uploads) — only when explicitly requested
   let sourceReferences: SourceReference[] = [];
   if (options.includeSources) {
-    const sourceRows = await db.brandContextNode.findMany({
-      where: { strategyId, kind: "BRAND_SOURCE" },
-      take: sourcesLimit,
-      orderBy: { createdAt: "desc" },
-      select: { sourceId: true, payload: true },
-    });
-    sourceReferences = sourceRows.map((r: { sourceId: string | null; payload: unknown }) =>
-      nodeToSourceReference(r),
-    );
+    const currentSources = await listDocumentCandidates(strategyId);
+    sourceReferences = selectSourceReferences(currentSources, options.query ?? "", sourcesLimit, options.passagesPerSource);
   }
 
-  if (rows.length === 0 && precise.length === 0 && sourceReferences.length === 0) return null;
+  if (narrativeRows.length === 0 && precise.length === 0 && sourceReferences.length === 0) return null;
 
   const narrativeBlock =
-    rows.length > 0
-      ? rows.map(nodeToLine).join("\n")
+    narrativeRows.length > 0
+      ? narrativeRows.map(nodeToLine).join("\n")
       : "(aucun nœud narratif indexé)";
 
   const sourceBlock =
@@ -290,13 +330,15 @@ SOURCES OPÉRATEUR (uploads bruts — citer textuellement avec [fileName#chunk])
 ${formatSourceReferences(sourceReferences)}`
       : "";
 
-  const text = `${HYBRID_HEADER}
+  // Consumers cap this combined block. Keep cited evidence before large exact
+  // field listings; the complete lossless values remain in preciseFields.
+  const text = `${HYBRID_HEADER}${sourceBlock}
 
 NARRATIF (sémantique, compressé) :
 ${narrativeBlock}
 
-PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
-${formatPreciseFields(precise)}${sourceBlock}
+PRÉCIS (valeurs stockées avec leur origine — distinguer objectifs et mesures) :
+${formatPreciseFields(precise)}
 
 --- FIN CONTEXTE ---`;
 
@@ -305,7 +347,7 @@ ${formatPreciseFields(precise)}${sourceBlock}
     preciseFields: precise,
     sourceReferences: sourceReferences.length > 0 ? sourceReferences : undefined,
     text,
-    nodeCount: rows.length + sourceReferences.length,
+    nodeCount: narrativeRows.length + sourceReferences.length,
     usedVectorSearch: false,
   };
 }
@@ -324,23 +366,27 @@ export async function getOracleBrandContextByQuery(
     limit?: number;
     includeSources?: boolean;
     sourcesLimit?: number;
+    passagesPerSource?: number;
   } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 8;
   const sourcesLimit = options.sourcesLimit ?? 6;
 
   // Embed the query
-  const embedResult = await embed({ input: query, caller: "oracle:context-augment" });
+  const metadataContext = () => getOracleBrandContext(strategyId, options.pillarKey, {
+    limit, includeSources: options.includeSources, sourcesLimit, query, passagesPerSource: options.passagesPerSource,
+  });
+  let embedResult: Awaited<ReturnType<typeof embed>>;
+  try {
+    embedResult = await embed({ input: query, caller: "oracle:context-augment" });
+  } catch {
+    console.warn("[seshat:oracle] embedding unavailable — reading metadata and precise fields");
+    return metadataContext();
+  }
   const qVec = embedResult.embeddings[0] ?? [];
   if (qVec.length === 0) {
     // No embedding available — fall back to metadata filter
-    return options.pillarKey
-      ? getOracleBrandContext(strategyId, options.pillarKey, {
-          limit,
-          includeSources: options.includeSources,
-          sourcesLimit,
-        })
-      : null;
+    return metadataContext();
   }
 
   // Pull all embedded nodes for this strategy + optional pillar filter.
@@ -363,7 +409,7 @@ export async function getOracleBrandContextByQuery(
     // pool when sources are requested so a pillar query can still surface
     // a relevant brandbook section.
     where.OR = options.includeSources
-      ? [{ pillarKey: options.pillarKey }, { kind: "BRANDLEVEL" }, { kind: "BRAND_SOURCE" }]
+      ? [{ pillarKey: options.pillarKey }, { kind: "BRANDLEVEL" }, { kind: { in: ["BRAND_SOURCE", "SOURCE_CHUNK"] } }]
       : [{ pillarKey: options.pillarKey }, { kind: "BRANDLEVEL" }];
   }
   const candidates = await db.brandContextNode.findMany({
@@ -372,13 +418,14 @@ export async function getOracleBrandContextByQuery(
     select: { kind: true, pillarKey: true, field: true, sourceId: true, payload: true, embedding: true },
   });
 
-  if (candidates.length === 0) return null;
+  const currentCandidates = await currentDocumentNodes(candidates, { strategyId });
+  if (currentCandidates.length === 0) return metadataContext();
 
-  type Candidate = (typeof candidates)[number];
+  type Candidate = (typeof currentCandidates)[number];
   type ScoredCandidate = Candidate & { similarity: number };
 
   // Score each candidate by cosine similarity
-  const scored: ScoredCandidate[] = candidates
+  const scored: ScoredCandidate[] = currentCandidates
     .map((c: Candidate): ScoredCandidate => ({
       ...c,
       similarity: cosineSimilarity(qVec, c.embedding ?? []),
@@ -388,16 +435,21 @@ export async function getOracleBrandContextByQuery(
 
   // Split between narrative nodes and BRAND_SOURCE references
   const narrativeScored = scored
-    .filter((s: ScoredCandidate) => s.kind !== "BRAND_SOURCE")
+    .filter((s: ScoredCandidate) => s.kind !== "BRAND_SOURCE" && s.kind !== "SOURCE_CHUNK")
     .slice(0, limit);
+  // Balance all current documents before ranking: a global vector candidate
+  // cap must not hide later passages, even when their vectors are compatible.
+  const metadataSources = options.includeSources
+    ? await listDocumentCandidates(strategyId)
+    : [];
   const sourceReferences: SourceReference[] = options.includeSources
-    ? scored
-        .filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE")
-        .slice(0, sourcesLimit)
-        .map((s: ScoredCandidate) => nodeToSourceReference(s))
+    ? selectSourceReferences([
+      ...metadataSources,
+      ...scored.filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK"),
+    ], query, sourcesLimit, options.passagesPerSource, true)
     : [];
 
-  if (narrativeScored.length === 0 && sourceReferences.length === 0) return null;
+  if (narrativeScored.length === 0 && sourceReferences.length === 0) return metadataContext();
 
   // Same hybrid rule: narrative from vector, precise from direct DB
   const precise = await loadPreciseFields(strategyId, options.pillarKey);
@@ -412,17 +464,17 @@ export async function getOracleBrandContextByQuery(
     sourceReferences.length > 0
       ? `
 
-SOURCES OPÉRATEUR pertinentes pour "${query.slice(0, 80)}" (citer textuellement avec [fileName#chunk]) :
+SOURCES OPÉRATEUR courantes pour "${query.slice(0, 80)}" (sélection par métadonnées et/ou similarité ; citer avec [fileName#chunk]) :
 ${formatSourceReferences(sourceReferences)}`
       : "";
 
-  const text = `${HYBRID_HEADER}
+  const text = `${HYBRID_HEADER}${sourceBlock}
 
 NARRATIF pertinent pour "${query.slice(0, 80)}" (sémantique, compressé) :
 ${narrativeBlock}
 
-PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
-${formatPreciseFields(precise)}${sourceBlock}
+PRÉCIS (valeurs stockées avec leur origine — distinguer objectifs et mesures) :
+${formatPreciseFields(precise)}
 
 --- FIN CONTEXTE ---`;
 

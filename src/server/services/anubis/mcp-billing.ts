@@ -24,7 +24,7 @@ import { createHash, randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/config";
-import { normalizeScopeKind } from "@/server/services/anubis/mcp-scope-kind";
+import { isMcpServerAllowed, normalizeScopeKind } from "@/server/services/anubis/mcp-scope-kind";
 
 // ── Auth ───────────────────────────────────────────────────────────────
 
@@ -41,6 +41,14 @@ export interface McpAuthResult {
   scopeKind?: "SYSTEM" | "BRAND";
   /** Si scopeKind=BRAND : la seule stratégie touchable (sinon null/absent). */
   scopeStrategyId?: string | null;
+  /** API-key server restriction, retained during aggregate discovery. */
+  scopeServer?: string;
+  allowedTools?: string[];
+  salesProfileId?: string;
+  salesProfileStatus?: string;
+  salesRunId?: string;
+  salesRequestId?: string;
+  salesDealId?: string | null;
 }
 
 /**
@@ -84,18 +92,34 @@ export async function authenticateMcpRequest(
     if (
       record &&
       record.isActive &&
-      (record.server === serverName || record.server === "*") &&
+      (record.server === serverName || record.server === "*" ||
+        (serverName === "*" && record.server.trim().length > 0)) &&
       (!record.expiresAt || record.expiresAt > new Date())
     ) {
+      let salesContext: Partial<McpAuthResult> = {};
+      if ((record.permissions as {managedBy?:string}|null)?.managedBy === "sales-fleet") {
+        const profile = await db.salesRepresentative.findUnique({where:{mcpKeyId:record.id},select:{id:true,status:true}});
+        if(!profile)return {ok:false,response:NextResponse.json({error:"Unknown sales holder"},{status:401})};
+        salesContext={salesProfileId:profile.id,salesProfileStatus:profile.status};
+        const runId=request.headers.get("x-sales-run-id"), lease=request.headers.get("x-sales-run-lease");
+        if(runId||lease){
+          const run=runId?await db.salesRun.findUnique({where:{id:runId},select:{id:true,representativeId:true,status:true,leaseToken:true,dealId:true,claimedAt:true,requestId:true}}):null;
+          if(!run||run.representativeId!==profile.id||run.status!=="RUNNING"||!lease||run.leaseToken!==lease||!run.claimedAt||run.claimedAt.getTime()<Date.now()-15*60000)return {ok:false,response:NextResponse.json({error:"Sales run scope denied"},{status:403})};
+          salesContext={...salesContext,salesRunId:run.id,salesDealId:run.dealId,salesRequestId:run.requestId};
+        }
+      }
       db.mcpApiKey
         .update({ where: { id: record.id }, data: { lastUsedAt: new Date() } })
         .catch(() => {});
       return {
         ok: true,
+        ...salesContext,
         apiKeyId: record.id,
+        allowedTools: Array.isArray((record.permissions as {allowedTools?:unknown}|null)?.allowedTools) ? ((record.permissions as {allowedTools:unknown[]}).allowedTools.filter((name):name is string => typeof name === "string")) : undefined,
         ratePerCallUsd: record.ratePerCallUsd,
         scopeKind: normalizeScopeKind(record.scopeKind),
         scopeStrategyId: record.scopeStrategyId,
+        scopeServer: record.server,
       };
     }
   }
@@ -134,24 +158,33 @@ export function scopeMcpParams(
   tool: string,
   rawParams: Record<string, unknown>,
 ): { denied: NextResponse; params?: undefined } | { denied?: undefined; params: Record<string, unknown> } {
+  let deniedDetail = isMcpServerAllowed(gate.scopeServer, server) ? null : "Cette clé est limitée à un autre serveur.";
+  if (gate.allowedTools && !gate.allowedTools.includes(tool) && !gate.allowedTools.includes(`${server}.${tool}`)) deniedDetail = "Cet outil ne fait pas partie du mandat de cette clé.";
+  if(gate.salesProfileId && !["sales_claim_run","sales_complete_run"].includes(tool)) {
+    if(gate.salesProfileStatus!=="ACTIVE"||!gate.salesRunId)deniedDetail="Cette action exige une exécution commerciale active.";
+    if(gate.salesDealId && rawParams.dealId && rawParams.dealId!==gate.salesDealId)deniedDetail="Cette exécution concerne une autre affaire.";
+  }
   if (gate.scopeKind === "BRAND") {
     const requested = typeof rawParams.strategyId === "string" ? rawParams.strategyId : null;
     if (requested && requested !== gate.scopeStrategyId) {
-      recordMcpCall({
-        apiKeyId: gate.apiKeyId,
-        userId: gate.userId,
-        ratePerCallUsd: gate.ratePerCallUsd,
-        server,
-        tool,
-        status: "DENIED",
-      }).catch(() => {});
-      return {
-        denied: NextResponse.json(
-          { error: "SCOPE_DENIED", detail: "Ce token est limité à une autre marque." },
-          { status: 403 },
-        ),
-      };
+      deniedDetail = "Ce token est limité à une autre marque.";
     }
+  }
+  if (deniedDetail) {
+    recordMcpCall({
+      apiKeyId: gate.apiKeyId,
+      userId: gate.userId,
+      ratePerCallUsd: gate.ratePerCallUsd,
+      server,
+      tool,
+      status: "DENIED",
+    }).catch(() => {});
+    return {
+      denied: NextResponse.json(
+        { error: "SCOPE_DENIED", detail: deniedDetail },
+        { status: 403 },
+      ),
+    };
   }
   return {
     params: {
@@ -161,6 +194,7 @@ export function scopeMcpParams(
         scopeStrategyId: gate.scopeStrategyId ?? null,
         userId: gate.userId ?? null,
         apiKeyId: gate.apiKeyId ?? null,
+        ...(gate.salesProfileId ? {salesRunId:gate.salesRunId??null,salesDealId:gate.salesDealId??null,salesRequestId:gate.salesRequestId??null}:{}),
       },
     },
   };
@@ -200,6 +234,15 @@ export async function recordMcpCall(input: RecordMcpCallInput): Promise<void> {
   });
 }
 
+/** Shared REST/RPC outcome for existing explicit failure envelopes.
+ * Do not inspect nested business data or reinterpret DEFERRED/missing values.
+ * ERROR remains in the existing billable OK+ERROR aggregate. */
+export function mcpResultFailed(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  return result.ok === false || (typeof result.error === "string" && result.error.trim().length > 0);
+}
+
 /**
  * Exécute + mètre un call MCP déjà authentifié (succès comme échec) et retourne
  * la VALEUR brute (ou relance l'erreur). Cœur partagé entre la voie REST
@@ -223,7 +266,7 @@ export async function meterMcp<T>(
       ratePerCallUsd: gate.ratePerCallUsd,
       server,
       tool,
-      status: "OK",
+      status: mcpResultFailed(result) ? "ERROR" : "OK",
       durationMs: Date.now() - started,
     }).catch((err) => console.warn("[mcp-billing] metering failed:", err instanceof Error ? err.message : err));
     return result;

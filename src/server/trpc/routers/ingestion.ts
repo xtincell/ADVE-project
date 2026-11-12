@@ -3,55 +3,92 @@
  */
 
 import { z } from "zod";
+import { sourceUploadContentSchema, UnreadableRetainedSourceError } from "@/server/services/ingestion-pipeline/original";
+import { sourceFileLocationSchema } from "@/domain/source-original";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
+import { DocumentEditionInputSchema, DocumentRepresentationInputSchema, ResourceDocumentFilingSchema, documentEdition, documentRepresentation, sourceHasRetainedDocument, sourceIsUsable } from "@/domain/source-document";
+import { registerDocumentEdition, registerDocumentRepresentation, decideDocumentEdition, clarifyDocumentEdition, labelDocumentEdition, correctResourceDocumentFiling } from "@/server/services/ingestion-pipeline/document-versions";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
+import { getOperatorContext } from "@/server/services/operator-isolation";
+import { listBrandSourceSummaries, loadBrandSources, resolveBrandSource, setSourceUse, invalidateSourceDerivatives } from "@/server/services/ingestion-pipeline/source-usage";
 /* lafusee:governed-active */
+
+/**
+ * Une seule réponse pour un document hors d'atteinte : identifiant inconnu de
+ * cette installation, document d'un autre locataire ou retiré de ce dossier.
+ * Le refus ne révèle jamais l'existence d'une pièce que l'appelant ne voit pas
+ * (recette d'installation isolée du 19 octobre, cas `foreign_id_writer_in_B`).
+ */
+const SOURCE_NOT_FOUND_MESSAGE = "Ce document n’est plus accessible dans ce dossier.";
+function sourceNotFound(): TRPCError {
+  return new TRPCError({ code: "NOT_FOUND", message: SOURCE_NOT_FOUND_MESSAGE });
+}
 
 /**
  * IDOR (round-10) — une source keyée sur son `id` (BrandDataSource) n'a pas de
  * strategyId de tête → aucune garde ne s'applique. `rawContent` est le matériel
  * brut de la marque (fuite/altération cross-tenant). Résout la source → sa marque.
+ *
+ * IN1 : `findUniqueOrThrow` laissait remonter P2025 en HTTP 500 pour un id
+ * inconnu, et un id d'un autre locataire recevait 403 : deux réponses
+ * distinctes. Les deux reçoivent désormais le même 404, avant toute écriture.
+ * Seul le refus d'accès devient 404 ; toute autre erreur garde son code.
  */
 async function assertSourceAccess(userId: string, sourceId: string): Promise<void> {
-  const source = await db.brandDataSource.findUniqueOrThrow({
+  const source = await db.brandDataSource.findUnique({
     where: { id: sourceId },
     select: { strategyId: true },
   });
-  await assertStrategyRead(userId, source.strategyId);
+  if (!source) throw sourceNotFound();
+  try {
+    await assertStrategyRead(userId, source.strategyId);
+  } catch (error) {
+    if (error instanceof TRPCError && error.code === "FORBIDDEN") throw sourceNotFound();
+    throw error;
+  }
+}
+
+/** The scoped documentary reader refuses with the same 404 when a source is out of reach. */
+function sourceUnavailableAsNotFound(error: unknown): never {
+  if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) throw sourceNotFound();
+  throw error;
 }
 
 /**
- * Fire PROPOSE_VAULT_FROM_SOURCE for a freshly extracted source. Best-effort,
- * non-blocking — the operator can also re-trigger from the cockpit
- * Propositions vault panel if this fails. Auto-classification per the user
- * choice "Auto + validation opérateur" (no auto-promotion to CANDIDATE).
+ * Prepare an extracted source only after an explicit request. Storage and
+ * deterministic extraction never imply consent to embeddings/classification.
+ * Both existing commands stay governed; proposals remain DRAFT.
  */
-function fireVaultProposalHook(
+function fireSourcePreparationHooks(
   strategyId: string,
   sourceId: string,
   operatorId: string,
 ): void {
   void (async () => {
-    try {
-      const { emitIntent } = await import("@/server/services/mestor/intents");
-      await emitIntent(
-        { kind: "PROPOSE_VAULT_FROM_SOURCE", strategyId, sourceId, operatorId },
-        { caller: "ingestion-router:propose-vault" },
-      );
-    } catch (err) {
-      console.warn(
-        "[ingestion] PROPOSE_VAULT_FROM_SOURCE hook failed (non-blocking):",
-        err instanceof Error ? err.message : err,
-      );
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    for (const intent of [
+      { kind: "INDEX_BRAND_SOURCE" as const, strategyId, sourceId },
+      { kind: "PROPOSE_VAULT_FROM_SOURCE" as const, strategyId, sourceId, operatorId },
+    ]) {
+      try {
+        await emitIntent(intent, { caller: "ingestion-router:prepare-source" });
+      } catch (err) {
+        console.warn(
+          `[ingestion] ${intent.kind} preparation failed (non-blocking):`,
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
-  })();
+  })().catch((err: unknown) => {
+    console.warn("[ingestion] source preparation unavailable:", err instanceof Error ? err.message : err);
+  });
 }
 
 export const ingestionRouter = createTRPCRouter({
@@ -60,23 +97,47 @@ export const ingestionRouter = createTRPCRouter({
 
     kind: "LEGACY_INGESTION_UPLOAD_FILE",
 
-    inputSchema: z.object({
+    inputSchema: z.union([z.object({
       strategyId: z.string(),
-      fileName: z.string(),
-      fileType: z.string(),
-      content: z.string(), // base64
-    }),
+      fileName: z.string().min(1).max(255),
+      fileType: z.string().min(1).max(8),
+      content: sourceUploadContentSchema, // same exact-byte admission as the vault
+      sourceId: z.string().optional(), // Explicit recovery of a legacy file source
+      sourceLocation: sourceFileLocationSchema.optional(),
+      prepareAnalysis: z.boolean().default(false),
+    }), z.object({
+      strategyId: z.string(),
+      retainedAsset: z.object({ assetId: z.string().min(1), contentHash: z.string().regex(/^[a-f0-9]{64}$/) }).strict(),
+      document: DocumentEditionInputSchema.optional(),
+      documentRepresentation: DocumentRepresentationInputSchema.optional(),
+      prepareAnalysis: z.boolean().default(false),
+    }).strict().refine(v => Boolean(v.document) !== Boolean(v.documentRepresentation), "Choisissez une édition ou un autre format de la même version.")]),
 
     caller: "ingestion:uploadFile",
 
   })
     .mutation(async ({ ctx, input }) => {
+      if ("retainedAsset" in input) {
+        try {
+          const sourceId = await ingestion.ingestFile(input.strategyId, input, ctx.session.user.id);
+          if (input.prepareAnalysis) fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
+          return { sourceId, needsManualReading: false, readingError: null };
+        } catch (error) {
+          if (error instanceof UnreadableRetainedSourceError) return { sourceId: error.sourceId, needsManualReading: true, readingError: error.message };
+          throw error;
+        }
+      }
+      if (input.sourceId) await assertSourceAccess(ctx.session.user.id, input.sourceId);
       const sourceId = await ingestion.ingestFile(input.strategyId, {
         name: input.fileName,
         type: input.fileType,
         content: input.content,
-      });
-      fireVaultProposalHook(input.strategyId, sourceId, ctx.session.user.id);
+        sourceId: input.sourceId,
+        sourceLocation: input.sourceLocation,
+      }, ctx.session.user.id);
+      if (input.prepareAnalysis) {
+        fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
+      }
       return { sourceId };
     }),
 
@@ -89,6 +150,7 @@ export const ingestionRouter = createTRPCRouter({
       strategyId: z.string(),
       text: z.string().min(10),
       label: z.string().optional(),
+      prepareAnalysis: z.boolean().default(false),
     }),
 
     caller: "ingestion:addText",
@@ -96,7 +158,9 @@ export const ingestionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       const sourceId = await ingestion.ingestText(input.strategyId, input.text, input.label);
-      fireVaultProposalHook(input.strategyId, sourceId, ctx.session.user.id);
+      if (input.prepareAnalysis) {
+        fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
+      }
       return { sourceId };
     }),
 
@@ -104,59 +168,80 @@ export const ingestionRouter = createTRPCRouter({
   listSources: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const sources = await ctx.db.brandDataSource.findMany({
-        where: { strategyId: input.strategyId },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          sourceType: true,
-          fileName: true,
-          fileType: true,
-          processingStatus: true,
-          pillarMapping: true,
-          extractedFields: true,
-          errorMessage: true,
-          createdAt: true,
-          // PR-A (ADR-0032)
-          certainty: true,
-          origin: true,
-        },
-      });
-
-      // ADR-0184 — « déposé » ne veut pas dire « exploitable ». L'indexation est
-      // best-effort (`void` + `console.warn`) : une source EXTRACTED jamais
-      // indexée ne se signalait NULLE PART, et le porteur croyait sa
-      // documentation prise en compte. On lit le compte réel de chunks.
-      const indexed = await ctx.db.brandContextNode.groupBy({
-        by: ["sourceId"],
-        where: {
-          strategyId: input.strategyId,
-          kind: "BRAND_SOURCE",
-          sourceId: { in: sources.map((s) => s.id) },
-        },
-        _count: { _all: true },
-      });
-      const chunksBySource = new Map(
-        indexed.map((row) => [row.sourceId, row._count._all] as const),
-      );
-
-      return sources.map((s) => ({
-        ...s,
-        /** Nombre de fragments indexés — 0 = pas encore exploitable en analyse. */
-        indexedChunks: chunksBySource.get(s.id) ?? 0,
-      }));
+      return listBrandSourceSummaries(input.strategyId, ctx.db);
     }),
+
+  // Reuse extracted text through the canonical writer; no new extraction,
+  // classifier, pillar amendment or implicit embedding authorization.
+  prepareSourceIndex: governedProcedure({
+    kind: "INDEX_BRAND_SOURCE",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(), sourceId: z.string(),
+      // The governed receipt must retain the same no-vector choice as the bus.
+      prepareEmbeddings: z.literal(false).default(false),
+    }),
+    caller: "ingestion:prepareSourceIndex",
+  }).mutation(async ({ ctx, input }) => {
+    const { source } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db).catch(sourceUnavailableAsNotFound);
+    if (!sourceIsUsable(source.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition antérieure reste consultable dans l’historique." });
+    if (!["EXTRACTED", "PROCESSED"].includes(source.processingStatus)) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le texte de ce document doit être extrait avant sa préparation." });
+    }
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    const operator = await getOperatorContext(ctx.session.user.id, ctx.db);
+    const result = await emitIntent({
+      kind: "INDEX_BRAND_SOURCE", strategyId: input.strategyId,
+      sourceId: input.sourceId, prepareEmbeddings: input.prepareEmbeddings,
+    }, { caller: "ingestion:prepareSourceIndex", operatorId: operator.operatorId ?? undefined });
+    if (result.status !== "OK") {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La préparation n’a pas abouti. Vous pouvez réessayer." });
+    }
+    return result.output as { sourceId: string; strategyId: string; chunks: number; alreadyFresh?: boolean; embeddingRequested: boolean };
+  }),
 
   // Get ONE source with its raw content (lazy — listSources omits rawContent
   // car volumineux). Consommé par le panneau d'édition de source du cockpit.
   getSource: protectedProcedure
+    .input(z.object({ id: z.string(), strategyId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      // The reader keeps its 403 contract (a withdrawn share included), with one
+      // message: a refused brand no longer tells a foreign source from an unknown id.
+      const refused = () => new TRPCError({ code: "FORBIDDEN", message: SOURCE_NOT_FOUND_MESSAGE });
+      const { source, consumerStrategyId, contentHash } = await resolveBrandSource(input.id, input.strategyId, ctx.db).catch((error: unknown) => {
+        if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) throw refused();
+        throw error;
+      });
+      await assertStrategyRead(ctx.session.user.id, consumerStrategyId).catch((error: unknown) => {
+        if (error instanceof TRPCError && error.code === "FORBIDDEN") throw refused();
+        throw error;
+      });
+      return { id: source.id, contentHash, fileName: source.fileName, rawContent: source.rawContent,
+        certainty: source.certainty, sourceType: source.sourceType, origin: source.origin, document: documentEdition(source.rawData), representation: documentRepresentation(source.rawData) };
+    }),
+
+  // Owner chooses a destination in the existing portfolio; no document is copied.
+  sourceUses: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
-      return ctx.db.brandDataSource.findUnique({
-        where: { id: input.id },
-        select: { id: true, fileName: true, rawContent: true, certainty: true, sourceType: true, origin: true },
-      });
+      const { source } = await resolveBrandSource(input.id, undefined, ctx.db);
+      const op = await getOperatorContext(ctx.session.user.id);
+      const canManageOwner = op.role === "ADMIN" || source.strategy.userId === op.userId || Boolean(op.operatorId && source.strategy.operatorId === op.operatorId);
+      if (!canManageOwner) return [];
+      const targets = await ctx.db.strategy.findMany({ where: {
+        id: { not: source.strategyId }, OR: [
+          ...(source.strategy.operatorId ? [{ operatorId: source.strategy.operatorId,
+            ...(op.role === "ADMIN" || op.operatorId === source.strategy.operatorId ? {} : { userId: op.userId }) }] : []),
+          { sourceUses: { some: { sourceId: input.id, revokedAt: null } } },
+        ],
+      }, select: { id: true, name: true, operatorId: true, sourceUses: { where: { sourceId: input.id, revokedAt: null }, select: { id: true, operatorId: true } } },
+      orderBy: { name: "asc" } });
+      return targets.map((t) => ({ id: t.id,
+        name: t.operatorId && t.operatorId === source.strategy.operatorId ? t.name : "Dossier hors de votre portefeuille",
+        linked: t.sourceUses.length > 0,
+        suspended: t.sourceUses.length > 0 && (!t.operatorId || t.operatorId !== source.strategy.operatorId || t.sourceUses[0]?.operatorId !== t.operatorId),
+      }));
     }),
 
   // Delete a data source
@@ -178,11 +263,14 @@ export const ingestionRouter = createTRPCRouter({
       // l'ancrage documentaire (ADR-0184), une citation se vérifie PAR cette
       // ancre : un orphelin est donc une citation qui paraît vérifiée et ne
       // l'est pas. Les deux suppressions vont ensemble, en transaction.
-      const [, deleted] = await ctx.db.$transaction([
-        ctx.db.brandContextNode.deleteMany({ where: { sourceId: input.id } }),
-        ctx.db.brandDataSource.delete({ where: { id: input.id } }),
-      ]);
-      return deleted;
+      return ctx.db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
+        const previous = await tx.brandDataSource.findUnique({ where: { id: input.id } });
+        if (!previous) throw sourceNotFound(); // removed concurrently, after the access check
+        if (sourceHasRetainedDocument(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les éditions et leurs formats restent conservés dans leur historique." });
+        await invalidateSourceDerivatives(tx, input.id);
+        return tx.brandDataSource.delete({ where: { id: input.id } });
+      });
     }),
 
   // Update a manual source (title + content + certainty per PR-A/ADR-0032).
@@ -196,18 +284,60 @@ export const ingestionRouter = createTRPCRouter({
       title: z.string().min(1).optional(),
       content: z.string().min(1).optional(),
       certainty: SourceCertaintySchema.optional(),
-    }),
+      document: DocumentEditionInputSchema.optional(),
+      documentRepresentation: DocumentRepresentationInputSchema.optional(),
+      documentDecision: z.object({ status: z.enum(["REFERENCE", "ARCHIVED"]), reason: z.string().trim().min(1).max(4000) }).optional(),
+      documentClarification: z.string().trim().min(1).max(4000).optional(),
+      resourceFiling: ResourceDocumentFilingSchema.optional(),
+      documentTags: z.object({ tags: z.array(z.string().trim().min(1).max(80)).max(24), reason: z.string().trim().min(1).max(1000) }).optional(),
+      expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+      use: z.object({ strategyId: z.string(), revoke: z.boolean().default(false) }).optional(),
+    }).refine(v => !v.resourceFiling || (v.expectedSourceHash && !v.documentTags && !v.documentRepresentation && !v.documentClarification && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Corriger le classement d’une ressource est un geste distinct, après relecture.").refine(v => !v.documentTags || (v.expectedSourceHash && !v.documentRepresentation && !v.documentClarification && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Étiqueter une édition est un geste distinct, après relecture.").refine(v => !v.documentRepresentation || (v.expectedSourceHash && !v.document && !v.documentDecision && !v.documentClarification && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Relier un format est un geste distinct, après relecture.").refine(v => !v.documentClarification || (v.expectedSourceHash && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Préciser une édition est un geste distinct, après relecture.").refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.resourceFiling || v.documentTags || v.documentRepresentation || v.documentClarification || v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
+      "Choisir une correction ou un usage du document.").refine((v) => !v.use || (v.title === undefined && v.content === undefined && v.certainty === undefined),
+      "Lier un usage et corriger le document sont deux gestes distincts."),
 
     caller: "ingestion:updateSource",
 
   })
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
-      const data: Record<string, unknown> = {};
+      if (input.resourceFiling) return ctx.db.$transaction(tx => correctResourceDocumentFiling(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, filing: input.resourceFiling! }), { timeout: 30_000 });
+      // A compressed workbook can retain tens of MiB of cells. Keep the same
+      // atomic hash fence and invalidation, with a bounded import-sized budget.
+      if (input.documentTags) return ctx.db.$transaction(tx => labelDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, ...input.documentTags! }), { timeout: 120_000 });
+      if (input.documentRepresentation) return ctx.db.$transaction(tx => registerDocumentRepresentation(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, representation: input.documentRepresentation!, userId: ctx.session.user.id }), { timeout: 30_000 });
+      if (input.documentClarification) return ctx.db.$transaction(tx => clarifyDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, clarification: input.documentClarification! }), { timeout: 30_000 });
+      if (input.use) {
+        const op = await getOperatorContext(ctx.session.user.id);
+        return setSourceUse({ sourceId: input.id, strategyId: input.use.strategyId, revoke: input.use.revoke,
+          userId: op.userId, operatorId: op.operatorId, admin: op.role === "ADMIN" });
+      }
+      if (input.documentDecision) return ctx.db.$transaction(tx => decideDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, decision: input.documentDecision!, userId: ctx.session.user.id }), { timeout: 30_000 });
+      if (input.document) return ctx.db.$transaction(tx => registerDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, document: input.document! }), { timeout: 30_000 });
+      const data: Record<string, unknown> = { processingStatus: "EXTRACTED", pillarMapping: {} };
       if (input.title !== undefined) data.fileName = input.title;
-      if (input.content !== undefined) data.rawContent = input.content;
+      if (input.content !== undefined) {
+        data.rawContent = input.content;
+        data.processingStatus = "EXTRACTED";
+        data.errorMessage = null;
+        // Structured values derived from the previous text must no longer
+        // outrank the corrected source in subsequent extraction.
+        data.extractedFields = {};
+        data.rawData = {};
+      }
       if (input.certainty !== undefined) data.certainty = input.certainty;
-      return ctx.db.brandDataSource.update({ where: { id: input.id }, data });
+      // Same atomic boundary as deletion: readers see either the old source
+      // with its index, or the revised source awaiting explicit preparation.
+      // No embedding or generation follows a manual correction implicitly.
+      return ctx.db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
+        const previous = await tx.brandDataSource.findUnique({ where: { id: input.id } });
+        if (!previous) throw sourceNotFound(); // removed concurrently, after the access check
+        if (sourceHasRetainedDocument(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition et ses formats sont conservés. Déposez un nouveau fichier pour une autre version." });
+        const updated = await tx.brandDataSource.update({ where: { id: input.id }, data });
+        await invalidateSourceDerivatives(tx, input.id);
+        return updated;
+      });
     }),
 
   // Launch the full processing pipeline
@@ -295,10 +425,11 @@ export const ingestionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const sourceIds = (await ctx.db.brandDataSource.findMany({
-        where: { strategyId: input.strategyId, processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },
-        select: { id: true },
-      })).map((s) => s.id);
+      // Keep explicit shared uses in scope; an owner-only preselection would
+      // remove them before the filler can resolve their current receipts.
+      const sourceIds = (await loadBrandSources(input.strategyId, {
+        processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
+      }, ctx.db)).map((s) => s.id);
 
       const { fillPillar } = await import("@/server/services/ingestion-pipeline/ai-filler");
       return fillPillar(input.strategyId, input.pillarKey, sourceIds);
@@ -313,6 +444,7 @@ export const ingestionRouter = createTRPCRouter({
       strategyId: z.string(),
       title: z.string().min(1),
       content: z.string().min(1),
+      prepareAnalysis: z.boolean().default(false),
     }),
 
     caller: "ingestion:addManualSource",
@@ -330,22 +462,9 @@ export const ingestionRouter = createTRPCRouter({
           pillarMapping: { a: true, d: true, v: true, e: true, r: true, t: true, i: true, s: true },
         },
       });
-      // Fire RAG indexing + vault classification (both non-blocking).
-      void (async () => {
-        try {
-          const { emitIntent } = await import("@/server/services/mestor/intents");
-          await emitIntent(
-            { kind: "INDEX_BRAND_SOURCE", strategyId: input.strategyId, sourceId: created.id },
-            { caller: "ingestion-router:addManualSource" },
-          );
-        } catch (err) {
-          console.warn(
-            "[ingestion] INDEX_BRAND_SOURCE hook failed (non-blocking):",
-            err instanceof Error ? err.message : err,
-          );
-        }
-      })();
-      fireVaultProposalHook(input.strategyId, created.id, ctx.session.user.id);
+      if (input.prepareAnalysis) {
+        fireSourcePreparationHooks(input.strategyId, created.id, ctx.session.user.id);
+      }
       return created;
     }),
 
@@ -355,10 +474,9 @@ export const ingestionRouter = createTRPCRouter({
   previewBrandBook: operatorProcedure
     .input(z.object({ strategyId: z.string(), sourceId: z.string(), mode: z.enum(["LLM", "STRUCTURED"]).default("LLM") }))
     .mutation(async ({ ctx, input }) => {
-      const source = await ctx.db.brandDataSource.findFirst({
-        where: { id: input.sourceId, strategyId: input.strategyId },
-        select: { rawContent: true, fileName: true },
-      });
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      const { source, contentHash } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db).catch(sourceUnavailableAsNotFound);
+      if (!sourceIsUsable(source.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition reste consultable dans l’historique. Choisissez une référence ou une proposition pour l’analyse." });
       if (!source?.rawContent) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Source introuvable ou sans texte extrait — uploade d'abord le brand book." });
       }
@@ -370,7 +488,7 @@ export const ingestionRouter = createTRPCRouter({
         caller: `operator:${ctx.session.user.id}`,
         sourceFilename: source.fileName ?? undefined,
       });
-      return { extraction };
+      return { extraction, sourceReceipt: { sourceId: source.id, contentHash } };
     }),
 
   /** PERSISTE une extraction RÉVISÉE via l'Intent gouverné (gateway + assets DRAFT). */
@@ -380,18 +498,17 @@ export const ingestionRouter = createTRPCRouter({
       extraction: z.unknown(),
       sourceFilename: z.string().optional(),
       sourceDataSourceId: z.string().optional(),
+      sourceReceipt: z.object({ sourceId: z.string(), contentHash: z.string().regex(/^[a-f0-9]{64}$/) }).optional(),
       // C3 — le front transmet le mode utilisé au preview (LLM/STRUCTURED) pour
       // que le persister pose la bonne provenance (INFERRED vs SOURCE).
       extractionMode: z.enum(["LLM", "STRUCTURED"]).default("LLM"),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Marque la source « OFFICIELLE » (fait vérifié) si fournie.
-      if (input.sourceDataSourceId) {
-        await ctx.db.brandDataSource.updateMany({
-          where: { id: input.sourceDataSourceId, strategyId: input.strategyId },
-          data: { certainty: "OFFICIAL" },
-        });
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      if (input.sourceDataSourceId && input.sourceReceipt?.sourceId !== input.sourceDataSourceId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Relisez ce document avant d’appliquer son extraction." });
       }
+      // Reading a document as a brand book does not certify its authority.
       const { emitIntent } = await import("@/server/services/mestor/intents");
       return emitIntent(
         {
@@ -401,6 +518,7 @@ export const ingestionRouter = createTRPCRouter({
           extraction: input.extraction,
           sourceFilename: input.sourceFilename,
           sourceDataSourceId: input.sourceDataSourceId,
+          sourceReceipt: input.sourceReceipt,
           extractionMode: input.extractionMode,
         },
         { caller: "trpc.ingestion.ingestBrandBook" },

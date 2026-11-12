@@ -4,15 +4,17 @@
  * Two LLM-backed primitives:
  *   - decomposeDocument: a long-form document (PDF/DOCX/note) is decomposed
  *     into N section proposals, each tagged with a canonical BrandAssetKind.
- *     A brandbook PDF typically yields 3-6 proposals (logo, palette, typo,
- *     tone, manifesto) covering multiple ADVERTIS pillars.
+ *     The full extracted text is submitted once, with a strict complete-answer
+ *     contract and original-source citations; no prefix or kind-count truncation.
  *   - classifyImage: a logo/photo/packaging image is classified into the
  *     right visual kind (LOGO_FINAL / KV_VISUAL / PHOTO_GUIDELINES / …).
  *
  * Layer 2. Wraps llm-gateway. No DB writes.
  */
 
+import { z } from "zod";
 import { callLLMAndParse } from "@/server/services/llm-gateway";
+import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import {
   BRAND_ASSET_KINDS,
@@ -22,32 +24,18 @@ import {
 import { inferPillarSource } from "./pillar-mapping";
 import type { SourceClassificationProposal } from "./types";
 
-const MAX_DECOMPOSER_PROPOSALS = 6;
-const DECOMPOSER_INPUT_CAP = 12_000;
-
-const DOCUMENT_KIND_HINTS: BrandAssetKind[] = [
-  "MANIFESTO",
-  "POSITIONING",
-  "TONE_CHARTER",
-  "PERSONA",
-  "SUPERFAN_JOURNEY",
-  "VALUE_PROPOSITION",
-  "CHROMATIC_STRATEGY",
-  "TYPOGRAPHY_SYSTEM",
-  "BIG_IDEA",
-  "CREATIVE_BRIEF",
-  "BRIEF_360",
-  "PITCH",
-  "TREND_RADAR",
-  "SEO_REPORT",
-  "NAMING",
-  "CLAIM",
-  "BRAINSTORM",
-  "CONCEPT",
-  "SOCIAL_COPY",
-  "LONG_COPY",
-  "GENERIC",
-];
+const DocumentProposalsSchema = z.object({
+  complete: z.literal(true),
+  proposals: z.array(z.object({
+    kind: z.enum(BRAND_ASSET_KINDS),
+    name: z.string().trim().min(1),
+    summary: z.string().trim().min(1),
+    confidence: z.number().min(0).max(1),
+    content: z.record(z.string(), z.unknown()),
+    quote: z.string().trim().min(1),
+    sectionTitle: z.string().optional(),
+  }).strict()).min(1),
+}).strict();
 
 const IMAGE_KIND_OPTIONS = [
   "LOGO_FINAL",
@@ -78,35 +66,29 @@ interface DecomposeInput {
 export async function decomposeDocument(
   input: DecomposeInput,
 ): Promise<SourceClassificationProposal[]> {
-  const truncated = input.rawContent.slice(0, DECOMPOSER_INPUT_CAP);
-  if (!truncated.trim()) return [];
+  if (!input.rawContent.trim()) return [];
 
-  const allowedKinds = DOCUMENT_KIND_HINTS.join(", ");
+  const allowedKinds = BRAND_ASSET_KINDS.join(", ");
   const system = `${UNTRUSTED_NOTICE}
 
 Tu es l'opérateur "filtreur qualifiant" du vault de marque La Fusée.
-Ta mission : décomposer un document fourni par le founder en 1 à ${MAX_DECOMPOSER_PROPOSALS} actifs de marque qualifiés (BrandAsset),
+Ta mission : décomposer intégralement le document fourni en actifs de marque qualifiés (BrandAsset),
 chacun avec son \`kind\` canonique. Cherche activement à couvrir plusieurs piliers ADVERTIS quand le document est riche.
+Conserve les sections et profils distincts, même quand ils ont le même kind.
+Ne transforme jamais une mascotte, un questionnaire, une équipe ou un sommaire en clientèle cible.
+Les profils documentaires restent des hypothèses ou des descriptions, jamais des contacts réels.
+Pour chaque proposition, fournis une citation courte, littérale et UNIQUE du corps du document,
+qui justifie son contenu. Ne cite pas un simple sommaire à la place du passage détaillé.
+N'invente aucun fait, priorité, rôle, tarif ou mesure absent de ce passage.
+Le document est fourni en entier. Indique complete:true seulement si toute sa lecture est terminée.
+Si tu ne peux pas terminer, réponds complete:false : aucune proposition ne sera enregistrée.
 
 Piliers ADVERTIS : A=Authenticité, D=Distinction, V=Valeur, E=Engagement, R=Reach, T=Trust, I=Innovation, S=Strategy.
 Kinds autorisés : ${allowedKinds}.
 Préfère un kind spécifique. Utilise GENERIC seulement si vraiment rien ne colle.
 
-Tu réponds STRICTEMENT en JSON, format :
-{
-  "proposals": [
-    {
-      "kind": "<BrandAssetKind>",
-      "name": "<court, mémorable, en français>",
-      "summary": "<1 phrase descriptive>",
-      "content": { "extracted": "<contenu structuré pertinent en français>" },
-      "sectionTitle": "<titre de section dans le doc, si identifiable>",
-      "charStart": <int approximatif>,
-      "charEnd": <int approximatif>,
-      "confidence": <float 0..1>
-    }
-  ]
-}`;
+Le champ content contient les informations extraites ; quote est la preuve textuelle,
+sans reformulation. Les positions seront calculées depuis l'original, ne les devine pas.`;
 
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : document fourni
   // par le founder (contenu + métadonnées de fichier attaquant-contrôlables).
@@ -115,60 +97,35 @@ Tu réponds STRICTEMENT en JSON, format :
 - Type MIME : ${sanitizeInline(input.mimeType ?? "inconnu", { max: 120 })}
 - Type fichier : ${sanitizeInline(input.fileType ?? "inconnu", { max: 60 })}
 
-${wrapUntrusted(`CONTENU DU DOCUMENT (potentiellement tronqué à ${DECOMPOSER_INPUT_CAP} caractères)`, truncated, { max: DECOMPOSER_INPUT_CAP })}
+${wrapUntrusted("CONTENU INTÉGRAL DU DOCUMENT", input.rawContent, { max: input.rawContent.length })}
 
-Décompose ce document en propositions BrandAsset (max ${MAX_DECOMPOSER_PROPOSALS}).`;
+Décompose l'ensemble du document en propositions BrandAsset distinctes et sourcées.`;
 
-  let parsed: Record<string, unknown> | unknown[];
-  try {
-    parsed = await callLLMAndParse({
-      system,
-      prompt,
-      caller: "source-classifier:decompose",
-      strategyId: input.strategyId,
-      purpose: "agent",
-      maxOutputTokens: 4000,
-    });
-  } catch (err) {
-    console.warn(
-      "[source-classifier] decomposer LLM call failed:",
-      err instanceof Error ? err.message : err,
-    );
-    return [];
-  }
-
-  const root = parsed as { proposals?: unknown };
-  const list = Array.isArray(root.proposals) ? root.proposals : [];
+  // One structured attempt, through the existing policy/cost/provider gateway.
+  // Invalid, partial or oversized responses fail before the vault transaction.
+  const { data } = await executeStructuredLLMCall({
+    system, prompt, schema: DocumentProposalsSchema,
+    caller: "source-classifier:decompose", strategyId: input.strategyId,
+    purpose: "agent", maxOutputTokens: 6000, retries: 0,
+    signal: AbortSignal.timeout(120_000),
+  });
   const out: SourceClassificationProposal[] = [];
 
-  for (const raw of list) {
-    if (!raw || typeof raw !== "object") continue;
-    const r = raw as Record<string, unknown>;
-    const kind = typeof r.kind === "string" ? r.kind.toUpperCase() : "GENERIC";
-    const validKind: BrandAssetKind = isBrandAssetKind(kind) ? kind : "GENERIC";
-    const name = typeof r.name === "string" && r.name.trim() ? r.name.trim() : `Section ${out.length + 1}`;
-    const summary = typeof r.summary === "string" ? r.summary.trim() : "";
-    const confidenceRaw = typeof r.confidence === "number" ? r.confidence : 0.6;
-    const confidence = Math.max(0, Math.min(1, confidenceRaw));
-
+  for (const r of data.proposals) {
+    const charStart = input.rawContent.indexOf(r.quote);
+    if (charStart < 0 || input.rawContent.indexOf(r.quote, charStart + 1) >= 0) {
+      throw new Error("SOURCE_CITATION_INVALID: une citation doit désigner un passage original unique.");
+    }
     out.push({
-      kind: validKind,
-      name,
-      summary,
-      confidence,
-      content: (r.content && typeof r.content === "object" && !Array.isArray(r.content))
-        ? (r.content as Record<string, unknown>)
-        : { extracted: summary },
+      kind: r.kind, name: r.name, summary: r.summary,
+      confidence: r.confidence, content: r.content,
       sourceCitation: {
-        ...(typeof r.charStart === "number" ? { charStart: r.charStart } : {}),
-        ...(typeof r.charEnd === "number" ? { charEnd: r.charEnd } : {}),
-        ...(typeof r.sectionTitle === "string" ? { sectionTitle: r.sectionTitle } : {}),
+        charStart, charEnd: charStart + r.quote.length,
+        ...(r.sectionTitle ? { sectionTitle: r.sectionTitle } : {}),
       },
-      pillarSource: inferPillarSource(validKind),
+      pillarSource: inferPillarSource(r.kind),
       inferredBy: "decomposer",
     });
-
-    if (out.length >= MAX_DECOMPOSER_PROPOSALS) break;
   }
 
   return out;
@@ -252,6 +209,6 @@ Choisis le kind le plus précis selon le contenu visuel inféré du nom et du co
 }
 
 /** Re-export for tests + tests on exhaustivity vs canonical taxonomy. */
-export const SUPPORTED_DOCUMENT_KINDS = DOCUMENT_KIND_HINTS;
+export const SUPPORTED_DOCUMENT_KINDS = BRAND_ASSET_KINDS;
 export const SUPPORTED_IMAGE_KINDS = IMAGE_KIND_OPTIONS;
 export const ALL_BRAND_ASSET_KINDS = BRAND_ASSET_KINDS;

@@ -60,7 +60,7 @@ const writeSucceeded: PostCondition = {
 export const manifest = defineManifest({
   service: "pillar-gateway",
   governor: "INFRASTRUCTURE",
-  version: "1.2.0",
+  version: "1.3.0",
   acceptsIntents: ["WRITE_PILLAR"],
   capabilities: [
     {
@@ -85,6 +85,25 @@ export const manifest = defineManifest({
       sideEffects: ["DB_WRITE", "LLM_CALL", "EVENT_EMIT"],
       postconditions: [writeSucceeded, scoreInRange],
       missionContribution: "CHAIN_VIA:advertis-scorer",
+    },
+    {
+      // ADR-0207 (amendement 562) — seul restaurateur de contenu pilier : journal,
+      // historique et retrait Notoria entrent ici, mêmes refus et même effet unique.
+      name: "rollbackPillar",
+      inputSchema: z.object({
+        strategyId: StringId,
+        pillarKey: z.string().min(1),
+        compensatedFrom: StringId.optional(),
+        versionId: StringId.optional(),
+        operatorId: StringId.optional(),
+        intentId: StringId.optional(),
+        reason: z.string(),
+      }),
+      outputSchema: z.object({ restored: z.boolean(), reason: z.string(), refusal: z.string().optional() }).passthrough(),
+      sideEffects: ["DB_WRITE", "EVENT_EMIT"],
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification:
+        "Réversibilité ciblée du socle de marque (Loi 1) : annuler une écriture sans effacer les décisions indépendantes qui l'ont suivie.",
     },
     {
       name: "reconcileCompletionLevelCache",

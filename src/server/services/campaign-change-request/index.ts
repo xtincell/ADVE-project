@@ -6,6 +6,9 @@ import type { Intent, IntentResult } from "@/server/services/mestor/intents";
 import type { CampaignChangeRequest, ChangeRequestImpact, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateChangeRequestCode } from "@/domain/campaign-code";
+import { assertCampaignScope, CampaignScopeError as ChangeRequestError, type CampaignScope } from "@/server/services/operator-isolation";
+import { assertReadVersion, nextVersion, refreshCampaignHealth, type VersionedCampaignScope } from "@/server/services/campaign-deliverable";
+export { CampaignScopeError as ChangeRequestError } from "@/server/services/operator-isolation";
 
 type HandlerResult = Pick<IntentResult, "status" | "summary" | "tool" | "output" | "reason" | "estimatedCost">;
 type CreateIntent = Extract<Intent, { kind: "OPERATOR_CREATE_CHANGE_REQUEST" }>;
@@ -15,12 +18,13 @@ type EscalateIntent = Extract<Intent, { kind: "OPERATOR_ESCALATE_CHANGE_REQUEST"
 
 const ZERO_COST = { amount: 0, currency: "USD" } as const;
 
-function vetoed(tool: string, msg: string): HandlerResult {
+function vetoed(tool: string, error: unknown): HandlerResult {
+  const msg = error instanceof Error ? error.message : String(error);
   return {
     status: "VETOED",
     summary: msg,
     tool,
-    reason: msg.includes("not found") ? "NOT_FOUND" : msg.includes("already") ? "ALREADY_RESOLVED" : "VALIDATION_FAILED",
+    reason: error instanceof ChangeRequestError ? error.code : msg.includes("not found") ? "NOT_FOUND" : msg.includes("already") ? "ALREADY_RESOLVED" : "VALIDATION_FAILED",
     estimatedCost: ZERO_COST,
   };
 }
@@ -37,22 +41,23 @@ export async function createChangeRequestHandler(intent: CreateIntent): Promise<
       description: intent.description,
       impact: intent.impact,
       assignedToUserId: intent.assignedToUserId ?? null,
+      strategyId: intent.strategyId, operatorId: intent.operatorId, requestId: intent.requestId,
     });
     return {
       status: "OK",
-      summary: `Ticket ${ticket.ticketCode} créé (impact: ${ticket.impact})${ticket.impact === "MAJOR" ? " — escalade Slack recommandée" : ""}`,
+      summary: `Ticket ${ticket.ticketCode} reçu (impact: ${ticket.impact})${ticket.impact === "MAJOR" ? " — arbitrage recommandé" : ""}`,
       tool: "campaign-change-request.create",
       output: { id: ticket.id, ticketCode: ticket.ticketCode },
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.create", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.create", err);
   }
 }
 
 export async function updateChangeRequestHandler(intent: UpdateIntent): Promise<HandlerResult> {
   try {
-    const ticket = await updateChangeRequest(intent.ticketId, intent.patches);
+    const ticket = await updateChangeRequest(intent.ticketId, intent.patches, intent);
     return {
       status: "OK",
       summary: `Ticket ${ticket.ticketCode} mis à jour (status=${ticket.status})`,
@@ -61,13 +66,13 @@ export async function updateChangeRequestHandler(intent: UpdateIntent): Promise<
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.update", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.update", err);
   }
 }
 
 export async function resolveChangeRequestHandler(intent: ResolveIntent): Promise<HandlerResult> {
   try {
-    const ticket = await resolveChangeRequest(intent.ticketId, intent.resolutionNotes, intent.newBriefVersionId ?? null);
+    const ticket = await resolveChangeRequest(intent.ticketId, intent.resolutionNotes, intent.newBriefVersionId ?? null, intent);
     return {
       status: "OK",
       summary: `Ticket ${ticket.ticketCode} résolu`,
@@ -76,13 +81,13 @@ export async function resolveChangeRequestHandler(intent: ResolveIntent): Promis
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.resolve", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.resolve", err);
   }
 }
 
 export async function escalateChangeRequestHandler(intent: EscalateIntent): Promise<HandlerResult> {
   try {
-    const ticket = await escalateChangeRequest(intent.ticketId, intent.escalationNotes);
+    const ticket = await escalateChangeRequest(intent.ticketId, intent.escalationNotes, intent);
     return {
       status: "OK",
       summary: `Ticket ${ticket.ticketCode} escaladé`,
@@ -91,7 +96,7 @@ export async function escalateChangeRequestHandler(intent: EscalateIntent): Prom
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.escalate", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.escalate", err);
   }
 }
 
@@ -99,104 +104,177 @@ export async function escalateChangeRequestHandler(intent: EscalateIntent): Prom
 // Business helpers
 // ─────────────────────────────────────────────────────────────────────
 
-export interface CreateChangeRequestArgs {
+export type ChangeRequestScope = CampaignScope;
+export interface CreateChangeRequestArgs extends ChangeRequestScope {
   campaignDeliverableId: string;
   requestedByName: string;
   description: string;
   impact: ChangeRequestImpact;
   assignedToUserId: string | null;
+  /** Explicit retry identity, stored in the existing ticket primary key. */
+  requestId?: string;
+}
+
+type Transaction = Prisma.TransactionClient;
+async function scopedDeliverable(tx: Transaction, id: string, scope: ChangeRequestScope) {
+  const row = await tx.campaignDeliverable.findUnique({ where: { id }, select: {
+    id: true, taskCode: true, campaignId: true,
+  } });
+  if (!row) throw new ChangeRequestError("NOT_FOUND", "Livrable introuvable.");
+  await assertCampaignScope(row.campaignId, scope, tx);
+  return row;
+}
+async function scopedTicket(tx: Transaction, id: string, scope: ChangeRequestScope) {
+  await tx.$queryRaw`SELECT "id" FROM "CampaignChangeRequest" WHERE "id" = ${id} FOR UPDATE`;
+  const row = await tx.campaignChangeRequest.findUnique({ where: { id } });
+  if (!row) throw new ChangeRequestError("NOT_FOUND", "Ticket introuvable.");
+  const deliverable = await scopedDeliverable(tx, row.campaignDeliverableId, scope);
+  return { row, deliverable };
+}
+async function checkAssignee(tx: Transaction, id: string | null | undefined, operatorId: string) {
+  if (!id) return;
+  const user = await tx.user.findUnique({ where: { id }, select: { operatorId: true } });
+  if (!user || user.operatorId !== operatorId) {
+    throw new ChangeRequestError("FORBIDDEN", "Le responsable doit appartenir à l’équipe de ce livrable.");
+  }
+}
+function assertOpen(status: string) {
+  if (status === "RESOLVED" || status === "REJECTED") {
+    throw new ChangeRequestError("CONFLICT", "Ticket clôturé : conserver ce reçu et ouvrir une nouvelle demande.");
+  }
+}
+function nonBlank(value: string | null | undefined, label: string) {
+  const text = value?.trim();
+  if (!text) throw new ChangeRequestError("BAD_REQUEST", `${label} requis.`);
+  return text;
 }
 
 export async function createChangeRequest(args: CreateChangeRequestArgs): Promise<CampaignChangeRequest> {
-  // Verify deliverable exists + get its taskCode (CampaignDeliverable doesn't have taskCode field yet ;
-  // we use the deliverable.id as fallback or a derived form).
-  const deliverable = await db.campaignDeliverable.findUnique({
-    where: { id: args.campaignDeliverableId },
-    select: { id: true, campaignId: true, campaign: { select: { code: true } } },
-  });
-  if (!deliverable) throw new Error(`CampaignDeliverable ${args.campaignDeliverableId} not found`);
-
-  // Compute next R-number for this deliverable
-  const existingRs = await db.campaignChangeRequest.count({
-    where: { campaignDeliverableId: args.campaignDeliverableId },
-  });
-  const nextR = existingRs + 1;
-
-  // Build ticketCode. Si la campaign a un code V4 (FC-TG-PEAK-001) on l'utilise + index .NN dérivé.
-  // Sinon fallback sur l'id du deliverable (lossy mais utilisable).
-  const baseCode = deliverable.campaign.code ?? `DEL-${args.campaignDeliverableId.slice(0, 8)}`;
-  const ticketCode = generateChangeRequestCode(baseCode, nextR);
-
-  return db.campaignChangeRequest.create({
-    data: {
-      ticketCode,
-      campaignDeliverableId: args.campaignDeliverableId,
-      requestedByName: args.requestedByName,
-      description: args.description,
-      impact: args.impact,
-      status: "PENDING",
-      assignedToUserId: args.assignedToUserId,
-    },
-  });
-}
-
-export async function updateChangeRequest(
-  ticketId: string,
-  patches: UpdateIntent["patches"],
-): Promise<CampaignChangeRequest> {
-  const existing = await db.campaignChangeRequest.findUnique({ where: { id: ticketId } });
-  if (!existing) throw new Error(`ChangeRequest ${ticketId} not found`);
-  if (existing.status === "RESOLVED") throw new Error(`Ticket ${ticketId} already RESOLVED — utiliser un nouveau ticket pour modifs supplémentaires`);
-
-  const allowedKeys = ["status", "assignedToUserId", "resolutionNotes", "description", "impact"];
-  const data: Prisma.CampaignChangeRequestUpdateInput = {};
-  for (const [key, value] of Object.entries(patches)) {
-    if (!allowedKeys.includes(key)) {
-      throw new Error(`Field "${key}" non modifiable. Allowed: ${allowedKeys.join(", ")}`);
+  const requestedByName = nonBlank(args.requestedByName, "Demandeur");
+  const description = nonBlank(args.description, "Besoin de modification");
+  try {
+    return await db.$transaction(async tx => {
+      // Same explicit command is serialized across tasks as well as processes.
+      if (args.requestId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`change-request:${args.requestId}`}))`;
+      await tx.$queryRaw`SELECT "id" FROM "CampaignDeliverable" WHERE "id" = ${args.campaignDeliverableId} FOR UPDATE`;
+      const deliverable = await scopedDeliverable(tx, args.campaignDeliverableId, args);
+      if (args.requestId) {
+        const previous = await tx.campaignChangeRequest.findUnique({ where: { id: args.requestId } });
+        if (previous) {
+          if (previous.campaignDeliverableId !== args.campaignDeliverableId ||
+              previous.requestedByName !== requestedByName || previous.description !== description ||
+              previous.impact !== args.impact || previous.assignedToUserId !== args.assignedToUserId) {
+            throw new ChangeRequestError("CONFLICT", "Cette demande a déjà été reçue avec un autre contenu.");
+          }
+          return previous;
+        }
+      }
+      await checkAssignee(tx, args.assignedToUserId, args.operatorId);
+      const baseCode = deliverable.taskCode?.trim() || `DEL-${deliverable.id}`;
+      if (deliverable.taskCode && await tx.campaignDeliverable.count({ where: {
+        taskCode: deliverable.taskCode, id: { not: deliverable.id },
+      } })) throw new ChangeRequestError("CONFLICT", "Code de tâche partagé : qualifier les identités avant de numéroter une reprise.");
+      const history = await tx.campaignChangeRequest.findMany({
+        where: { campaignDeliverableId: deliverable.id }, select: { ticketCode: true },
+      });
+      let maxRevision = 0;
+      for (const row of history) {
+        const suffix = /-R([0-9]+)$/.exec(row.ticketCode);
+        const revision = suffix ? Number(suffix[1]) : NaN;
+        if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) {
+          throw new ChangeRequestError("CONFLICT", "Numérotation historique à qualifier avant la prochaine reprise.");
+        }
+        maxRevision = Math.max(maxRevision, revision);
+      }
+      const created = await tx.campaignChangeRequest.create({ data: {
+        ...(args.requestId ? { id: args.requestId } : {}),
+        ticketCode: generateChangeRequestCode(baseCode, maxRevision + 1),
+        campaignDeliverableId: deliverable.id, requestedByName, description,
+        impact: args.impact, status: "PENDING", assignedToUserId: args.assignedToUserId,
+      } });
+      // An open change request blocks its task: the automatic campaign health follows.
+      await refreshCampaignHealth(tx, deliverable.campaignId);
+      return created;
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      throw new ChangeRequestError("CONFLICT", "Identité de ticket déjà utilisée ; qualifier la numérotation sans renommer l’historique.");
     }
-    (data as Record<string, unknown>)[key] = value;
+    throw error;
   }
-  // Auto-stamp resolvedAt si transition vers RESOLVED.
-  if (patches.status === "RESOLVED" && !existing.resolvedAt) {
-    (data as Record<string, unknown>).resolvedAt = new Date();
-  }
-
-  return db.campaignChangeRequest.update({ where: { id: ticketId }, data });
 }
 
-export async function resolveChangeRequest(
-  ticketId: string,
-  resolutionNotes: string,
-  newBriefVersionId: string | null,
-): Promise<CampaignChangeRequest> {
-  const existing = await db.campaignChangeRequest.findUnique({ where: { id: ticketId } });
-  if (!existing) throw new Error(`ChangeRequest ${ticketId} not found`);
-  if (existing.status === "RESOLVED") throw new Error(`Ticket already RESOLVED at ${existing.resolvedAt?.toISOString()}`);
+/** Champs dont le remplacement exige la version lue (besoin, impact, responsable). */
+const VERSIONED_TICKET_FIELDS = ["description", "impact", "assignedToUserId"];
+const TICKET_VERSION_MESSAGES = {
+  missing: "Relisez la reprise avant de modifier son besoin, son impact ou son responsable : sa version est requise.",
+  stale: "La reprise a été modifiée depuis votre lecture : relisez-la avant d’enregistrer.",
+};
 
-  return db.campaignChangeRequest.update({
-    where: { id: ticketId },
-    data: {
-      status: "RESOLVED",
-      resolutionNotes,
-      newBriefVersionId,
-      resolvedAt: new Date(),
-    },
+export async function updateChangeRequest(ticketId: string, patches: UpdateIntent["patches"], scope: VersionedCampaignScope): Promise<CampaignChangeRequest> {
+  return db.$transaction(async tx => {
+    const { row, deliverable } = await scopedTicket(tx, ticketId, scope);
+    assertOpen(row.status);
+    const allowedKeys = ["status", ...VERSIONED_TICKET_FIELDS, "resolutionNotes"];
+    const data: Prisma.CampaignChangeRequestUpdateInput = {};
+    for (const [key, value] of Object.entries(patches)) {
+      if (!allowedKeys.includes(key)) throw new ChangeRequestError("BAD_REQUEST", `Champ non modifiable : ${key}.`);
+      if (value === undefined) continue;
+      (data as Record<string, unknown>)[key] = value;
+    }
+    if (patches.description !== undefined) data.description = nonBlank(patches.description, "Besoin de modification");
+    await checkAssignee(tx, patches.assignedToUserId, scope.operatorId);
+    if (patches.status === "RESOLVED") {
+      data.resolutionNotes = nonBlank(patches.resolutionNotes, "Compte rendu de résolution");
+      data.resolvedAt = new Date();
+    }
+    // A terminal decision is protected by the lock and the closed-ticket rule; replacing
+    // the need, its impact, its owner or open notes requires the version that was read.
+    const terminal = patches.status === "RESOLVED" || patches.status === "REJECTED";
+    const versioned = Object.keys(data).some(key => VERSIONED_TICKET_FIELDS.includes(key))
+      || (patches.resolutionNotes !== undefined && !terminal);
+    assertReadVersion(row.updatedAt, scope.expectedUpdatedAt, versioned, TICKET_VERSION_MESSAGES);
+    data.updatedAt = nextVersion(row.updatedAt);
+    const updated = await tx.campaignChangeRequest.update({ where: { id: ticketId }, data });
+    await refreshCampaignHealth(tx, deliverable.campaignId);
+    return updated;
   });
 }
 
-export async function escalateChangeRequest(
-  ticketId: string,
-  escalationNotes: string,
-): Promise<CampaignChangeRequest> {
-  const existing = await db.campaignChangeRequest.findUnique({ where: { id: ticketId } });
-  if (!existing) throw new Error(`ChangeRequest ${ticketId} not found`);
+export async function resolveChangeRequest(ticketId: string, resolutionNotes: string, newBriefVersionId: string | null, scope: ChangeRequestScope): Promise<CampaignChangeRequest> {
+  const notes = nonBlank(resolutionNotes, "Compte rendu de résolution");
+  return db.$transaction(async tx => {
+    const { row, deliverable } = await scopedTicket(tx, ticketId, scope);
+    if (row.status === "RESOLVED" && row.resolutionNotes === notes && row.newBriefVersionId === newBriefVersionId) return row;
+    assertOpen(row.status);
+    if (newBriefVersionId) {
+      const brief = await tx.campaignBrief.findUnique({ where: { id: newBriefVersionId }, select: { campaignId: true } });
+      if (brief?.campaignId !== deliverable.campaignId) {
+        throw new ChangeRequestError("BAD_REQUEST", "La version de brief doit appartenir à la même campagne.");
+      }
+    }
+    const resolved = await tx.campaignChangeRequest.update({ where: { id: ticketId }, data: {
+      status: "RESOLVED", resolutionNotes: notes, newBriefVersionId, resolvedAt: new Date(),
+      updatedAt: nextVersion(row.updatedAt),
+    } });
+    await refreshCampaignHealth(tx, deliverable.campaignId);
+    return resolved;
+  });
+}
 
-  return db.campaignChangeRequest.update({
-    where: { id: ticketId },
-    data: {
-      status: "ESCALATED",
-      resolutionNotes: existing.resolutionNotes ? `${existing.resolutionNotes}\n[ESCALATED] ${escalationNotes}` : `[ESCALATED] ${escalationNotes}`,
-    },
+export async function escalateChangeRequest(ticketId: string, escalationNotes: string, scope: ChangeRequestScope): Promise<CampaignChangeRequest> {
+  const notes = `[ESCALATED] ${nonBlank(escalationNotes, "Motif d’arbitrage")}`;
+  return db.$transaction(async tx => {
+    const { row, deliverable } = await scopedTicket(tx, ticketId, scope);
+    assertOpen(row.status);
+    if (row.status === "ESCALATED" && row.resolutionNotes?.split("\n").includes(notes)) return row;
+    // Local workflow only: this never sends a Slack/Telegram/email message.
+    const escalated = await tx.campaignChangeRequest.update({ where: { id: ticketId }, data: {
+      status: "ESCALATED", resolutionNotes: row.resolutionNotes ? `${row.resolutionNotes}\n${notes}` : notes,
+      updatedAt: nextVersion(row.updatedAt),
+    } });
+    await refreshCampaignHealth(tx, deliverable.campaignId);
+    return escalated;
   });
 }
 

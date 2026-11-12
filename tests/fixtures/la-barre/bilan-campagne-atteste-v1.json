@@ -1,0 +1,48 @@
+{
+  "_note": "Version de bilan fictive attestée par La Fusée à son enregistrement (ADR-0245). Partagée par La Barre et La Fusée : l'empreinte ignore l'attestation ; le sceau se vérifie avec la clé et l'instance de recette ci-dessous, jamais celles d'une installation.",
+  "cleDeRecette": "cle-de-recette-attestation-la-barre",
+  "instance": "barre-matanga",
+  "version": {
+    "schema": "la-barre/bilan-campagne",
+    "schemaVersion": 1,
+    "id": "BIL-CMP-recette-noel",
+    "version": 1,
+    "arrete_le": "2026-11-11T09:00:00.000Z",
+    "campagne": {
+      "id": "CMP-recette-noel",
+      "nom": "Marque de recette — Noël 2026",
+      "regime": "ponctuelle",
+      "occasion": "noel",
+      "debut": "2026-11-15",
+      "fin": "2027-01-06"
+    },
+    "marques": [
+      {
+        "id": "MQ-recette",
+        "nom": "Marque de recette"
+      }
+    ],
+    "contenu": "Bilan de recette, sans donnée réelle : « l’affiche » a porté, le film non.",
+    "note": null,
+    "precedente": null,
+    "decision": "DEC-rec001",
+    "qui": "creation",
+    "acteur": {
+      "personneId": "P-recette",
+      "nom": "Personne de recette",
+      "poste": "creation",
+      "postes": [
+        "creation"
+      ]
+    },
+    "empreinte": "2b6b559b4bbb2c03c894f4f0551b6411cd57ae383aba47435cbc34b2249d9529",
+    "attestation": {
+      "par": "la-fusee",
+      "userId": "user-recette",
+      "nom": "Personne de recette (La Fusée)",
+      "at": "2026-11-11T09:00:02.000Z",
+      "empreinte": "e7aa80a3dc04a15b9e8d5223285d17fe7b82ddd4dc218747a5765cb9e15cd570",
+      "sceau": "2ac6f4d4d49c3433e66cc34d6a5418c74084699c0d971ae8452bcf021783df57"
+    }
+  }
+}

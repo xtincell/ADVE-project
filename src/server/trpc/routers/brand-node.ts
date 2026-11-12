@@ -11,12 +11,16 @@
  */
 
 import { z } from "zod";
+import { PortfolioReferencesSchema, PortfolioLifecycleSchema } from "@/domain/portfolio-reference";
+import { getPortfolioWorkspace } from "@/server/services/brand-node/workspace";
+import { canAccessBarre } from "@/server/services/brand-node/barre-connection";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
   createBrandNode,
   updateBrandNode,
+  BrandNodeUpdateConflictError,
   archiveBrandNode,
   moveBrandNode,
   attachStrategyToNode,
@@ -42,6 +46,7 @@ import { db } from "@/lib/db";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { accessibleStrategyIds } from "../middleware/strategy-scope";
 import { assertStrategyRead } from "./_strategy-read-guard";
+import { found } from "../entity-access";
 
 /* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
 
@@ -132,6 +137,8 @@ export const brandNodeRouter = createTRPCRouter({
       countryCode: z.string().length(2).nullable().optional(),
       clusterTag: z.string().nullable().optional(),
       attachStrategyId: StringId.nullable().optional(),
+      sourceRefs: PortfolioReferencesSchema.optional(),
+      lifecycle: PortfolioLifecycleSchema.optional(),
     }),
   }).mutation(async ({ ctx, input }) => {
     // Anti-IDOR (round-9) : le caller ne peut créer un nœud QUE dans un arbre
@@ -153,6 +160,8 @@ export const brandNodeRouter = createTRPCRouter({
         countryCode: input.countryCode ?? null,
         clusterTag: input.clusterTag ?? null,
         attachStrategyId: input.attachStrategyId ?? null,
+        sourceRefs: input.sourceRefs,
+        lifecycle: input.lifecycle,
       });
       return { ok: true as const, node };
     } catch (err) {
@@ -169,22 +178,33 @@ export const brandNodeRouter = createTRPCRouter({
       strategyId: StringId,
       operatorId: StringId,
       nodeId: StringId,
+      expectedUpdatedAt: z.string().datetime().optional(),
       patches: z.object({
         name: z.string().min(1).max(200).optional(),
         slug: z.string().min(1).max(80).regex(/^[a-z0-9-]+$/).optional(),
         clusterTag: z.string().nullable().optional(),
         countryCode: z.string().length(2).nullable().optional(),
+        clientId: StringId.nullable().optional(),
         nodeRole: z.array(z.string()).optional(),
-        lifecycle: z.string().optional(),
+        lifecycle: PortfolioLifecycleSchema.optional(),
         inheritanceLocked: z.boolean().optional(),
+        sourceRefs: PortfolioReferencesSchema.optional(),
       }).passthrough(),
     }),
   }).mutation(async ({ ctx, input }) => {
     await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    if ("clientId" in input.patches) {
+      const actor = await getOperatorContext(ctx.session.user.id);
+      const target = found(await db.brandNode.findUnique({ where: { id: input.nodeId }, select: { operatorId: true } }), "Nœud introuvable");
+      if (actor.role !== "ADMIN" && actor.operatorId !== target.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Le rattachement client est pris en charge par votre équipe." });
+      }
+    }
     try {
-      const node = await updateBrandNode(input.nodeId, input.patches);
+      const node = await updateBrandNode(input.nodeId, input.patches, input.expectedUpdatedAt);
       return { ok: true as const, node };
     } catch (err) {
+      if (err instanceof BrandNodeUpdateConflictError) throw new TRPCError({ code: "CONFLICT", message: err.message });
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: err instanceof Error ? err.message : "updateBrandNode failed",
@@ -243,14 +263,22 @@ export const brandNodeRouter = createTRPCRouter({
       strategyId: StringId,
       operatorId: StringId,
       nodeId: StringId,
+      expectedStrategyId: StringId.nullable(),
+      expectedUpdatedAt: z.string().datetime(),
     }),
   }).mutation(async ({ ctx, input }) => {
+    await assertOperatorAccess(ctx.session.user.id, input.operatorId);
     await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    const target = await db.brandNode.findUnique({ where: { id: input.nodeId }, select: { operatorId: true } });
+    if (target?.operatorId !== input.operatorId) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Le dossier appartient à une autre équipe." });
+    }
     await assertStrategyRead(ctx.session.user.id, input.strategyId);
     try {
-      const node = await attachStrategyToNode(input.nodeId, input.strategyId);
+      const node = await attachStrategyToNode(input.nodeId, input.strategyId, input);
       return { ok: true as const, node };
     } catch (err) {
+      if (err instanceof BrandNodeUpdateConflictError) throw new TRPCError({ code: "CONFLICT", message: err.message });
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: err instanceof Error ? err.message : "attachStrategyToNode failed",
@@ -278,6 +306,20 @@ export const brandNodeRouter = createTRPCRouter({
         message: err instanceof Error ? err.message : "tagNodeRole failed",
       });
     }
+  }),
+
+  /** Read model of existing nodes, native records and source references. */
+  workspace: protectedProcedure.input(z.object({ nodeId: StringId })).query(async ({ ctx, input }) => {
+    await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    const node = found(await db.brandNode.findUnique({ where: { id: input.nodeId } }), "Nœud introuvable");
+    const opCtx = await getOperatorContext(ctx.session.user.id);
+    // A portfolio can contain several clients. Ancestor access for a founder
+    // must never grant the agency-wide workspace.
+    if (opCtx.role !== "ADMIN" && opCtx.operatorId !== node.operatorId) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Cet espace est réservé à votre équipe." });
+    }
+    const allowedBarre = canAccessBarre(opCtx);
+    return getPortfolioWorkspace(node, { allowBarre: allowedBarre, actor: opCtx });
   }),
 
   // ── Read queries ─────────────────────────────────────────────────────
@@ -376,10 +418,11 @@ export const brandNodeRouter = createTRPCRouter({
       await assertNodeAccess(ctx.session.user.id, input.nodeId);
       const ancestorIds = await getAncestorIds(input.nodeId);
       if (ancestorIds.length === 0) return [];
-      return db.brandNode.findMany({
+      const ancestors = await db.brandNode.findMany({
         where: { id: { in: ancestorIds } },
         select: { id: true, name: true, slug: true, nodeKind: true, parentNodeId: true },
       });
+      return ancestorIds.flatMap((id) => ancestors.filter((node) => node.id === id));
     }),
 
   /**

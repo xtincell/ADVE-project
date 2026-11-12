@@ -41,4 +41,11 @@ else
   fi
 fi
 
+if [ "${SKIP_MIGRATE_ON_BOOT:-0}" != "1" ] && [ -f public-brand-migration.cjs ]; then
+  if ! node public-brand-migration.cjs; then
+    echo "[entrypoint] Public-page capture failed: retry node public-brand-migration.cjs."
+    exit 1
+  fi
+fi
+
 exec node server.js

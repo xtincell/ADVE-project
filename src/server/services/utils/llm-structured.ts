@@ -38,6 +38,9 @@ import {
 import { UNTRUSTED_NOTICE } from "./untrusted-content";
 
 export interface StructuredLLMOptions<T> {
+  video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo;
+  images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[];
+  signal?: AbortSignal;
   /** System prompt — la directive "Réponds en JSON" est ajoutée automatiquement. */
   system: string;
   /** User prompt. */
@@ -61,6 +64,8 @@ export interface StructuredLLMOptions<T> {
   ollamaModel?: string;
   /** Max output tokens (default 6000). */
   maxOutputTokens?: number;
+  /** Optional generation temperature, passed to the existing gateway. */
+  temperature?: number;
   /** Nombre de retries sur échec Zod (default 2). Total = 1 + retries calls. */
   retries?: number;
   /** Description top-level du schéma pour le prompt (optionnel). */
@@ -76,6 +81,8 @@ export interface StructuredLLMOptions<T> {
 export interface StructuredLLMResult<T> {
   /** Donnée parsée + validée. */
   data: T;
+  model?: string;
+  provider?: string;
   /** Texte LLM brut de la dernière tentative réussie. */
   rawText: string;
   /** Nombre de tentatives effectuées (1 = succès du premier coup). */
@@ -122,7 +129,10 @@ export async function executeStructuredLLMCall<T>(
   let userPrompt = options.prompt;
 
   for (let attempt = 1; attempt <= 1 + retries; attempt++) {
-    const { text } = await callLLM({
+    const { text, model, provider } = await callLLM({
+      images: options.images,
+      video: options.video,
+      signal: options.signal,
       system: baseSystem,
       prompt: userPrompt,
       caller: `${options.caller}:struct${attempt > 1 ? `:retry${attempt - 1}` : ""}`,
@@ -132,6 +142,7 @@ export async function executeStructuredLLMCall<T>(
       // override par appel > env OLLAMA_STRUCTURED_MODEL > modèle ModelPolicy.
       ollamaModel: options.ollamaModel ?? process.env.OLLAMA_STRUCTURED_MODEL,
       maxOutputTokens: options.maxOutputTokens,
+      temperature: options.temperature,
       // F-A3 — Demande au gateway de forcer json_object si provider supporte
       // (OpenAI / Ollama). Pour Anthropic, le system prompt enrichi A2 garantit
       // déjà la contrainte stricte.
@@ -147,6 +158,7 @@ export async function executeStructuredLLMCall<T>(
       });
       return {
         data: result.data,
+        model, provider,
         rawText: text,
         attempts: attempt,
         warnings: result.warnings,

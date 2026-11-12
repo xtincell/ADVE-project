@@ -197,9 +197,10 @@ describe("retirer un document retire son index", () => {
     for (const rel of DELETERS) {
       const src = read(rel);
       expect(src, `${rel} supprime une source`).toMatch(/brandDataSource\.delete\(/);
-      expect(src, `${rel} doit purger les fragments de la même source`).toMatch(
-        /brandContextNode\.deleteMany\(\{\s*where:\s*\{\s*sourceId/,
-      );
+      expect(src, `${rel} doit invalider le document et ses dérivés`).toMatch(/await invalidateSourceDerivatives\(tx,/);
+      const invalidator = read("src/server/services/ingestion-pipeline/source-usage.ts");
+      expect(invalidator).toMatch(/brandContextNode\.deleteMany\(\{\s*where:\s*\{\s*sourceId/);
+
     }
   });
 

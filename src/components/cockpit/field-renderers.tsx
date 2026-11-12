@@ -10,6 +10,10 @@
  */
 
 import { useState } from "react";
+import { getFieldLabel } from "@/lib/types/field-labels";
+import { cataloguePriceLabel } from "@/domain/product-catalog";
+import { brandActorRoleLabels } from "@/domain/brand-actors";
+import { brandValueLabel, brandValueRank, str } from "./pillars/pillar-kit";
 import { getVariableSpec } from "@/lib/types/variable-bible";
 import { getVariableId } from "@/lib/types/variable-ids";
 import { findCanonicalCodes, CANONICAL_MAP } from "@/lib/types/variable-bible-canonical-map";
@@ -32,255 +36,8 @@ interface FieldProps {
 
 // ── Label Map ─────────────────────────────────────────────────────────
 
-const LABELS: Record<string, string> = {
-  nomMarque: "Nom de la marque", accroche: "Accroche", description: "Description",
-  secteur: "Secteur", pays: "Pays", brandNature: "Nature", langue: "Langue",
-  archetype: "Archetype", archetypeSecondary: "Archetype secondaire",
-  citationFondatrice: "Citation fondatrice", noyauIdentitaire: "Noyau identitaire",
-  publicCible: "Public cible", promesseFondamentale: "Croyance fondamentale",
-  positionnement: "Positionnement", promesseMaitre: "Promesse maitre",
-  personas: "Personas", paysageConcurrentiel: "Concurrents",
-  tonDeVoix: "Ton de voix", assetsLinguistiques: "Assets linguistiques",
-  directionArtistique: "Direction artistique", sousPromesses: "Sous-promesses",
-  archetypalExpression: "Expression de l'archetype",
-  produitsCatalogue: "Catalogue produits", productLadder: "Echelle produit",
-  unitEconomics: "Unit Economics", businessModel: "Modele d'affaires",
-  positioningArchetype: "Positionnement prix", salesChannel: "Canal de vente",
-  pricingJustification: "Justification du pricing",
-  personaSegmentMap: "Mapping persona-produit",
-  touchpoints: "Touchpoints", rituels: "Rituels", aarrr: "Funnel AARRR",
-  kpis: "KPIs", superfanPortrait: "Portrait du superfan",
-  promesseExperience: "Promesse d'experience",
-  conversionTriggers: "Triggers de conversion", barriersEngagement: "Barrieres",
-  globalSwot: "SWOT", probabilityImpactMatrix: "Matrice de risques",
-  mitigationPriorities: "Priorites de mitigation", riskScore: "Score de risque",
-  overtonBlockers: "Blocages Overton", pillarGaps: "Diagnostic par pilier",
-  coherenceRisks: "Risques de coherence", devotionVulnerabilities: "Vulnerabilites Engagement",
-  triangulation: "Triangulation marche", hypothesisValidation: "Hypotheses",
-  tamSamSom: "TAM / SAM / SOM", brandMarketFitScore: "Brand-Market Fit",
-  overtonPosition: "Position Overton", perceptionGap: "Ecart de perception",
-  riskValidation: "Validation des risques", competitorOvertonPositions: "Concurrents Overton",
-  catalogueParCanal: "Catalogue par canal", assetsProduisibles: "Assets produisibles",
-  activationsPossibles: "Activations", innovationsProduit: "Innovations produit",
-  actionsByDevotionLevel: "Actions par Engagement", riskMitigationActions: "Actions de mitigation",
-  hypothesisTestActions: "Tests d'hypotheses", formatsDisponibles: "Formats disponibles",
-  fenetreOverton: "Fenetre d'Overton", roadmap: "Roadmap",
-  sprint90Days: "Sprint 90 jours", selectedFromI: "Actions selectionnees depuis I",
-  devotionFunnel: "Funnel Engagement", overtonMilestones: "Jalons Overton",
-  northStarKPI: "North Star KPI", budgetByDevotion: "Budget par Engagement",
-  axesStrategiques: "Axes strategiques", facteursClesSucces: "Facteurs cles de succes",
-  valeurs: "Valeurs", herosJourney: "Parcours du heros", ikigai: "Ikigai",
-  enemy: "Ennemi", prophecy: "Prophetie", doctrine: "Doctrine",
-  livingMythology: "Mythologie vivante", hierarchieCommunautaire: "Hierarchie communautaire",
-  equipeDirigeante: "Equipe dirigeante", equipeComplementarite: "Complementarite equipe",
-  timelineNarrative: "Timeline narrative", totalActions: "Total actions",
-  globalBudget: "Budget global", coherenceScore: "Coherence",
-  syntheseExecutive: "Synthese executive", visionStrategique: "Vision strategique",
-  promesseDeValeur: "Promesse de valeur", mvp: "MVP", proprieteIntellectuelle: "Propriete intellectuelle",
-  gamification: "Gamification", principesCommunautaires: "Principes communautaires",
-  sacredCalendar: "Calendrier sacre", commandments: "Commandements",
-  ritesDePassage: "Rites de passage", sacraments: "Sacrements", taboos: "Tabous",
-  sacredObjects: "Objets sacres", proofPoints: "Proof Points", symboles: "Symboles",
-  rejectedFromI: "Actions rejetees", recommandationsPrioritaires: "Recommandations",
-  marketReality: "Realite marche", weakSignalAnalysis: "Signaux faibles",
-  traction: "Traction", marketDataSources: "Sources de donnees",
-  brandPlatform: "Plateforme de marque", copyStrategy: "Copy strategy",
-  bigIdea: "Big Idea", potentielBudget: "Budget potentiel", mediaPlan: "Plan media",
-  productExperienceMap: "Experience par produit", ladderProductAlignment: "Engagement x Produit",
-  channelTouchpointMap: "Canaux x Touchpoints",
-  economicModels: "Modeles economiques", freeLayer: "Layer gratuit",
-  kpiDashboard: "KPI Dashboard", teamStructure: "Equipe mobilisee",
-  budgetBreakdown: "Ventilation budget",
-  // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ──
-  messieFondateur: "Figure fondatrice", competencesDivines: "Compétences clés",
-  preuvesAuthenticite: "Preuves d'authenticite", indexReputation: "Index de reputation",
-  eNps: "eNPS", turnoverRate: "Turnover interne",
-  missionStatement: "Mission Statement", originMyth: "Origin Myth",
-  positionnementEmotionnel: "Positionnement emotionnel", swotFlash: "SWOT Flash",
-  esov: "ESOV", barriersImitation: "Barrieres imitation",
-  storyEvidenceRatio: "Storytelling / Evidence",
-  roiProofs: "ROI Proofs", experienceMultisensorielle: "Architecture Multisensorielle",
-  sacrificeRequis: "Sacrifice Requis", packagingExperience: "Packaging & Delivery",
-  clergeStructure: "Le Clerge", pelerinages: "Les Pelerinages",
-  programmeEvangelisation: "Programme d'Evangelisation",
-  communityBuilding: "Community Building",
-  // Atom-level labels
-  action: "Action", nom: "Nom", name: "Nom", format: "Format", objectif: "Objectif",
-  pilierImpact: "Pilier impacte", devotionImpact: "Impact Engagement", overtonShift: "Shift Overton",
-  canal: "Canal", cible: "Cible", budgetEstime: "Budget estime", activation: "Activation",
-  type: "Type", feasibility: "Faisabilite", horizon: "Horizon", phase: "Phase",
-  duree: "Duree", budget: "Budget", objectifDevotion: "Objectif Engagement",
-  priority: "Priorite", owner: "Responsable", kpi: "KPI", isRiskMitigation: "Mitigation risque",
-  sourceRef: "Source", age: "Age", csp: "CSP", location: "Localisation",
-  income: "Revenu", familySituation: "Situation familiale", motivations: "Motivations",
-  fears: "Craintes", hiddenDesire: "Desir cache", lifestyle: "Style de vie",
-  devotionPotential: "Potentiel Engagement", rank: "Rang", prix: "Prix", cout: "Cout",
-  margeUnitaire: "Marge unitaire", categorie: "Categorie", segmentCible: "Segment cible",
-  phaseLifecycle: "Phase cycle de vie", lienPromesse: "Lien promesse",
-  risk: "Risque", probability: "Probabilite", impact: "Impact", mitigation: "Mitigation",
-  actNumber: "Acte", title: "Titre", narrative: "Recit", emotionalArc: "Arc emotionnel",
-  causalLink: "Lien causal", value: "Valeur", customName: "Nom personnalise",
-  justification: "Justification", costOfHolding: "Cout de maintien",
-  personnalite: "Personnalite", onDit: "On dit", onNeditPas: "On ne dit pas",
-  bio: "Biographie", role: "Role", competencesCles: "Competences cles",
-  experiencePasse: "Experience passee", credentials: "Credentials",
-  allocationPct: "Allocation temps", manifesto: "Manifesto",
-  counterStrategy: "Contre-strategie", marketingCounter: "Contre marketing",
-  activeOpposition: "Opposition active", passiveOpposition: "Opposition passive",
-  worldTransformed: "Monde transforme", pioneers: "Pionniers", urgency: "Urgence",
-  dogmas: "Dogmes", principles: "Principes", practices: "Pratiques",
-  gainClientConcret: "Gain client concret",
-  gainClientAbstrait: "Gain client abstrait",
-  // Hierarchie & communaute
-  level: "Niveau", privileges: "Privileges", entryCriteria: "Critere d'entree",
-  principle: "Principe", commandment: "Commandement",
-  nomSacre: "Nom sacre", reward: "Recompense", kpiMeasure: "KPI de mesure",
-  frequency: "Frequence", date: "Date", significance: "Signification",
-  rituelEntree: "Rituel d'entree", fromStage: "De", toStage: "Vers",
-  taboo: "Tabou", consequence: "Consequence",
-  // Timeline narrative sub-fields
-  origine: "Origine",
-  transformation: "Transformation", present: "Present", futur: "Futur",
-  // Mythologie & cult marketing
-  foundingMyth: "Mythe fondateur", heroicMoments: "Moments heroiques",
-  sacredRituals: "Rituels sacres", canon: "Canon", extensionRules: "Regles d'extension",
-  captureSystem: "Systeme de capture", sharedHatred: "Haine partagee",
-  bondingRituals: "Rituels de cohesion", fraternityFuel: "Carburant de fraternite",
-  overtonMap: "Carte Overton", ourPosition: "Notre position",
-  enemyPosition: "Position ennemie", battleground: "Terrain de combat",
-  shiftDirection: "Direction du shift", enemyBrands: "Marques ennemies",
-  howTheyFight: "Leur strategie", enemySchwartzValues: "Valeurs ennemies",
-  // Direction artistique
-  semioticAnalysis: "Analyse semiotique", visualLandscape: "Paysage visuel",
-  moodboard: "Moodboard", chromaticStrategy: "Stratégie chromatique",
-  typographySystem: "Systeme typographique", logoTypeRecommendation: "Recommandation logo",
-  logoValidation: "Validation logo", designTokens: "Design tokens",
-  motionIdentity: "Identite mouvement", brandGuidelines: "Charte graphique",
-  lsiMatrix: "Matrice LSI", dominantSigns: "Signes dominants",
-  gloryOutputId: "ID Glory",
-  // Engagement
-  personaRef: "Persona ref", productRef: "Produit ref",
-  touchpointRefs: "Touchpoints", emotionalOutcome: "Resultat emotionnel",
-  experienceDescription: "Experience", entryAction: "Action d'entree",
-  upgradeAction: "Action d'upgrade", fromLevel: "De", toLevel: "Vers",
-  trigger: "Declencheur", barrier: "Barriere", enforcement: "Application",
-  // Assets & Identite
-  slogan: "Slogan", tagline: "Tagline", motto: "Devise",
-  mantras: "Mantras", lexiquePropre: "Lexique propre",
-  languePrincipale: "Langue principale", languesSecondaires: "Langues secondaires",
-  word: "Mot", definition: "Definition",
-  sign: "Signe", meaning: "Signification", culturalContext: "Contexte culturel",
-  archetypeVisual: "Archetype visuel", semioticTensions: "Tensions semiotiques",
-  tension: "Tension", resolution: "Resolution",
-  competitors: "Concurrents", visualIdentity: "Identite visuelle",
-  differentiator: "Differenciateur", whitespace: "Espace blanc",
-  positioningMap: "Carte de positionnement", xAxis: "Axe X", yAxis: "Axe Y",
-  brandPosition: "Position de marque",
-  theme: "Theme", keywords: "Mots-cles",
-  colorPalette: "Palette de couleurs", hex: "Hex", usage: "Usage",
-  textures: "Textures", references: "References", source: "Source",
-  primaryColors: "Couleurs primaires", secondaryColors: "Couleurs secondaires",
-  emotion: "Emotion", gradients: "Degrades", from: "De", to: "Vers",
-  forbiddenColors: "Couleurs interdites", reason: "Raison",
-  accessibilityNotes: "Notes accessibilite",
-  primaryFont: "Police principale", secondaryFont: "Police secondaire",
-  category: "Categorie", size: "Taille", weight: "Graisse",
-  hierarchy: "Hierarchie", rules: "Regles",
-  logoType: "Type de logo", rationale: "Justification",
-  variations: "Variations", doNots: "A eviter",
-  strengths: "Forces", weaknesses: "Faiblesses",
-  recommendations: "Recommandations", culturalFit: "Adequation culturelle",
-  spacing: "Espacements", borderRadius: "Rayons de bordure",
-  shadows: "Ombres", breakpoints: "Points de rupture",
-  personality: "Personnalite", transitions: "Transitions",
-  duration: "Duree", easing: "Courbe", microInteractions: "Micro-interactions",
-  animation: "Animation",
-  sections: "Sections", content: "Contenu",
-  dosAndDonts: "A faire / A eviter",
-  applicationExamples: "Exemples d'application", medium: "Support",
-  concepts: "Concepts", layers: "Couches",
-  sublimationRules: "Regles de sublimation", literal: "Litteral", sublimated: "Sublime",
-  // Engagement sacre
-  socialSignal: "Signal social", form: "Forme", stage: "Stade",
-  claim: "Affirmation",
-  symbol: "Symbole", meanings: "Significations", usageContexts: "Contextes d'usage",
-  // Concurrents
-  partDeMarcheEstimee: "Part de marche estimee", avantagesCompetitifs: "Avantages competitifs",
-  faiblesses: "Faiblesses", strategiePos: "Stratégie de positionnement",
-  distinctiveAssets: "Assets distinctifs", menaceNiveau: "Menace",
-  // Generics
-  score: "Score", gaps: "Lacunes", pillar1: "Pilier 1", pillar2: "Pilier 2",
-  field1: "Champ 1", field2: "Champ 2", contradiction: "Contradiction",
-  severity: "Severite", status: "Statut", evidence: "Preuve",
-  hypothesis: "Hypothese", validationMethod: "Methode de validation",
-  // V — Pricing & Economics
-  whatIsFree: "Ce qui est gratuit",
-  whatIsPaid: "Ce qui est payant", conversionLever: "Levier de conversion",
-  cac: "Cout d'acquisition",
-  ltv: "Valeur vie client", ltvCacRatio: "Ratio LTV/CAC",
-  pointMort: "Point mort", margeNette: "Marge nette",
-  roiEstime: "ROI estime", paybackPeriod: "Periode de retour",
-  budgetCom: "Budget communication", caVise: "CA vise",
-  riskHedging: "Couverture de risque",
-  canalDistribution: "Canal distribution", disponibilite: "Disponibilite",
-  skuRef: "Reference SKU", produitIds: "Produits",
-  exists: "Existe", features: "Fonctionnalites",
-  launchDate: "Date de lancement", userCount: "Utilisateurs",
-  feedbackSummary: "Resume feedback",
-  brevets: "Brevets", statut: "Statut", numero: "Numero",
-  secretsCommerciaux: "Secrets commerciaux",
-  technologieProprietary: "Technologie proprietaire",
-  barrieresEntree: "Barrieres a l'entree", licences: "Licences",
-  protectionScore: "Score de protection",
-  gainMarqueConcret: "Gain marque concret", gainMarqueAbstrait: "Gain marque abstrait",
-  coutClientConcret: "Cout client concret", coutClientAbstrait: "Cout client abstrait",
-  coutMarqueConcret: "Cout marque concret", coutMarqueAbstrait: "Cout marque abstrait",
-  valeurMarqueTangible: "Valeur marque tangible", valeurMarqueIntangible: "Valeur marque intangible",
-  valeurClientTangible: "Valeur client tangible", valeurClientIntangible: "Valeur client intangible",
-  coutMarqueTangible: "Cout marque tangible", coutMarqueIntangible: "Cout marque intangible",
-  coutClientTangible: "Cout client tangible", coutClientIntangible: "Cout client intangible",
-  // E — Engagement
-  primaryChannel: "Canal principal",
-  aarrStage: "Etape AARRR", aarrPrimary: "AARRR principal",
-  // R — Risk
-  blockingPerception: "Perception bloquante", devotionLevelBlocked: "Niveau Engagement bloque",
-  churnCause: "Cause de desabonnement",
-  // T — Track
-  macroTrends: "Tendances macro", weakSignals: "Signaux faibles",
-  currentPerception: "Perception actuelle", targetPerception: "Perception cible",
-  measurementMethod: "Methode de mesure", measuredAt: "Mesure le",
-  confidence: "Confiance", segment: "Segment", perception: "Perception",
-  gapDescription: "Description de l'ecart", gapScore: "Score ecart",
-  relativeToUs: "Position relative",
-  customerInterviews: "Entretiens clients", competitiveAnalysis: "Analyse concurrentielle",
-  trendAnalysis: "Analyse tendances", financialBenchmarks: "Benchmarks financiers",
-  // S — Strategie
-  axe: "Axe", pillarsLinked: "Piliers lies",
-  perceptionActuelle: "Perception actuelle", perceptionCible: "Perception cible",
-  ecart: "Ecart", strategieDeplacement: "Stratégie de déplacement",
-  etape: "Etape", devotionTarget: "Cible Engagement", riskRef: "Ref risque",
-  hypothesisRef: "Ref hypothese", responsibility: "Responsabilite",
-  pillar: "Pilier", target: "Objectif",
-  spectateurs: "Spectateurs", interesses: "Interesses",
-  participants: "Participants", engages: "Engages",
-  ambassadeurs: "Ambassadeurs", evangelistes: "Prescripteurs",
-  acquisition: "Acquisition", conversion: "Conversion",
-  retention: "Retention", evangelisation: "Recommandation",
-  currentValue: "Valeur actuelle", recommendation: "Recommandation",
-};
-
-export function getFieldLabel(key: string): string {
-  // ADR-0030 PR-Fix-3 — gérer les paths nested (ex: "unitEconomics.cac"
-  // → "Unit Economics → CAC"). Avant : "Unit Economics. Cac" (moche).
-  // Chaque segment est mappé via LABELS puis joint avec " → ".
-  if (key.includes(".")) {
-    return key
-      .split(".")
-      .map((k) => LABELS[k] ?? k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()))
-      .join(" → ");
-  }
-  return LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
-}
+// Shared pure metadata is also consumed by Oracle HTML and server exports.
+export { getFieldLabel } from "@/lib/types/field-labels";
 
 // ── Core atoms ────────────────────────────────────────────────────────
 
@@ -867,6 +624,7 @@ export function PersonasCard({ personas, onFocus }: { personas: Array<Record<str
               </div>
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-foreground-muted mb-2">
+              <span>{brandActorRoleLabels(p.actorRoles).join(" · ") || "Rôles à qualifier"}</span>
               {p.age ? <span>{String(p.age)} ans</span> : null}
               {p.csp ? <span>{String(p.csp)}</span> : null}
               {p.location ? <span>{String(p.location)}</span> : null}
@@ -895,8 +653,8 @@ export function ProduitsCatalogueCard({ produits, onFocus }: { produits: Array<R
             className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-white">{String(p.nom ?? p.name ?? "")}</span>
-              {p.prix ? <span className="text-xs font-bold text-success">{Number(p.prix).toLocaleString()} XAF</span> : null}
             </div>
+            <p className="mb-1.5 whitespace-pre-wrap break-words text-xs font-bold text-success">{cataloguePriceLabel(p)}</p>
             <div className="flex flex-wrap gap-1.5 text-2xs">
               {p.categorie ? <span className="rounded bg-info/10 px-1.5 py-0.5 text-info">{String(p.categorie)}</span> : null}
               {p.segmentCible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-accent">{String(p.segmentCible)}</span> : null}
@@ -1015,7 +773,7 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
   }
 
   const list = valeurs as Array<Record<string, unknown>>;
-  const sorted = [...list].sort((a, b) => (Number(a.rank) || 99) - (Number(b.rank) || 99));
+  const sorted = [...list].sort((a, b) => (brandValueRank(a) ?? Infinity) - (brandValueRank(b) ?? Infinity));
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
@@ -1029,14 +787,14 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
           // d'autres marques) contiennent `nom` au lieu de `customName`/`value`.
           // Le renderer reste défensif : fallback chain par priorité avant
           // d'afficher vide.
-          const label = String(v.customName ?? v.value ?? v.nom ?? v.name ?? v.title ?? "");
+          const label = brandValueLabel(v);
           const detail = v.justification ?? v.description ?? null;
           return (
             <div key={i}
               onClick={onFocus ? () => onFocus(v) : undefined}
               className={`flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2.5 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
-                {Number(v.rank) || i + 1}
+                {brandValueRank(v) ?? i + 1}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -1183,6 +941,7 @@ export function EquipeDirigenteCard({ equipe, onFocus }: { equipe: Array<Record<
               <span className="rounded bg-accent/10 px-1.5 py-0.5 text-2xs text-accent">{String(m.role ?? "")}</span>
             </div>
             {m.bio ? <p className="text-2xs text-white/60 line-clamp-2 mb-1.5">{String(m.bio)}</p> : null}
+            {m.responsabilites ? <p className="text-2xs text-foreground-muted mt-1"><b>Responsabilités : </b>{str(m.responsabilites)}</p> : null}
             {Array.isArray(m.competencesCles) ? (
               <div className="flex flex-wrap gap-1">
                 {(m.competencesCles as string[]).slice(0, 4).map((c, j) => (

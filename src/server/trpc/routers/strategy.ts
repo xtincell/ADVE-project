@@ -1,4 +1,9 @@
+import { assertSeedScopeAccess, seedStrategy } from "@/server/services/strategy-bootstrap";
+export { buildInitialIntakeResponses, formatIntakeRawContent } from "@/server/services/strategy-bootstrap";
+import { ensureNodePlatform } from "@/server/services/brand-node/ensure-platform";
 import { z } from "zod";
+import { mixDecision } from "@/domain/production-mix";
+import {readProductionMix,adoptProductionMix} from "@/server/services/deliverable-orchestrator/production-mix";
 import { classifyTier, MarketScaleSchema, BrandTierSchema, effectiveTier } from "@/domain";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
@@ -7,7 +12,7 @@ import { assertStrategyRead } from "./_strategy-read-guard";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
-import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
+import { canAccessStrategy, getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
 import { emitIntent, type Intent } from "@/server/services/mestor/intents";
@@ -20,7 +25,15 @@ import {
   type TierTransitionDirection,
 } from "@/server/services/mestor/gates/palier-promotion-proofs";
 import { computeEvidenceBreakdown } from "@/server/services/advertis-scorer/evidence";
+import { PublicBrandPublicationInput } from "@/domain/public-brand";
+import { previewPublicBrand, publishPublicBrand, PublicBrandError } from "@/server/services/brand-vault/publication";
+import { inspectSynthesisForReview, transitionPillarStatus, assertApprovedSynthesis } from "@/server/services/pillar-gateway/validation-status";
+import { measuredConfidence } from "@/lib/confidence";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : une marque inconnue reçoit 404 typé, jamais P2025 ni un message Prisma. */
+const STRATEGY_NOT_FOUND = "Marque introuvable.";
 
 export const strategyRouter = createTRPCRouter({
   create: governedProcedure({
@@ -34,6 +47,8 @@ export const strategyRouter = createTRPCRouter({
       clientId: z.string().optional(),
       sector: z.string().optional(),
       country: z.string().optional(),
+      marketScale: MarketScaleSchema.optional(),
+      portfolioNode: z.object({nodeId: z.string().min(1), expectedUpdatedAt: z.string().datetime()}).optional(),
       businessContext: z.record(z.string(), z.unknown()).optional(),
     }),
 
@@ -41,216 +56,30 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { sector, country, businessContext, clientId, ...rest } = input;
-      // Résout vers un User réellement présent en base — la session JWT peut
-      // porter un id orphelin après re-seed (sinon FK Strategy_userId_fkey).
+      const { portfolioNode, ...seed } = input;
       const { resolveSessionUserId } = await import("../resolve-session-user");
-      const userId = await resolveSessionUserId(ctx);
-      const strategy = await ctx.db.strategy.create({
-        data: {
-          ...rest,
-          userId,
-          operatorId: input.operatorId ?? (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | undefined,
-          clientId: clientId ?? undefined,
-          businessContext: businessContext as Prisma.InputJsonValue,
-        },
-      });
-
-      // Auto-create 8 pillars — seed A and V with Strategy metadata (Chantier -1)
-      const biz = businessContext as Record<string, unknown> | undefined;
-      const pillarSeeds: Record<string, Record<string, unknown>> = {
-        a: {
-          nomMarque: input.name,
-          description: input.description ?? "",
-          secteur: sector ?? "",
-          pays: country ?? "",
-          brandNature: biz?.brandNature ?? undefined,
-          langue: (biz as Record<string, unknown> | undefined)?.language ?? "fr",
-        },
-        d: {},
-        v: {
-          businessModel: biz?.businessModel ?? undefined,
-          economicModels: biz?.economicModels ?? undefined,
-          positioningArchetype: biz?.positioningArchetype ?? undefined,
-          salesChannel: biz?.salesChannel ?? undefined,
-          freeLayer: biz?.freeLayer ?? undefined,
-        },
-        e: {},
-        r: {},
-        t: {},
-        i: {},
-        s: {},
-      };
-      // Clean undefined values to avoid Prisma issues
-      for (const obj of Object.values(pillarSeeds)) {
-        for (const [k, v] of Object.entries(obj)) {
-          if (v === undefined) delete obj[k];
+      const actor = { ...ctx.session.user, id: await resolveSessionUserId(ctx) };
+      let operatorId = seed.operatorId ?? ctx.session.user.operatorId ?? undefined;
+      if (seed.operatorId || seed.clientId || portfolioNode) {
+        const scope = await getOperatorContext(actor.id);
+        if (!operatorId && seed.clientId && scope.role === "ADMIN") {
+          const client = await ctx.db.client.findUnique({where:{id:seed.clientId},select:{operatorId:true}});
+          operatorId = client?.operatorId;
         }
+        await assertSeedScopeAccess(ctx.db, scope, operatorId, seed.clientId);
       }
-      for (const key of [...PILLAR_STORAGE_KEYS]) {
-        await ctx.db.pillar.create({
-          data: {
-            strategyId: strategy.id,
-            key,
-            content: pillarSeeds[key] as Prisma.InputJsonValue,
-            confidence: key === "a" || key === "v" ? 0.1 : 0,
-          },
-        });
+      if (portfolioNode) {
+        if (!operatorId) throw new TRPCError({code:"FORBIDDEN",message:"Équipe du dossier requise."});
+        return ensureNodePlatform(ctx.db, { ...portfolioNode, operatorId }, actor, (tx,nodeSeed,author)=>
+          seedStrategy(tx,{...seed,...nodeSeed},author));
       }
-
-      // Initialize structured responses object
-      const bizCtx = (biz ?? {}) as Record<string, unknown>;
-      const initialResponses = {
-        biz: {
-          biz_model: bizCtx.businessModel ?? null,
-          biz_nature: bizCtx.brandNature ?? null,
-          biz_revenue: bizCtx.economicModels ?? [],
-          biz_positioning: bizCtx.positioningArchetype ?? null,
-          biz_sales_channel: bizCtx.salesChannel ?? null,
-          biz_free_element: bizCtx.freeLayer ? (bizCtx.freeLayer as any).whatIsFree : "NONE",
-          biz_free_detail: bizCtx.freeLayer ? (bizCtx.freeLayer as any).whatIsPaid : "",
-          biz_premium_scope: bizCtx.premiumScope ?? "NONE",
-        },
-        a: {
-          a_vision: "",
-          a_mission: "",
-          a_noyau: input.name,
-          a_values: "",
-          a_origin: "",
-          a_archetype: "",
-          a_citation: "",
-        },
-        d: {
-          d_positioning: "",
-          d_promise: "",
-          d_persona_principal: "",
-          d_persona_secondary: "",
-          d_visual: "Inexistante",
-          d_voice: "Pas defini",
-          d_competitors: "",
-        },
-        v: {
-          v_promise: "",
-          v_products: "",
-          v_experience: "5",
-        },
-        e: {
-          e_community: "Aucune",
-          e_loyalty: "10-30%",
-          e_advocates: "Rarement",
-          e_rituals: "",
-        },
-        r: {
-          r_threats: "",
-          r_crisis: "Non",
-          r_reputation: "Pas du tout",
-        },
-        t: {
-          t_kpis: "",
-          t_measurement: "Jamais",
-          t_nps: "Non",
-        },
-        i: {
-          i_roadmap: "Non",
-          i_budget: "< 2%",
-          i_team: "Personne de dedie",
-        },
-        s: {
-          s_guidelines: "Non",
-          s_coherence: "5",
-          s_ambition: "",
-        }
-      };
-
-      // Auto-create QuickIntake to act as the biz intake for the cockpit-created brand
-      const quickIntake = await ctx.db.quickIntake.create({
-        data: {
-          contactName: ctx.session.user.name ?? "System",
-          contactEmail: ctx.session.user.email ?? "system@lafusee.io",
-          companyName: input.name,
-          sector: sector ?? null,
-          country: country ?? null,
-          businessModel: bizCtx.businessModel as string ?? null,
-          economicModel: Array.isArray(bizCtx.economicModels) ? (bizCtx.economicModels as string[]).join(",") : null,
-          positioning: bizCtx.positioningArchetype as string ?? null,
-          brandNature: bizCtx.brandNature as string ?? null,
-          responses: initialResponses as Prisma.InputJsonValue,
-          status: "CONVERTED",
-          convertedToId: strategy.id,
-        }
-      });
-
-      // Auto-create BrandDataSource of type MANUAL_INPUT linked to the QuickIntake
-      const rawContent = formatIntakeRawContent(input.name, initialResponses);
-      await ctx.db.brandDataSource.create({
-        data: {
-          strategyId: strategy.id,
-          sourceType: "MANUAL_INPUT",
-          fileName: `Quick Intake — ${input.name}`,
-          rawContent,
-          rawData: initialResponses as Prisma.InputJsonValue,
-          extractedFields: initialResponses as Prisma.InputJsonValue,
-          pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
-          processingStatus: "PROCESSED",
-          certainty: "DECLARED",
-          origin: `intake:${quickIntake.id}`,
-        },
-      }).catch((err) => { console.warn("[strategy] BrandDataSource creation failed:", err); });
-
-      // Chantier 7 — Seed SESHAT with sector benchmarks
-      if (sector) {
-        await ctx.db.knowledgeEntry.create({
-          data: {
-            entryType: "SECTOR_BENCHMARK",
-            sector: sector,
-            market: country ?? "",
-            data: { source: "initial_seed", benchmarkType: "sector_defaults", strategyId: strategy.id },
-            // `successScore` est une pertinence 0-1 (elle est servie telle quelle
-            // en `relevance`) : la valeur 50 classait ce placeholder loin devant
-            // toute référence réelle. Rien n'a été mesuré ici — donc `null`.
-            successScore: null,
-            sampleSize: 0,
-            sourceHash: `seed-${strategy.id}`,
-          },
-        }).catch(() => {}); // Non-fatal
-      }
-
-      // Auto-create VariableStoreConfig
-      await ctx.db.variableStoreConfig.create({
-        data: { strategyId: strategy.id, stalenessThresholdDays: 30, autoRecalculate: true },
-      }).catch((err) => { console.warn("[strategy] variable-store config creation failed:", err instanceof Error ? err.message : err); });
-
-      // Auto-create BrandOSConfig
-      await ctx.db.brandOSConfig.create({
-        data: { strategyId: strategy.id, config: { currency: "XAF", language: "fr" } },
-      }).catch((err) => { console.warn("[strategy] brandOS config creation failed:", err instanceof Error ? err.message : err); });
-
-      // Auto-create Deal in CRM
-      await ctx.db.deal.create({
-        data: {
-          strategyId: strategy.id,
-          userId,
-          contactName: ctx.session.user.name ?? "",
-          contactEmail: ctx.session.user.email ?? "",
-          companyName: input.name,
-          stage: "WON",
-          source: "COCKPIT_CREATE",
-          wonAt: new Date(),
-        },
-      }).catch((err) => { console.warn("[strategy] CRM deal creation failed:", err instanceof Error ? err.message : err); });
-
-      // Audit trail (non-blocking)
-      auditTrail.log({
-        userId: ctx.session.user.id,
-        action: "CREATE",
-        entityType: "Strategy",
-        entityId: strategy.id,
-        newValue: { name: input.name, sector, country },
-      }).catch((err) => { console.warn("[audit-trail] strategy create log failed:", err instanceof Error ? err.message : err); });
-
-      return strategy;
+      return ctx.db.$transaction(tx => seedStrategy(tx, { ...seed, operatorId }, actor));
     }),
 
+  productionMix: protectedProcedure.input(z.object({id:z.string()})).query(async ({ctx,input})=>{
+    await assertStrategyRead(ctx.session.user.id,input.id);
+    return readProductionMix(ctx.db,input.id,ctx.session.user.id);
+  }),
   update: governedProcedure({
 
 
@@ -272,6 +101,7 @@ export const strategyRouter = createTRPCRouter({
       // poser sur une marque existante — veille définitivement morte.
       countryCode: z.string().length(2).nullable().optional(),
       sector: z.string().max(120).nullable().optional(),
+      marketRegion: z.string().trim().min(2).max(120).nullable().optional(),
       // ADR-0165 — sujets de veille suivis (édition manuelle, prime sur le
       // dérivé ADVE). [] = revenir au dérivé automatique.
       watchSubjects: z.array(z.string().min(3).max(60)).max(8).optional(),
@@ -285,7 +115,9 @@ export const strategyRouter = createTRPCRouter({
       // produit n'écrivait publicSlug (seeds/scripts uniquement) — le founder
       // ne pouvait ni activer sa page publique ni en connaître l'URL.
       enablePublicPage: z.boolean().optional(),
-    }),
+      publicPage: PublicBrandPublicationInput.optional(),
+      productionMix: mixDecision.optional(),
+    }).transform((input) => ({ ...input, strategyId: input.id })),
 
 
     caller: "strategy:update",
@@ -293,7 +125,32 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, recalculateScore, sector, enablePublicPage, watchSubjects, ...data } = input;
+      const { id, strategyId: _strategyId, recalculateScore, sector, marketRegion, enablePublicPage, watchSubjects, publicPage, productionMix, ...data } = input;
+      if(productionMix){
+        if(Object.keys(input).some(key=>!["id","strategyId","productionMix"].includes(key))) throw new TRPCError({code:"BAD_REQUEST",message:"Validez le mix séparément des autres modifications."});
+        return adoptProductionMix(ctx.db,id,ctx.session.user.id,ctx.intentId,productionMix);
+      }
+
+      if (publicPage) {
+        if (Object.keys(input).some((key) => !["id", "strategyId", "publicPage", "recalculateScore"].includes(key))) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Publiez la page séparément des autres modifications." });
+        }
+        try {
+          await publishPublicBrand(id, ctx.session.user.id, ctx.intentId, publicPage);
+          return found(await ctx.db.strategy.findUnique({ where: { id } }), STRATEGY_NOT_FOUND);
+        } catch (error) {
+          if (error instanceof PublicBrandError) throw new TRPCError({ code: error.code, message: error.message, cause: error });
+          if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+            throw new TRPCError({ code: "CONFLICT", message: "Cette adresse vient d’être prise. Rechargez l’aperçu pour réessayer.", cause: error });
+          }
+          if (error instanceof Error && (/^SOURCE_/.test(error.message) || error.name === "CollaboratorWriteVetoError")) {
+            throw new TRPCError({ code: error.name === "CollaboratorWriteVetoError" ? "FORBIDDEN" : "PRECONDITION_FAILED", message: error.message, cause: error });
+          }
+          throw error;
+        }
+      }
+      if (enablePublicPage !== undefined) throw new TRPCError({ code: "PRECONDITION_FAILED",
+        message: "Ouvrez Connexions → Page publique pour relire et publier la version choisie." });
 
       // Enforce operator isolation
       const hasAccess = await canAccessStrategy(id, {
@@ -303,52 +160,37 @@ export const strategyRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      const previous = await ctx.db.strategy.findUniqueOrThrow({ where: { id } });
+      const previous = found(await ctx.db.strategy.findUnique({ where: { id } }), STRATEGY_NOT_FOUND);
       // Secteur / sujets de veille : MERGE dans businessContext (jamais un
       // écrasement du JSON). watchSubjects: [] = purge (retour au dérivé ADVE).
       const mergedBusinessContext =
-        sector !== undefined || watchSubjects !== undefined
+        sector !== undefined || watchSubjects !== undefined || marketRegion !== undefined
           ? ({
               ...((previous.businessContext as Record<string, unknown> | null) ?? {}),
               ...(sector !== undefined ? { sector } : {}),
+              ...(marketRegion !== undefined ? {marketRegion} : {}),
               ...(watchSubjects !== undefined ? { watchSubjects } : {}),
             } as Prisma.InputJsonValue)
           : undefined;
-      // Page publique : slug canonique dérivé du nom (format LFA-, idempotent).
-      // Non-latin-safe (jamais de throw) + désambiguïsation de collision (le slug
-      // est @unique GLOBAL ; deux marques homonymes crashaient sinon en P2002 500).
-      let publicSlugPatch: { publicSlug: string } | undefined;
-      if (enablePublicPage && !previous.publicSlug) {
-        const { brandPublicSlugSafe, disambiguateBrandSlug } = await import("@/domain/brand-slug");
-        let candidate = brandPublicSlugSafe(previous.name, previous.id);
-        const clash = await ctx.db.strategy.findFirst({
-          where: { publicSlug: candidate, id: { not: id } },
-          select: { id: true },
-        });
-        if (clash) candidate = disambiguateBrandSlug(candidate, previous.id);
-        publicSlugPatch = { publicSlug: candidate };
-      }
-      const buildUpdateData = (slugPatch?: { publicSlug: string }) => ({
+      const updates = {
         ...data,
         ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
-        ...(slugPatch ?? {}),
-      });
-      let updated;
-      try {
-        updated = await ctx.db.strategy.update({ where: { id }, data: buildUpdateData(publicSlugPatch) });
-      } catch (err) {
-        // Course entre le findFirst et l'update sur le slug → réessai désambiguïsé.
-        // Duck-typing sur `.code` (l'import Prisma est type-only ici).
-        const isUniqueViolation =
-          !!err && typeof err === "object" && (err as { code?: unknown }).code === "P2002";
-        if (publicSlugPatch && isUniqueViolation) {
-          const { disambiguateBrandSlug } = await import("@/domain/brand-slug");
-          updated = await ctx.db.strategy.update({
-            where: { id },
-            data: buildUpdateData({ publicSlug: disambiguateBrandSlug(publicSlugPatch.publicSlug, previous.id) }),
-          });
-        } else throw err;
-      }
+      };
+      const requiresScopeGuard = data.countryCode !== undefined && data.countryCode !== previous.countryCode;
+      const needsCAS = requiresScopeGuard || mergedBusinessContext !== undefined;
+      const patch = async (tx: Prisma.TransactionClient) => {
+        if (requiresScopeGuard) {
+          const foreignScope = data.countryCode ? { OR:[{countryCode:null}, {countryCode:{not:data.countryCode}}] } : {countryCode:{not:null}};
+          if (await tx.brandNode.findFirst({where:{strategyId:id,archivedAt:null,...foreignScope}, select:{id:true}})) {
+            throw new TRPCError({code:"CONFLICT",message:"Ce dossier est rattaché à un autre périmètre de portefeuille."});
+          }
+        }
+        return tx.strategy.update({where:{id,...(needsCAS ? {updatedAt:previous.updatedAt} : {})},data:updates});
+      };
+      const updated = needsCAS ? await ctx.db.$transaction(patch,{isolationLevel:"Serializable"}).catch((err:unknown)=>{
+        if (["P2025","P2034"].includes((err as {code?:string})?.code ?? "")) throw new TRPCError({code:"CONFLICT",message:"Le dossier a changé. Relisez ses données."});
+        throw err;
+      }) : await patch(ctx.db);
 
       // Audit trail (non-blocking)
       auditTrail.log({
@@ -373,6 +215,11 @@ export const strategyRouter = createTRPCRouter({
       return updated;
     }),
 
+  publicPage: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    await assertStrategyRead(ctx.session.user.id, input.id);
+    return previewPublicBrand(input.id, ctx.session.user.id);
+  }),
+
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -382,7 +229,7 @@ export const strategyRouter = createTRPCRouter({
         role: ctx.session.user.role ?? "USER",
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
-      return ctx.db.strategy.findUniqueOrThrow({
+      return found(await ctx.db.strategy.findUnique({
         where: { id: input.id },
         include: {
           pillars: true,
@@ -392,7 +239,7 @@ export const strategyRouter = createTRPCRouter({
           brandAssets: { take: 10 },
           client: { select: { id: true, name: true, sector: true, country: true } },
         },
-      });
+      }), STRATEGY_NOT_FOUND);
     }),
 
   /**
@@ -546,8 +393,7 @@ export const strategyRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       // Enforce operator isolation: non-ADMIN users can only see their operator's strategies
-      const userRole = ctx.session.user.role ?? "USER";
-      const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+      const { role: userRole, operatorId: userOperatorId } = await getOperatorContext(ctx.session.user.id, ctx.db);
       const operatorScope = scopeStrategies({ operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole });
 
       const strategies = await ctx.db.strategy.findMany({
@@ -827,10 +673,10 @@ export const strategyRouter = createTRPCRouter({
       // invisible à la garde de tête ADR-0175) → fuite complète des piliers ADVE
       // d'une marque arbitraire. Garde de lecture explicite.
       await assertStrategyRead(ctx.session.user.id, input.id);
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.id },
         include: { pillars: true, client: { select: { id: true, name: true } } },
-      });
+      }), STRATEGY_NOT_FOUND);
       // Absence ≠ zéro (canon du repo). Une marque jamais évaluée n'a pas
       // `advertis_vector` : le code fabriquait alors `composite = 0` puis la
       // classait au palier le plus bas, et le cockpit affichait « Score 0/200 »
@@ -939,75 +785,32 @@ export const strategyRouter = createTRPCRouter({
       );
 
       return {
-        confidence: sPillar?.confidence ?? null,
+        ...await inspectSynthesisForReview(sPillar, ctx.db),
+        confidence: measuredConfidence(sPillar?.confidence),
         validationStatus: sPillar?.validationStatus ?? "DRAFT",
         fieldCertainty: sPillar?.fieldCertainty ?? null,
         pillarScores,
-        hasLowConfidence: (sPillar?.confidence ?? 0) < 0.30,
+        hasLowConfidence: measuredConfidence(sPillar?.confidence) !== null && sPillar!.confidence! < 0.30,
         isAiProposed: sPillar?.validationStatus === "AI_PROPOSED",
       };
     }),
 
-  validateSynthesis: protectedProcedure
-    .input(z.object({
+  // Compatibility endpoint: same governed state decision as pillar.transitionStatus.
+  validateSynthesis: governedProcedure({
+    kind: "LEGACY_PILLAR_TRANSITION_STATUS",
+    caller: "strategy:validateSynthesis",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
-      /** Si true : force la validation même si confiance < 30% et met confidence=1.0 */
+      expectedVersion: z.number().int().min(1),
+      // Historical name retained; acknowledgement never alters a measurement.
       forceConfidence: z.boolean().optional().default(false),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      await assertStrategyRead(ctx.session.user.id, input.strategyId);
-      // 1. Lire le pilier S
-      const sPillar = await ctx.db.pillar.findFirst({
-        where: { strategyId: input.strategyId, key: "s" },
-      });
-
-      const confidence = sPillar?.confidence ?? 0;
-
-      // 2. Si confiance < 30% et pas de forceConfidence → retourner un warning
-      //    Le client affichera le modal de confirmation.
-      if (confidence < 0.30 && !input.forceConfidence) {
-        return {
-          warning: true as const,
-          confidence,
-          validationStatus: sPillar?.validationStatus ?? "DRAFT",
-          message: "Stratégie majoritairement inférée par l'IA. Confirmation requise.",
-          updated: null,
-        };
-      }
-
-      // 3. Valider la stratégie
-      const updated = await ctx.db.strategy.update({
-        where: { id: input.strategyId },
-        data: { status: "VALIDATED" },
-      });
-
-      // 4. Si pilier S existe : mettre confidence=1.0 et status=VALIDATED
-      if (sPillar) {
-        await ctx.db.pillar.update({
-          where: { id: sPillar.id },
-          data: {
-            confidence: 1.0,
-            validationStatus: "VALIDATED",
-          },
-        });
-      }
-
-      // Audit trail (non-blocking)
-      auditTrail.log({
-        userId: ctx.session.user.id,
-        action: "UPDATE",
-        entityType: "Strategy",
-        entityId: input.strategyId,
-        newValue: {
-          status: "VALIDATED",
-          sPillarConfidence: 1.0,
-          forceConfidence: input.forceConfidence,
-          previousConfidence: confidence,
-        },
-      }).catch((err) => { console.warn("[audit-trail] strategy validate log failed:", err); });
-
-      return { warning: false as const, confidence: 1.0, updated };
+      key: z.literal("S").default("S"),
+      targetStatus: z.literal("VALIDATED").default("VALIDATED"),
     }),
+  }).mutation(({ ctx, input }) => transitionPillarStatus({
+    ...input, userId: ctx.session.user.id, acknowledgeLowConfidence: input.forceConfidence,
+  })),
 
   generateProjectsFromActions: governedProcedure({
     kind: "LEGACY_STRATEGY_GENERATE_PROJECTS_FROM_ACTIONS",
@@ -1016,22 +819,11 @@ export const strategyRouter = createTRPCRouter({
       actionIds: z.array(z.string()),
     }),
     caller: "strategy:generateProjectsFromActions",
+    requireOperator: true,
   })
     .mutation(async ({ ctx, input }) => {
-      if (!(await canAccessStrategy(input.strategyId, {
-        operatorId: (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null,
-        userId: ctx.session.user.id,
-        role: ctx.session.user.role ?? "USER",
-      }))) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé: cette stratégie appartient à un autre opérateur" });
-      }
-
+      const strategy = await assertApprovedSynthesis(input.strategyId, ctx.session.user.id);
       const { generateCampaignCode, generateBriefFromBrandAction } = await import("@/server/services/campaign-manager");
-
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
-        where: { id: input.strategyId },
-        include: { pillars: true },
-      });
 
       const brandActions = await ctx.db.brandAction.findMany({
         where: {
@@ -1120,7 +912,7 @@ export const strategyRouter = createTRPCRouter({
     }),
     caller: "strategy:generateCanonicalCampaigns",
   }).mutation(async ({ ctx, input }) => {
-    const strat = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true } });
+    const strat = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId }, select: { id: true } }), STRATEGY_NOT_FOUND);
     const { generateCanonicalCampaigns } = await import("@/server/services/campaign-canon");
     return generateCanonicalCampaigns({ strategyId: strat.id, routeKey: input.routeKey, startDate: input.startDate });
   }),
@@ -1144,7 +936,7 @@ export const strategyRouter = createTRPCRouter({
     }),
     caller: "strategy:createPunctualCampaign",
   }).mutation(async ({ ctx, input }) => {
-    await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true } });
+    found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId }, select: { id: true } }), STRATEGY_NOT_FOUND);
     const { createPunctualCampaign } = await import("@/server/services/campaign-canon");
     return createPunctualCampaign(input);
   }),
@@ -1497,70 +1289,4 @@ export const strategyRouter = createTRPCRouter({
 
 function classifyScore(composite: number): string {
   return classifyTier(composite);
-}
-
-export function formatIntakeRawContent(name: string, responses: Record<string, any>): string {
-  const parts: string[] = [];
-  parts.push(`=== Fiche d'Intake : ${name} ===`);
-  
-  const biz = responses.biz ?? {};
-  if (biz.biz_model) parts.push(`Modèle d'affaires: ${biz.biz_model}`);
-  if (biz.biz_nature) parts.push(`Nature de marque: ${biz.biz_nature}`);
-  if (biz.biz_revenue) parts.push(`Modèle économique: ${Array.isArray(biz.biz_revenue) ? biz.biz_revenue.join(", ") : biz.biz_revenue}`);
-  if (biz.biz_positioning) parts.push(`Positionnement prix: ${biz.biz_positioning}`);
-  if (biz.biz_sales_channel) parts.push(`Canal de vente: ${biz.biz_sales_channel}`);
-  if (biz.biz_free_element) parts.push(`Partie gratuite: ${biz.biz_free_element}`);
-  if (biz.biz_free_detail) parts.push(`Détail gratuité: ${biz.biz_free_detail}`);
-  if (biz.biz_premium_scope) parts.push(`Gamme premium: ${biz.biz_premium_scope}`);
-
-  const a = responses.a ?? {};
-  if (a.a_vision) parts.push(`Vision: ${a.a_vision}`);
-  if (a.a_mission) parts.push(`Mission: ${a.a_mission}`);
-  if (a.a_noyau) parts.push(`Noyau identitaire: ${a.a_noyau}`);
-  if (a.a_values) parts.push(`Valeurs: ${a.a_values}`);
-  if (a.a_origin) parts.push(`Origine: ${a.a_origin}`);
-  if (a.a_archetype) parts.push(`Archétype: ${a.a_archetype}`);
-  if (a.a_citation) parts.push(`Citation: ${a.a_citation}`);
-
-  const d = responses.d ?? {};
-  if (d.d_positioning) parts.push(`Positionnement unique: ${d.d_positioning}`);
-  if (d.d_promise) parts.push(`Promesse maître: ${d.d_promise}`);
-  if (d.d_persona_principal) parts.push(`Persona principal: ${d.d_persona_principal}`);
-  if (d.d_persona_secondary) parts.push(`Persona secondaire: ${d.d_persona_secondary}`);
-  if (d.d_visual) parts.push(`Identité visuelle: ${d.d_visual}`);
-  if (d.d_voice) parts.push(`Ton de voix: ${d.d_voice}`);
-  if (d.d_competitors) parts.push(`Concurrents: ${d.d_competitors}`);
-
-  const v = responses.v ?? {};
-  if (v.v_promise) parts.push(`Promesse client: ${v.v_promise}`);
-  if (v.v_products) parts.push(`Produits/services: ${v.v_products}`);
-  if (v.v_experience) parts.push(`Expérience client: ${v.v_experience}/10`);
-
-  const e = responses.e ?? {};
-  if (e.e_community) parts.push(`Communauté: ${e.e_community}`);
-  if (e.e_loyalty) parts.push(`Fidélité client: ${e.e_loyalty}`);
-  if (e.e_advocates) parts.push(`Recommandation: ${e.e_advocates}`);
-  if (e.e_rituals) parts.push(`Rituels: ${e.e_rituals}`);
-
-  const r = responses.r ?? {};
-  if (r.r_threats) parts.push(`Risques: ${r.r_threats}`);
-  if (r.r_crisis) parts.push(`Plan de crise: ${r.r_crisis}`);
-  if (r.r_reputation) parts.push(`Suivi réputation: ${r.r_reputation}`);
-
-  const t = responses.t ?? {};
-  if (t.t_kpis) parts.push(`KPIs: ${t.t_kpis}`);
-  if (t.t_measurement) parts.push(`Fréquence de mesure: ${t.t_measurement}`);
-  if (t.t_nps) parts.push(`Connaissance NPS: ${t.t_nps}`);
-
-  const i = responses.i ?? {};
-  if (i.i_roadmap) parts.push(`Plan marketing: ${i.i_roadmap}`);
-  if (i.i_budget) parts.push(`Budget marketing (% CA): ${i.i_budget}`);
-  if (i.i_team) parts.push(`Gestion marketing: ${i.i_team}`);
-
-  const s = responses.s ?? {};
-  if (s.s_guidelines) parts.push(`Guidelines de marque: ${s.s_guidelines}`);
-  if (s.s_coherence) parts.push(`Cohérence communication: ${s.s_coherence}/10`);
-  if (s.s_ambition) parts.push(`Ambition à 3 ans: ${s.s_ambition}`);
-
-  return parts.filter(Boolean).join("\n");
 }

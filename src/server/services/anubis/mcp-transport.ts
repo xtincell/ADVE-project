@@ -31,44 +31,39 @@ import {
 } from "@/server/services/anubis/mcp-server";
 import {
   meterMcp,
+  mcpResultFailed,
+  scopeMcpParams,
   type McpAuthResult,
 } from "@/server/services/anubis/mcp-billing";
 import { CURATED_MCP_TOOLS, MCP_TOOL_NAME_RE, mcpToolName } from "@/server/services/anubis/mcp-curated";
 import { NextResponse } from "next/server";
+import { isMcpServerAllowed } from "@/server/services/anubis/mcp-scope-kind";
 
 export { CURATED_MCP_TOOLS, mcpToolName } from "@/server/services/anubis/mcp-curated";
 
 const TOOL_NAME_RE = MCP_TOOL_NAME_RE;
 
 /**
- * Applique le scoping de portée du token (ADR-0145) HORS NextResponse —
- * équivalent transport-agnostique de `scopeMcpParams`. Jette `SCOPE_DENIED`
- * (converti en isError par le SDK) au lieu de retourner une NextResponse 403.
+ * Réutilise la frontière REST pour le scoping, l'injection d'auth et le journal
+ * DENIED. Convertit le refus HTTP en erreur SDK sans dispatch ni second journal.
  */
 function scopeParamsForTool(
   gate: McpAuthResult,
+  server: string,
+  tool: string,
   rawParams: Record<string, unknown>,
 ): Record<string, unknown> {
-  if (gate.scopeKind === "BRAND") {
-    const requested = typeof rawParams.strategyId === "string" ? rawParams.strategyId : null;
-    if (requested && requested !== gate.scopeStrategyId) {
-      throw new Error("SCOPE_DENIED — ce token est limité à une autre marque.");
-    }
-  }
-  return {
-    ...rawParams,
-    __auth: {
-      scopeKind: gate.scopeKind ?? null,
-      scopeStrategyId: gate.scopeStrategyId ?? null,
-      userId: gate.userId ?? null,
-      apiKeyId: gate.apiKeyId ?? null,
-    },
-  };
+  const scoped = scopeMcpParams(gate, server, tool, rawParams);
+  if (scoped.denied) throw new Error("SCOPE_DENIED — ce token ne permet pas cet outil ou cette marque.");
+  return scoped.params;
 }
 
 /** Résultat MCP texte-JSON standard. */
 function jsonResult(value: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] };
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
+    ...(mcpResultFailed(value) ? { isError: true } : {}),
+  };
 }
 
 /**
@@ -84,7 +79,7 @@ export async function buildMcpServer(gate: McpAuthResult): Promise<McpServer> {
     },
   );
 
-  const servers = await loadAllServers();
+  const servers = (await loadAllServers()).filter(mod => isMcpServerAllowed(gate.scopeServer, mod.serverName));
   const byName = new Map(servers.map((s) => [s.serverName, s]));
 
   for (const { server: serverName, tool: toolName } of CURATED_MCP_TOOLS) {
@@ -99,7 +94,7 @@ export async function buildMcpServer(gate: McpAuthResult): Promise<McpServer> {
       { description: def.description, inputSchema: shape },
       async (args: Record<string, unknown>) => {
         try {
-          const scoped = scopeParamsForTool(gate, args ?? {});
+          const scoped = scopeParamsForTool(gate, serverName, toolName, args ?? {});
           const result = await meterMcp(gate, serverName, toolName, () =>
             dispatchTool(serverName, toolName, scoped),
           );
@@ -119,10 +114,10 @@ export async function buildMcpServer(gate: McpAuthResult): Promise<McpServer> {
     "lafusee_catalog",
     {
       description:
-        "Catalogue COMPLET des serveurs et outils MCP de La Fusée (au-delà des outils curés exposés directement). Utilise-le pour découvrir un outil, puis appelle-le via lafusee_invoke.",
+        "Catalogue des serveurs et outils MCP de La Fusée accessibles avec ce token (au-delà des outils curés exposés directement). Utilise-le pour découvrir un outil, puis appelle-le via lafusee_invoke.",
       inputSchema: {},
     },
-    async () => jsonResult(await buildAggregatedManifest()),
+    async () => jsonResult(await buildAggregatedManifest(gate.scopeServer)),
   );
 
   server.registerTool(
@@ -141,7 +136,7 @@ export async function buildMcpServer(gate: McpAuthResult): Promise<McpServer> {
         const targetServer = String(args.server ?? "");
         const targetTool = String(args.tool ?? "");
         if (!targetServer || !targetTool) throw new Error("server et tool requis");
-        const scoped = scopeParamsForTool(gate, args.params ?? {});
+        const scoped = scopeParamsForTool(gate, targetServer, targetTool, args.params ?? {});
         const result = await meterMcp(gate, targetServer, targetTool, () =>
           dispatchTool(targetServer, targetTool, scoped),
         );

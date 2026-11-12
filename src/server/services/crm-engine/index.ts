@@ -5,6 +5,10 @@
  * CdC: Annexe E §4.2 — Pipeline commercial (Quick Intake → Deal → Brand Instance)
  */
 
+import { TRPCError } from "@trpc/server";
+import { createHash } from "node:crypto";
+import type { Prisma } from "@prisma/client";
+import { advanceSale, selectApprovedSalesOffer, salesStateSchema, saleStage, type SalesStep, type SalesActor } from "./commercial";
 import { db } from "@/lib/db";
 import { scopeStrategies } from "@/server/services/operator-isolation";
 
@@ -66,17 +70,28 @@ export async function createDealFromIntake(intakeId: string): Promise<string> {
 /**
  * Create a manual deal (not from intake)
  */
-export async function createDeal(data: {
+export interface CreateDealInput {
+  id?: string;
   contactName: string;
-  contactEmail: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  operatorId?: string;
+  sellerStrategyId?: string;
   companyName: string;
   value?: number;
   currency?: string;
   source?: string;
   notes?: string;
-}): Promise<string> {
-  const deal = await db.deal.create({
+  performedBy?: string;
+  creationDescription?: string;
+  creationMetadata?: Prisma.InputJsonObject;
+}
+
+/** Shared transaction boundary for a manual deal or an approved portfolio member. */
+export async function createDealIn(tx: Prisma.TransactionClient, data: CreateDealInput): Promise<string> {
+  const deal = await tx.deal.create({
     data: {
+      id: data.id,
       contactName: data.contactName,
       contactEmail: data.contactEmail,
       companyName: data.companyName,
@@ -85,23 +100,30 @@ export async function createDeal(data: {
       value: data.value,
       currency: data.currency ?? "XAF",
       notes: data.notes,
+      contactPhone: data.contactPhone,
+      operatorId: data.operatorId,
+      sellerStrategyId: data.sellerStrategyId,
     },
   });
 
-  await db.funnelMapping.create({
+  await tx.funnelMapping.create({
     data: { dealId: deal.id, step: "LEAD" },
   });
 
-  await db.cRMActivity.create({
+  await tx.cRMActivity.create({
     data: {
       dealId: deal.id,
       activityType: "DEAL_CREATED",
-      description: `Deal créé manuellement (${data.companyName})`,
-      metadata: { source: data.source ?? "MANUAL" },
+      description: data.creationDescription ?? `Deal créé manuellement (${data.companyName})`,
+      performedBy: data.performedBy,
+      metadata: { source: data.source ?? "MANUAL", ...data.creationMetadata },
     },
-  }).catch(() => {});
+  });
 
   return deal.id;
+}
+export async function createDeal(data: CreateDealInput): Promise<string> {
+  return db.$transaction(tx => createDealIn(tx, data));
 }
 
 /**
@@ -402,20 +424,13 @@ export async function getDealDetails(dealId: string) {
 /**
  * Get pipeline overview with counts and values per stage
  */
-export async function getPipelineOverview(operatorId?: string | null) {
-  // Anti-IDOR (audit 2026-07-22) : scope opérateur via la relation strategy.
-  // Round-3 : `Deal.strategyId` est NULLABLE (peuplé seulement à la conversion
-  // WON) — un filtre relation-to-one SEUL excluait tous les deals pré-conversion
-  // (LEAD/QUALIFIED/…) → l'opérateur voyait un pipeline VIDE (régression). Les
-  // deals pré-conversion n'ont AUCUN lien opérateur en base (`createDeal` ne pose
-  // ni userId ni strategyId) : on les inclut donc (partagés, faute de colonne
-  // `Deal.operatorId` — vraie isolation tracée RESIDUAL-DEBT) et on scope les
-  // deals convertis par la marque. `operatorId` absent (ADMIN) → global assumé.
+export async function getPipelineOverview(operatorId?: string | null, currency = "XAF") {
+  // Ownership exists before conversion. Preserve only attributable legacy history.
   const strategyScope = operatorId
-    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
+    ? { OR: [{ operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
     : {};
   const deals = await db.deal.findMany({
-    where: { ...strategyScope },
+    where: { ...strategyScope, currency },
     orderBy: { createdAt: "desc" },
     include: {
       strategy: { select: { id: true, name: true } },
@@ -449,10 +464,9 @@ export async function listDeals(options?: {
   operatorId?: string | null;
   limit?: number;
 }) {
-  // Cf. getPipelineOverview : deals pré-conversion (strategyId null) inclus,
-  // sinon l'opérateur voit une liste vide (régression round-3).
+  // Preserve the operator scope before and after conversion.
   const strategyScope = options?.operatorId
-    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId: options.operatorId, userId: "", role: "FIXER" }) }] }
+    ? { OR: [{ operatorId: options.operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId: options.operatorId, userId: "", role: "FIXER" }) }] }
     : {};
 
   return db.deal.findMany({
@@ -476,22 +490,22 @@ export async function listDeals(options?: {
  * Revenue forecast: weighted pipeline value by stage probability.
  * Shows: total pipeline, weighted forecast, average deal size, win rate.
  */
-export async function getRevenueForecast(operatorId?: string | null) {
+export async function getRevenueForecast(operatorId?: string | null, currency = "XAF") {
   // Anti-IDOR (audit 2026-07-22) : scope opérateur (prévisions = valeurs des deals).
   // Cf. getPipelineOverview : deals pré-conversion (strategyId null) inclus.
   const strategyScope = operatorId
-    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
+    ? { OR: [{ operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
     : {};
   const deals = await db.deal.findMany({
-    where: { stage: { notIn: ["LOST"] }, ...strategyScope },
+    where: { stage: { notIn: ["LOST"] }, ...strategyScope, currency },
   });
 
   const wonDeals = await db.deal.findMany({
-    where: { stage: "WON", ...strategyScope },
+    where: { stage: "WON", ...strategyScope, currency },
   });
 
   const lostDeals = await db.deal.count({
-    where: { stage: "LOST", ...strategyScope },
+    where: { stage: "LOST", ...strategyScope, currency },
   });
 
   // Weighted pipeline
@@ -535,7 +549,7 @@ export async function getRevenueForecast(operatorId?: string | null) {
   return {
     totalPipeline: Math.round(totalPipeline),
     weightedForecast: Math.round(weightedForecast),
-    currency: "XAF",
+    currency,
     byStage,
     winRate: Math.round(winRate * 10) / 10,
     avgDealSize: Math.round(avgDealSize),
@@ -553,9 +567,13 @@ export async function getRevenueForecast(operatorId?: string | null) {
 /**
  * Conversion metrics: stage-by-stage rates, average durations, bottleneck detection.
  */
-export async function getConversionMetrics() {
+export async function getConversionMetrics(operatorId?: string | null) {
+  const deals = await db.deal.findMany({ where: operatorId
+    ? { OR: [{ operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
+    : {}, select: { id: true } });
+  const dealFilter = { dealId: { in: deals.map(deal => deal.id) } };
   const funnelData = await db.funnelMapping.findMany({
-    where: { exitedAt: { not: null } },
+    where: { ...dealFilter, exitedAt: { not: null } },
   });
 
   // Group by step
@@ -579,8 +597,8 @@ export async function getConversionMetrics() {
   for (let i = 0; i < STAGE_ORDER.length - 1; i++) {
     const from = STAGE_ORDER[i]!;
     const to = STAGE_ORDER[i + 1]!;
-    const enteredFrom = await db.funnelMapping.count({ where: { step: from } });
-    const enteredTo = await db.funnelMapping.count({ where: { step: to } });
+    const enteredFrom = await db.funnelMapping.count({ where: { ...dealFilter, step: from } });
+    const enteredTo = await db.funnelMapping.count({ where: { ...dealFilter, step: to } });
     conversionRates[`${from}_to_${to}`] = enteredFrom > 0 ? Math.round((enteredTo / enteredFrom) * 100) : 0;
   }
 
@@ -632,4 +650,158 @@ function estimateDealValue(sector?: string | null, businessModel?: string | null
   const multiplier = modelMultiplier[businessModel ?? ""] ?? 1.0;
 
   return Math.round(base * multiplier);
+}
+
+
+/** A decision, its state and its journal commit together or not at all. */
+export async function applySalesStep(dealId: string, step: SalesStep, actor: SalesActor) {
+  const fingerprint = createHash("sha256").update(JSON.stringify(step)).digest("hex");
+  return db.$transaction(async tx => {
+    const deal = await tx.deal.findUniqueOrThrow({ where: { id: dealId } });
+    const replay = await tx.cRMActivity.findFirst({
+      where: { dealId, metadata: { path: ["salesRequestId"], equals: step.requestId } },
+    });
+    if (replay) {
+      const metadata = replay.metadata as { fingerprint?: string; actorId?: string };
+      if (metadata.fingerprint !== fingerprint || metadata.actorId !== actor.id) {
+        throw new TRPCError({ code: "CONFLICT", message: "Référence déjà utilisée pour une autre décision." });
+      }
+      return deal;
+    }
+    if (deal.revision !== step.expectedRevision) {
+      throw new TRPCError({ code: "CONFLICT", message: "Le dossier a évolué. Relire avant de décider." });
+    }
+    const previous = salesStateSchema.parse(deal.commercial ?? {});
+    const {assertSalesEffectIn}=await import("./outbound-authority");
+    await assertSalesEffectIn(tx,deal,actor);
+    const {prepareSalesPlanIn}=await import("./scheduling");
+    step=await prepareSalesPlanIn(tx,dealId,previous,step,actor);
+    if (step.command.type === "MANDATE" && step.command.mandate.collection && deal.sellerStrategyId) {
+      const { freezeSalesCollectionIn } = await import("./collection-provider");
+      step = { ...step, command: { ...step.command, mandate: { ...step.command.mandate,
+        collection: await freezeSalesCollectionIn(tx, deal.sellerStrategyId, step.command.mandate.beneficiary, {
+          ...step.command.mandate.collection, attestedBy: actor.id, attestedAt: new Date().toISOString(),
+        }) } } };
+    }
+    const command = step.command;
+    if(deal.sellerStrategyId&&!actor.id.startsWith("mcp:")&&!["MANDATE","HANDOVER","STOP","PAYMENT","DELIVER"].includes(command.type)){
+      const {assertHumanSalesActive}=await import("./fleet");await assertHumanSalesActive(deal.sellerStrategyId,actor.id);
+    }
+    const branchAcceptance = command.type === "BRANCH" &&
+      previous.mandate?.conversationTree?.nodes.find(node => node.id === previous.treeNodeId)?.choices.find(choice => choice.id === command.choiceId)?.decision?.type === "ACCEPT";
+    if (actor.id.startsWith("mcp:") && (command.type === "ACCEPT" || branchAcceptance)) {
+      const messageId = (command.type === "ACCEPT" || command.type === "BRANCH") ? command.customerMessageId : undefined;
+      const message = messageId ? await tx.crmMessage.findUnique({
+        where: { id: messageId }, include: { contact: { select: { strategyId: true, email: true } } },
+      }) : null;
+      if (!message || message.direction !== "IN" || message.status !== "RECEIVED" ||
+          (message.salesDealId ? message.salesDealId !== deal.id :
+            (message.contact?.strategyId !== deal.sellerStrategyId || !deal.contactEmail || message.contact?.email.toLowerCase() !== deal.contactEmail.toLowerCase()))) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’agent doit référencer une réponse reçue de cet acheteur pour cette marque." });
+      }
+      if (previous.proposal && (!previous.proposal.presentedAt || message.createdAt < new Date(previous.proposal.presentedAt))) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’accord doit être reçu après la présentation de cette proposition au client." });
+      }
+    }
+    if(previous.mandate?.collection && ["PAYMENT","DELIVER"].includes(command.type)) {
+      const payment=deal.paymentReference?await tx.intakePayment.findUnique({where:{reference:deal.paymentReference}}):null;
+      const {paymentMajorAmount}=await import("./payments");
+      if(!payment||payment.tierKey!=="SALES_COLLECTION"||payment.intakeToken!==`sales-deal:${deal.id}`||payment.status!=="PAID"||!payment.paidAt||paymentMajorAmount(payment)!==previous.mandate.amount||payment.currency!==previous.mandate.currency)throw new TRPCError({code:"PRECONDITION_FAILED",message:"La personne chargée des paiements doit vérifier celui de cette affaire avant de continuer."});
+      if(payment.provider==="CINETPAY"){
+        const proof=await tx.cRMActivity.findUnique({where:{id:`sales-cinetpay-paid:${payment.reference}`}});
+        const metadata=proof?.metadata as {independentProviderProof?:boolean;providerRef?:string;paymentReference?:string;proposalId?:string;amountMinor?:number;currency?:string}|null;
+        if(!proof||proof.dealId!==deal.id||proof.activityType!=="SALES_PAYMENT_RECONCILED"||metadata?.independentProviderProof!==true||metadata.providerRef!==payment.providerRef||metadata.paymentReference!==payment.reference||metadata.proposalId!==previous.proposal?.id||metadata.amountMinor!==payment.amount||metadata.currency!==payment.currency)throw new TRPCError({code:"PRECONDITION_FAILED",message:"Le règlement doit être rapproché avec le reçu indépendant du prestataire avant de continuer."});
+      }
+    }
+    if(actor.id.startsWith("mcp:") && command.type === "DELIVER") {
+      const message=command.customerMessageId?await tx.crmMessage.findUnique({where:{id:command.customerMessageId},include:{contact:{select:{strategyId:true,email:true}}}}):null;
+      const paid=await tx.cRMActivity.findFirst({where:{dealId,activityType:"SALES_DECISION",metadata:{path:["command","type"],equals:"PAYMENT"}},orderBy:{performedAt:"desc"},select:{performedAt:true}});
+      const sameBuyer=message && (message.salesDealId?message.salesDealId===dealId:message.contact?.strategyId===deal.sellerStrategyId&&!!deal.contactEmail&&message.contact?.email.toLowerCase()===deal.contactEmail.toLowerCase());
+      if(!message||!sameBuyer||message.direction!=="IN"||message.status!=="RECEIVED"||!paid||message.createdAt<paid.performedAt)throw new TRPCError({code:"PRECONDITION_FAILED",message:"La remise exige une confirmation reçue de ce client après le règlement. Le paiement seul ne prouve aucune livraison."});
+    }
+    if (command.type === "DELIVER" && previous.mandate?.pricingRule?.tierKey === "INTAKE_PDF") {
+      const { resolveSalesDeliveryDocument } = await import("./customer");
+      const document = await resolveSalesDeliveryDocument(tx, deal, previous);
+      const [ready, message, acknowledgement] = await Promise.all([
+        document ? tx.cRMActivity.findUnique({ where: { id: document.activityId } }) : null,
+        command.customerMessageId ? tx.crmMessage.findUnique({ where: { id: command.customerMessageId } }) : null,
+        command.customerMessageId ? tx.cRMActivity.findUnique({ where: { id: `sales-delivery-acceptance:${command.customerMessageId}` } }) : null,
+      ]);
+      const receipt = acknowledgement?.metadata as { deliveryActivityId?: string; customerMessageId?: string; bodyFingerprint?: string; artifactHash?: string } | null;
+      const artifact = (ready?.metadata as { artifact?: unknown } | null)?.artifact;
+      if (!document || !ready || ready.dealId !== deal.id || typeof artifact !== "string" || !message || message.salesDealId !== deal.id
+        || message.direction !== "IN" || message.status !== "RECEIVED" || message.createdAt < ready.performedAt
+        || !acknowledgement || acknowledgement.dealId !== deal.id || acknowledgement.activityType !== "SALES_CUSTOMER_DELIVERY_ACCEPTANCE"
+        || acknowledgement.performedBy !== null || acknowledgement.performedAt < message.createdAt
+        || receipt?.deliveryActivityId !== ready.id || receipt.customerMessageId !== message.id
+        || receipt.bodyFingerprint !== createHash("sha256").update(message.body).digest("hex")
+        || receipt.artifactHash !== createHash("sha256").update(artifact).digest("hex")) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le rapport doit être prêt et ce client doit confirmer la réception de ce document avant de terminer la livraison." });
+      }
+    }
+    let next;
+    try {
+      if (command.type === "SELECT_OFFER") {
+        const { resolvePublicSalesOfferIn } = await import("./public-offer-selection");
+        next = selectApprovedSalesOffer(previous, await resolvePublicSalesOfferIn(tx, deal, previous, command.offerId, actor), actor, new Date());
+      } else next = advanceSale(previous, step, actor, new Date());
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: (error as Error).message });
+    }
+    const stage = saleStage(next);
+    if (next.node === "PROPOSAL" && previous.node !== "PROPOSAL" && next.proposal && !next.proposal.presentedAt) {
+      next = { ...next, proposal: { ...next.proposal, presentedAt: new Date().toISOString() } };
+    }
+    const changed = await tx.deal.updateMany({
+      where: { id: dealId, revision: step.expectedRevision },
+      data: {
+        commercial: JSON.parse(JSON.stringify(next)), paymentReference: next.mandate?.intakePaymentReference ?? deal.paymentReference, stage, revision: { increment: 1 },
+        wonAt: stage === "WON" ? (deal.wonAt ?? new Date()) : deal.wonAt,
+        value: next.mandate?.informationOnly || ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : next.mandate?.pricingRule && !next.proposal ? null : (next.mandate?.amount ?? deal.value),
+        currency: next.mandate?.currency ?? deal.currency,
+      },
+    });
+    if (changed.count !== 1) throw new TRPCError({ code: "CONFLICT", message: "Une autre décision vient d’être enregistrée." });
+    await tx.cRMActivity.create({ data: {
+      dealId, performedBy: actor.id, activityType: "SALES_DECISION",
+      description: step.command.type,
+      metadata: { salesRequestId: step.requestId, fingerprint, actorId: actor.id, channel: step.channel,
+        command: JSON.parse(JSON.stringify(step.command)), from: previous.node, to: next.node },
+    } });
+    return tx.deal.findUniqueOrThrow({ where: { id: dealId } });
+  });
+}
+
+
+/** Reserve before transport. An uncertain attempt is retained for reconciliation. */
+export async function sendSalesEmail(dealId: string, actor: SalesActor, input: { requestId: string; subject: string; text: string }) {
+  const deal = await db.deal.findUniqueOrThrow({ where: { id: dealId } });
+  if(deal.sellerStrategyId&&!actor.id.startsWith("mcp:")){
+    const {assertHumanSalesActive}=await import("./fleet");await assertHumanSalesActive(deal.sellerStrategyId,actor.id);
+  }
+  const state = salesStateSchema.parse(deal.commercial);
+  const mandate = state.mandate;
+  if (!mandate || mandate.sellerId !== actor.id || !mandate.outboundEmailEnabled ||
+      !mandate.channels.includes("EMAIL") || new Date(mandate.expiresAt) <= new Date() ||
+      state.contactStopped || state.node === "STOPPED" || !deal.contactEmail || !deal.sellerStrategyId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Cet envoi exige une adresse de destination et l’autorisation de contacter le client par email." });
+  }
+  const fingerprint = createHash("sha256").update(JSON.stringify(input)).digest("hex");
+  const {reserveSalesOutbound}=await import('./outbound-authority');
+  const reservation=await reserveSalesOutbound(dealId,actor,{requestId:input.requestId,fingerprint,channel:'EMAIL',body:input.text,subject:input.subject});
+  if(reservation.replay)return reservation.receipt;
+  const { sendBrandEmail } = await import("@/server/services/anubis/brand-email");
+  const htmlEscapes: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+  const html = input.text.replace(/[&<>"]/g, char => htmlEscapes[char]!).replace(/\n/g, "<br>");
+  let result;
+  try {
+    result = await sendBrandEmail(deal.sellerStrategyId, { to: deal.contactEmail, subject: input.subject, text: input.text, html, tag: "sales", allowFallback: false });
+  } catch {
+    return db.cRMActivity.update({ where: { id: input.requestId }, data: { activityType: "SALES_EMAIL_UNCERTAIN" } });
+  }
+  return db.cRMActivity.update({ where: { id: input.requestId }, data: {
+    activityType: result.ok ? "SALES_EMAIL_SENT" : "SALES_EMAIL_UNCERTAIN",
+    metadata: { ...(reservation.receipt.metadata as Prisma.InputJsonObject),
+      provider: result.provider, providerRef: result.ok ? result.providerRef : null, ...(result.ok?{confirmedAt:new Date().toISOString()}:{}) },
+  } });
 }

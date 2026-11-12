@@ -20,14 +20,25 @@
  */
 
 import { db } from "@/lib/db";
+import { ensureProductIds, rebindProductRefs, retiredCatalogueIdentities, type CatalogueProduct } from "@/domain/product-catalog";
+import { acquirePillarEntityIds } from "@/domain/pillar-entity-ids";
+import { randomUUID } from "node:crypto";
+import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
 import { setNestedValue, tokenizePillarPath, assertSafePillarPath } from "@/lib/pillar-path";
 import { coerceValue, applyResolvedRecoOps } from "./apply-resolved-ops";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { isDeepStrictEqual } from "node:util";
+import { createCheckpoint, pillarMetadata, planCompensation, readCheckpoint, type PillarMetadata } from "@/server/services/pillar-versioning/checkpoint";
+import { getOperatorContext, canAccessStrategy } from "@/server/services/operator-isolation";
+import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "@/server/governance/collaborator-firewall";
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
-import { createVersion } from "@/server/services/pillar-versioning";
+import { getFieldZod, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
+import { createVersion, readCatalogueArchives } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
+import { assertCurrentSourceReceipts, readSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
+import { markPillarsStale, withdrawSynthesisReview } from "./review-invalidation";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -49,6 +60,7 @@ interface PillarWriteAuthor {
 }
 
 type PillarWriteOperation =
+  | { type: "RESTORE_VERSION"; versionId: string; compensatedFrom?: string }
   | { type: "REPLACE_FULL"; content: Record<string, unknown> }
   | { type: "MERGE_DEEP"; patch: Record<string, unknown> }
   | { type: "SET_FIELDS"; fields: Array<{ path: string; value: unknown }> }
@@ -56,6 +68,16 @@ type PillarWriteOperation =
   | { type: "APPLY_RECOS_RESOLVED"; operations: Array<{ field: string; operation: string; proposedValue: unknown; targetMatch?: { key: string; value: string }; recoId: string }> };
 
 interface PillarWriteOptions {
+  /** Version du contenu effectivement relu par l'appelant, contrôlée dans la transaction. */
+  expectedVersion?: number;
+  /** Snapshot used by a derived calculation; null means the source was absent. */
+  expectedPillarVersions?: Partial<Record<import("@/domain").PillarStorageKey, number | null>>;
+  /** Confirmation humaine : provenance et retrait des marqueurs legacy dans la même écriture. */
+  confirmInferredField?: string;
+  sourceReceipts?: SourceReceipt[];
+  requiredSourceIds?: string[];
+  /** Un amendement agent refusé ne doit créer ni version ni accusé « appliqué ». */
+  rejectOnProvenanceRefusal?: boolean;
   skipValidation?: boolean;
   targetStatus?: ValidationStatus;
   confidenceDelta?: number;
@@ -97,6 +119,8 @@ interface PillarWriteRequest {
 
 interface PillarWriteResult {
   success: boolean;
+  /** Existing compensation receipt; no new version or downstream effect. */
+  noOp?: boolean;
   version: number;
   previousContent: Record<string, unknown>;
   newContent: Record<string, unknown>;
@@ -111,7 +135,7 @@ export type { PillarWriteRequest, PillarWriteResult, PillarWriteAuthor, PillarWr
 
 // ── Deep merge utility ────────────────────────────────────────────────
 
-function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>, replaceArrays = false): Record<string, unknown> {
   const result = { ...target };
   for (const [key, value] of Object.entries(source)) {
     if (value === undefined) continue;
@@ -122,10 +146,11 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
       typeof value === "object" && value !== null && !Array.isArray(value)
     ) {
       // Recursive merge for nested objects
-      result[key] = deepMerge(existing as Record<string, unknown>, value as Record<string, unknown>);
+      result[key] = deepMerge(existing as Record<string, unknown>, value as Record<string, unknown>, replaceArrays);
     } else if (Array.isArray(existing) && Array.isArray(value)) {
-      // Arrays: append new items (never replace — LOI 1)
-      result[key] = [...existing, ...value];
+      // S collections describe the current derived plan, not an additive
+      // catalogue. The existing PillarVersion preserves the previous plan.
+      result[key] = replaceArrays ? [...value] : [...existing, ...value];
     } else {
       // Scalars: new value wins
       result[key] = value;
@@ -220,21 +245,52 @@ function applyRecos(
 
 // ── Main Gateway ──────────────────────────────────────────────────────
 
-export async function writePillar(request: PillarWriteRequest): Promise<PillarWriteResult> {
+export async function writePillar(request: PillarWriteRequest, transaction?: Prisma.TransactionClient): Promise<PillarWriteResult> {
   const { strategyId, pillarKey, operation, author, options } = request;
   const warnings: string[] = [];
 
-  // Auto-create pillar row BEFORE the transaction so that createVersion (which
-  // uses the global `db` client, not `tx`) can find the row via its id.
-  // upsert is race-safe: concurrent writes for the same key both succeed.
-  await db.pillar.upsert({
-    where: { strategyId_key: { strategyId, key: pillarKey } },
-    create: { strategyId, key: pillarKey, content: {}, confidence: 0, currentVersion: 1 },
-    update: {},
-  });
+  // Content persistence cannot approve S. Only the existing reviewed-version
+  // transition owns that decision, even for canonical imports and operators.
+  if (pillarKey === "s" && ["VALIDATED", "LOCKED"].includes(options?.targetStatus ?? "")) {
+    const current = await (transaction ?? db).pillar.findUnique({ where: { strategyId_key: { strategyId, key: pillarKey } } });
+    const content = (current?.content ?? {}) as Record<string, unknown>;
+    return { success: false, version: current?.currentVersion ?? 0, previousContent: content, newContent: content,
+      stalePropagated: [], warnings: [], error: "SYNTHESIS_REVIEW_REQUIRED: approuvez la version relue de la synthèse par la transition dédiée." };
+  }
 
   try {
-    const result = await db.$transaction(async (tx) => {
+    const perform = async (tx: Prisma.TransactionClient): Promise<PillarWriteResult> => {
+      if (operation.type !== "RESTORE_VERSION") {
+        if (options?.sourceReceipts || options?.requiredSourceIds?.length) {
+          await assertCurrentSourceReceipts(tx, strategyId, options.sourceReceipts ?? [], options.requiredSourceIds, "UPDATE");
+        }
+        // Same strategy-before-pillar order as human review. Without this,
+        // an edit can keep the Strategy approval of an earlier S version, or
+        // deadlock with the reviewer while invalidating that approval.
+        await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+        // Check the complete read snapshot before even creating an empty target.
+        // All governed content writers share the Strategy lock. Missing rows are
+        // part of the snapshot, so later arrivals cannot silently alter a plan.
+        if (options?.expectedPillarVersions) {
+          const { PILLAR_STORAGE_KEYS } = await import("@/domain");
+          const rows = await tx.pillar.findMany({ where: { strategyId }, select: { key: true, currentVersion: true } });
+          const versions = new Map(rows.map(row => [row.key, row.currentVersion]));
+          for (const [key, expected] of Object.entries(options.expectedPillarVersions)) {
+            if (!(PILLAR_STORAGE_KEYS as readonly string[]).includes(key) ||
+                (expected !== null && (!Number.isSafeInteger(expected) || (expected ?? 0) < 1))) {
+              throw new Error("PILLAR_SOURCE_VERSION_REQUIRED: snapshot de source invalide.");
+            }
+            if ((versions.get(key) ?? null) !== expected) {
+              throw new Error(`PILLAR_SOURCE_VERSION_CONFLICT: source ${key} modifiée — recharger et recalculer.`);
+            }
+          }
+        }
+        await tx.pillar.upsert({
+          where: { strategyId_key: { strategyId, key: pillarKey } },
+          create: { strategyId, key: pillarKey, content: {}, confidence: null, currentVersion: 1 },
+          update: {},
+        });
+      }
       // ── Load current pillar ──────────────────────────────────────
       const pillar = await tx.pillar.findUnique({
         where: { strategyId_key: { strategyId, key: pillarKey } },
@@ -242,11 +298,76 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
 
       if (!pillar) {
         // Should never happen after the upsert above — defensive guard.
-        return { success: false, version: 0, previousContent: {}, newContent: {}, stalePropagated: [], warnings: [], error: `Pillar ${pillarKey} not found for strategy ${strategyId} (post-upsert)` };
+        return { success: false, version: 0, previousContent: {}, newContent: {}, stalePropagated: [], warnings: [], error: `Pillar ${pillarKey} not found for strategy ${strategyId}` };
       }
 
       const previousContent = (pillar.content ?? {}) as Record<string, unknown>;
       const currentStatus = (pillar.validationStatus ?? "DRAFT") as ValidationStatus;
+
+      let restoration: { content: Record<string, unknown>; metadata: PillarMetadata; compensatedFrom: string } | undefined;
+      if (operation.type === "RESTORE_VERSION") {
+        if (author.system !== "OPERATOR" || !author.userId || !author.intentId || options?.expectedVersion === undefined) {
+          throw new Error("RESTORE_AUTHORITY_REQUIRED: acteur, intention et version attendue requis.");
+        }
+        const actor = await getOperatorContext(author.userId, tx);
+        if (!(await canAccessStrategy(strategyId, actor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
+        const emission = await tx.intentEmission.findUnique({ where: { id: author.intentId }, select: { strategyId: true, intentKind: true } });
+        if (!emission || emission.strategyId !== strategyId || !RESTORE_EMISSION_KINDS.includes(emission.intentKind)) {
+          throw new Error("RESTORE_EMISSION_REQUIRED: intention de restauration introuvable pour cette marque.");
+        }
+        await restoreMayEmit({ userId: actor.userId, role: actor.role, strategyId, kind: emission.intentKind }, tx);
+        const snapshot = await tx.pillarVersion.findUnique({ where: { id: operation.versionId } });
+        if (!snapshot || snapshot.pillarId !== pillar.id || (operation.compensatedFrom && snapshot.intentId !== operation.compensatedFrom)) {
+          throw new Error("RESTORE_ARCHIVE_UNAVAILABLE: archive étrangère ou absente.");
+        }
+        if (snapshot.intentId) {
+          const related = await tx.pillarVersion.findMany({ where: { pillarId: pillar.id, intentId: snapshot.intentId }, take: 2, select: { id: true } });
+          if (related.length !== 1) throw new Error("RESTORE_AMBIGUOUS: plusieurs écritures du pilier portent cette intention.");
+        }
+        // History and intent actions share one effect identity for the SAME write.
+        const compensatedFrom = snapshot.intentId ?? `version:${snapshot.id}`;
+        const previous = await tx.pillarVersion.findUnique({ where: { pillarId_compensatedFrom: { pillarId: pillar.id, compensatedFrom } } });
+        if (previous) return { success: true, noOp: true, version: previous.version + 1, previousContent, newContent: previousContent,
+          stalePropagated: [], warnings: ["La compensation de cette écriture est déjà enregistrée."] };
+        const checkpoint = readCheckpoint(snapshot.checkpoint, snapshot.version);
+        const laterRows = isDeepStrictEqual(checkpoint.beforeMetadata.sources, checkpoint.afterMetadata.sources) ? []
+          : await tx.pillarVersion.findMany({ where: { pillarId: pillar.id, version: { gte: checkpoint.afterVersion, lt: pillar.currentVersion } } });
+        const later = laterRows.map(row => readCheckpoint(row.checkpoint, row.version));
+        const planned = planCompensation({ beforeContent: snapshot.content, checkpoint, currentContent: pillar.content,
+          currentMetadata: pillarMetadata(pillar), currentVersion: pillar.currentVersion, later });
+        const receipts = readSourceReceipts(planned.metadata.sources);
+        if (planned.metadata.sources !== null && (!Array.isArray(planned.metadata.sources) || receipts.length !== planned.metadata.sources.length)) {
+          throw new Error("RESTORE_SOURCE_RECEIPT_UNAVAILABLE: références historiques non vérifiables.");
+        }
+        // Same lock order as documentary writers: sources, strategy, actor, pillar.
+        await assertCurrentSourceReceipts(tx, strategyId, receipts, [], "UPDATE");
+        await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${author.userId} FOR SHARE`;
+        await tx.$queryRaw`SELECT id FROM "StrategyCollaborator" WHERE "strategyId" = ${strategyId} AND "userId" = ${author.userId} FOR SHARE`;
+        const currentActor = await getOperatorContext(author.userId, tx);
+        if (!(await canAccessStrategy(strategyId, currentActor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
+        await restoreMayEmit({ userId: currentActor.userId, role: currentActor.role, strategyId, kind: emission.intentKind }, tx);
+        await tx.$queryRaw`SELECT id FROM "Pillar" WHERE id = ${pillar.id} FOR UPDATE`;
+        const locked = await tx.pillar.findUniqueOrThrow({ where: { id: pillar.id } });
+        if (locked.currentVersion !== pillar.currentVersion || !isDeepStrictEqual(locked.content, pillar.content) || !isDeepStrictEqual(pillarMetadata(locked), pillarMetadata(pillar))) {
+          throw new Error("PILLAR_VERSION_CONFLICT: état modifié pendant la préparation de la restauration.");
+        }
+        restoration = { ...planned, compensatedFrom };
+      }
+
+      if (options?.expectedVersion !== undefined && options.expectedVersion !== pillar.currentVersion) {
+        throw new Error(`PILLAR_VERSION_CONFLICT: version attendue ${options.expectedVersion}, courante ${pillar.currentVersion} — recharger et réappliquer.`);
+      }
+      let confirmedCertainty: Record<string, string> | undefined;
+      if (options?.confirmInferredField) {
+        const field = options.confirmInferredField;
+        const certainty = (pillar.fieldCertainty ?? {}) as Record<string, string>;
+        if (author.system !== "OPERATOR" || options.fieldProvenance?.[field] !== "HUMAN" || !inferredFieldPaths(previousContent, certainty, pillarKey).includes(field)) {
+          throw new Error("FIELD_CONFIRMATION_CONFLICT: ce champ n'est plus une valeur inférée à confirmer — recharger.");
+        }
+        confirmedCertainty = Object.fromEntries(Object.entries(certainty).filter(([path]) =>
+          field.includes(".") || field.includes("[") ? path !== field && path !== `${pillarKey}.${field}` : provenanceTopKey(path, pillarKey) !== field));
+      }
 
       // ── GUARD: validationStatus ──────────────────────────────────
       if (currentStatus === "LOCKED" && author.system !== "OPERATOR") {
@@ -257,14 +378,19 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       let newContent: Record<string, unknown>;
 
       switch (operation.type) {
+        case "RESTORE_VERSION":
+          newContent = restoration!.content;
+          break;
         case "REPLACE_FULL":
           newContent = operation.content;
           break;
         case "MERGE_DEEP":
-          newContent = deepMerge(previousContent, operation.patch);
+          newContent = deepMerge(previousContent, operation.patch, pillarKey === "s");
           break;
         case "SET_FIELDS":
-          newContent = { ...previousContent };
+          // setNestedValue mutates its containers. A shallow copy also mutates
+          // previousContent, hiding the change from the provenance guard.
+          newContent = structuredClone(previousContent);
           for (const { path, value } of operation.fields) {
             setNestedValue(newContent, path, value);
           }
@@ -304,7 +430,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       // RTIS protocols cannot persist malformed LLM output. Default behaviour
       // (warnings-only) is preserved for operator drafts, ingestion, and
       // legacy call sites that knowingly accept partial data.
-      if (!options?.skipValidation) {
+      if (!restoration && !options?.skipValidation) {
         // PillarKey from advertis-vector and from pillar-schemas are the same set
         // but typed independently; cast is safe here.
         const validation = validatePillarPartial(pillarKey.toUpperCase() as Parameters<typeof validatePillarPartial>[0], newContent);
@@ -331,7 +457,11 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       // ── VALIDATE: SHAPE gate (corruption structurelle uniquement) ──────────
       // Bloque un scalaire-là-où-conteneur (casse le rendu) sans toucher aux advisories
       // DRAFT. Couvre le runtime (CRUD/amend) que le gate seed ne voyait pas.
-      if (options?.shapeGate) {
+      // S (ADR-0214 amendement 6.27.564) : tout écrivain de S — calcul, import de
+      // canon, édition partielle, complétion — persiste un contenu que le contrat
+      // unique sait classer (brouillon ou composé). Une corruption de forme n'est
+      // ni l'un ni l'autre : refusée pour tous les auteurs, quelle que soit l'option.
+      if (!restoration && (options?.shapeGate || pillarKey === "s")) {
         const { classifyPillarConformance } = await import("@/lib/types/pillar-conformance");
         const conf = classifyPillarConformance(
           pillarKey.toUpperCase() as Parameters<typeof classifyPillarConformance>[0],
@@ -353,13 +483,20 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       }
 
       // ── VALIDATE: Bible rules (format de fond) ──────────────────
-      const bibleViolations = validateAgainstBible(pillarKey, newContent);
+      const bibleViolations = restoration ? [] : validateAgainstBible(pillarKey, newContent);
       for (const v of bibleViolations) {
         warnings.push(`Bible[${v.severity}]: ${v.message}`);
       }
       // BLOCK-level violations prevent write for AI systems (not operators)
       const bibleBlocks = bibleViolations.filter((v) => v.severity === "BLOCK");
       if (bibleBlocks.length > 0 && author.system !== "OPERATOR") {
+        const rejected = bibleBlocks.filter(block =>
+          JSON.stringify(newContent[block.field]) !== JSON.stringify(previousContent[block.field]));
+        if (options?.rejectOnProvenanceRefusal && rejected.length > 0) {
+          return { success: false, version: pillar.currentVersion ?? 0,
+            previousContent, newContent: previousContent, stalePropagated: [], warnings,
+            error: `BIBLE_FIELD_REFUSED: ${rejected.map(block => block.message).join(" | ")}` };
+        }
         // Reject the violating fields by reverting them to previous values
         for (const block of bibleBlocks) {
           if (previousContent[block.field] !== undefined) {
@@ -371,7 +508,9 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
 
       // ── Determine target validationStatus ────────────────────────
       let targetStatus: ValidationStatus;
-      if (options?.targetStatus) {
+      if (restoration) {
+        targetStatus = restoration.metadata.validationStatus;
+      } else if (options?.targetStatus) {
         targetStatus = options.targetStatus;
       } else if (author.system === "OPERATOR") {
         targetStatus = currentStatus; // Operator preserves current status
@@ -382,13 +521,20 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
 
       // ── PROVENANCE GUARD: HUMAIN > SOURCE > INFÉRÉ (au champ) ─────
       // Inerte tant qu'aucune provenance n'est tracée (champs UNKNOWN → ALLOW).
-      // Wrappé : un bug du garde ne doit jamais bloquer une écriture légitime.
+      // Les anciens callers restent tolérants ; l'amendement agent exige
+      // un arbitrage réussi et refuse toute erreur du garde.
       let challenged: string[] = [];
-      try {
+      let denied: string[] = [];
+      if (!restoration) try {
         const { applyProvenanceGuard, provenanceFromAuthorSystem } = await import("./provenance-guard");
         const existingProvenance = (previousContent._fieldProvenance ?? null) as Record<string, unknown> | null;
         const defaultProv = provenanceFromAuthorSystem(author.system);
         const explicit = options?.fieldProvenance;
+        const surgicalPaths = operation.type === "SET_FIELDS" && options?.expectedVersion !== undefined
+          ? operation.fields.filter(field => {
+            const schema = getFieldZod(pillarKey, field.path) as { safeParse: (value: unknown) => { success: boolean } } | null;
+            return schema?.safeParse(field.value).success;
+          }).map(f => f.path) : [];
         const guard = applyProvenanceGuard({
           previousContent,
           newContent,
@@ -397,6 +543,10 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           // Déclaration EXPLICITE (≠ défaut déduit de l'auteur) — seule voie
           // par laquelle une confirmation d'un champ inchangé pose sa provenance.
           declaredFor: (path) => explicit?.[path],
+          declaredPaths: Object.keys(explicit ?? {}),
+          surgicalPaths,
+          inferableMissingPaths: operation.type === "SET_FIELDS" && options?.expectedVersion !== undefined
+            ? operation.fields.filter(f => canInferMissingConceptualField(pillarKey, f.path, previousContent, f.value)).map(f => f.path) : [],
         });
         // Le garde rend le contenu ARBITRÉ — c'est lui qui fait foi, pas le
         // candidat.
@@ -419,36 +569,70 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         }
         newContent._fieldProvenance = guard.provenance;
         challenged = guard.challenged;
+        denied = guard.denied;
         for (const w of guard.warnings) warnings.push(w);
       } catch (err) {
+        if (options?.rejectOnProvenanceRefusal) throw err;
         warnings.push(`Provenance guard skipped: ${err instanceof Error ? err.message : String(err)}`);
       }
+      if (options?.rejectOnProvenanceRefusal && (denied.length || challenged.length)) {
+        throw new Error(`FIELD_PROVENANCE_REFUSED: autorité insuffisante pour ${[...denied, ...challenged].join(", ")}. Une décision humaine reste nécessaire.`);
+      }
 
-      // ── VERSION: create PillarVersion ────────────────────────────
-      // La PillarVersion capture le contenu PRÉ-écriture, stampé de l'intent
-      // courant → ROLLBACK_PILLAR restaure EXACTEMENT cet état (G, ADR-0176).
-      await createVersion({
-        pillarId: pillar.id,
-        content: newContent,
-        author: `${author.system}${author.userId ? `:${author.userId}` : ""}`,
-        reason: author.reason,
-        intentId: author.intentId,
-      });
+      // Only an accepted catalogue change acquires ids. Unrelated edits and
+      // refused source changes must never backfill the human catalogue.
+      if (!restoration && pillarKey === "v" && JSON.stringify(newContent.produitsCatalogue) !== JSON.stringify(previousContent.produitsCatalogue)) {
+        const namedProducts = (value: unknown): value is CatalogueProduct[] => Array.isArray(value) && value.every(
+          p => p !== null && typeof p === "object" && !Array.isArray(p) && typeof p.nom === "string" && p.nom.trim(),
+        );
+        if (namedProducts(newContent.produitsCatalogue)) {
+          const previous = namedProducts(previousContent.produitsCatalogue) ? previousContent.produitsCatalogue : [];
+          // Every archived state, not only the previous one: a product retired two
+          // versions ago keeps its identity out of reach of a new homonym (ADR-0205, 568).
+          const archives = await readCatalogueArchives(pillar.id, tx);
+          const { reservedIds, retired } = retiredCatalogueIdentities(archives.map(a => a.catalogue), previousContent.produitsCatalogue);
+          const products = ensureProductIds(newContent.produitsCatalogue, previous, reservedIds);
+          const ids = products.map(p => p.id);
+          if (new Set(ids).size !== ids.length) throw new Error("CATALOGUE_ID_CONFLICT: deux produits portent le même identifiant — corriger le catalogue avant de réappliquer.");
+          // Allocation never yields a retired id: one here was sent explicitly. The only
+          // proof accepted for a reintroduction is the restoration of its archive.
+          const retiredIds = new Set(retired.flatMap(p => typeof p.id === "string" && p.id.trim() ? [p.id] : []));
+          const reused = products.filter(p => retiredIds.has(p.id!));
+          if (reused.length) {
+            throw new Error(`CATALOGUE_RETIRED_ID: ${reused.map(p => `« ${p.id} »`).join(", ")} identifie un produit retiré du catalogue. ` +
+              "Une réintroduction sous cet identifiant passe par la restauration de la version qui le contenait ; sinon, ajoutez le produit sans identifiant pour qu'il en reçoive un nouveau.");
+          }
+          newContent.produitsCatalogue = products;
+          newContent = rebindProductRefs(newContent, previous, products, retired);
+        }
+      }
+
+      // Same acquisition rule as the product catalogue, after authority arbitration.
+      // Never backfill a refused human collection or an unrelated field edit.
+      if (!restoration) newContent = acquirePillarEntityIds(pillarKey, newContent, previousContent, randomUUID);
 
       const newVersion = (pillar.currentVersion ?? 1) + 1;
 
       // ── Confidence adjustment ────────────────────────────────────
-      let newConfidence = pillar.confidence ?? 0;
-      if (options?.confidenceDelta) {
+      let newConfidence = restoration ? restoration.metadata.confidence : pillar.confidence;
+      if (!restoration && newConfidence !== null && options?.confidenceDelta) {
         newConfidence = Math.min(0.95, Math.max(0, newConfidence + options.confidenceDelta));
+      }
+
+      // A new S version (including a restored historical plan) is a new
+      // reviewable object. Preserve the content/confidence, never transport
+      // an old decision to the new version.
+      if (pillarKey === "s" && (targetStatus === "VALIDATED" || targetStatus === "LOCKED")) {
+        targetStatus = "AI_PROPOSED";
+        warnings.push("La synthèse a changé de version ; son approbation doit être renouvelée après lecture.");
       }
 
       // ── v4 AUTO-APPROVAL: auto-promote AI_PROPOSED → VALIDATED ──
       // Conditions: RTIS protocol author + high confidence + low impact
       if (
-        targetStatus === "AI_PROPOSED" &&
+        pillarKey !== "s" && !restoration && targetStatus === "AI_PROPOSED" &&
         author.system.startsWith("PROTOCOLE_") &&
-        newConfidence > 0.9 &&
+        (newConfidence ?? 0) > 0.9 &&
         warnings.length === 0
       ) {
         // Assess impact: low impact = less than 30% new keys added
@@ -473,6 +657,31 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         }
       }
 
+      const newSources = restoration ? restoration.metadata.sources : (options?.sourceReceipts?.length ? [
+        ...(Array.isArray(pillar.sources) ? pillar.sources.filter(entry => !readSourceReceipts([entry]).some(old => options.sourceReceipts!.some(r => r.sourceId === old.sourceId))) : []),
+        ...options.sourceReceipts,
+      ] : pillar.sources);
+      const newCertainty = restoration ? restoration.metadata.fieldCertainty : (confirmedCertainty ?? pillar.fieldCertainty);
+      const newStaleAt = restoration?.metadata.staleAt ? new Date(restoration.metadata.staleAt) : null;
+      // Every accepted content write carries its canonical cache in the same
+      // transaction/version check, including callers that intentionally skip
+      // scoring. This derived value never approves or changes the content.
+      const { evaluatePillarReadiness } = await import("@/server/governance/pillar-readiness");
+      const { toCanonical } = await import("@/domain");
+      const completionLevel = evaluatePillarReadiness({
+        key: pillarKey, content: newContent, validationStatus: targetStatus, staleAt: newStaleAt,
+      }, toCanonical(pillarKey)).cacheLevel;
+      const beforeMetadata = pillarMetadata(pillar);
+      const afterMetadata = pillarMetadata({ sources: newSources, fieldCertainty: newCertainty, confidence: newConfidence,
+        validationStatus: targetStatus, staleAt: newStaleAt });
+      // Capture the accepted state, including auto-approval commentary, inside this transaction.
+      await createVersion({ pillarId: pillar.id, content: newContent,
+        author: `${author.system}${author.userId ? `:${author.userId}` : ""}`, reason: author.reason, intentId: author.intentId,
+        compensatedFrom: restoration?.compensatedFrom,
+        checkpoint: createCheckpoint(previousContent, newContent, beforeMetadata, afterMetadata, newVersion,
+          readSourceReceipts([...(Array.isArray(pillar.sources) ? pillar.sources : []), ...(Array.isArray(newSources) ? newSources : [])])) as Prisma.InputJsonValue,
+      }, tx);
+
       // ── PERSIST (verrou optimiste — round-12, corrigé round-13a) ──
       // Conditionné à la version LUE (`pillar.currentVersion`, l.336). Sans ce
       // prédicat, deux écritures concurrentes du MÊME pilier (fenêtre findUnique
@@ -490,8 +699,13 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           content: newContent as Prisma.InputJsonValue,
           confidence: newConfidence,
           validationStatus: targetStatus,
-          staleAt: null, // This pillar is now fresh
+          staleAt: newStaleAt,
+          completionLevel,
           currentVersion: newVersion,
+          ...(restoration ? { fieldCertainty: newCertainty === null ? Prisma.DbNull : newCertainty as Prisma.InputJsonValue,
+            sources: newSources === null ? Prisma.DbNull : newSources as Prisma.InputJsonValue }
+            : { ...(confirmedCertainty ? { fieldCertainty: confirmedCertainty as Prisma.InputJsonValue } : {}),
+              ...(options?.sourceReceipts?.length ? { sources: newSources as Prisma.InputJsonValue } : {}) }),
         },
       });
       if (persisted.count !== 1) {
@@ -503,15 +717,8 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
 
       // ── STALE: propagate to dependents (cascade ADVERTIS) ────────
       const dependents = getPillarDependents(pillarKey);
-      if (dependents.length > 0) {
-        await tx.pillar.updateMany({
-          where: {
-            strategyId,
-            key: { in: dependents },
-          },
-          data: { staleAt: new Date() },
-        });
-      }
+      await markPillarsStale(tx, strategyId, dependents);
+      if (pillarKey === "s") await withdrawSynthesisReview(tx, strategyId);
 
       // ── SCORE: recalculate (outside transaction to avoid timeout) ─
       // Will be done after transaction commits — see below
@@ -535,7 +742,8 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         warnings,
         challenged,
       };
-    }, {
+    };
+    const result = transaction ? await perform(transaction) : await db.$transaction(perform, {
       // Supabase EU = latence réseau élevée (cf. DB_POOL_CONN_MS=30000). Le défaut
       // Prisma de 5s pour les transactions interactives expirait sur les écritures
       // RTIS lourdes (gros blob + versioning + staleness propagation) → écriture
@@ -552,14 +760,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
     // l'Oracle. Le chemin commun est ici. Idempotent (COMPLETE→STALE
     // uniquement — no-op à l'intake où aucune section n'existe) et
     // conservateur : sur-invalider est sûr, sous-invalider était le bug.
-    if (result.success) {
-      try {
-        const { markAllSectionsStale } = await import("@/server/services/oracle-section");
-        await markAllSectionsStale(strategyId);
-      } catch {
-        // Non-fatal — la staleness Oracle ne doit jamais casser l'écriture pilier.
-      }
-    }
+    if (result.success && !result.noOp && !transaction) await invalidateOracleAfterCommit(strategyId);
     return result;
   } catch (err) {
     return {
@@ -572,6 +773,40 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/** Shared transaction for versioned pillar writes and their existing projections. */
+export async function withPillarTransaction<T>(strategyId: string, perform: (
+  tx: Prisma.TransactionClient, write: (request: PillarWriteRequest) => Promise<PillarWriteResult>,
+) => Promise<T>): Promise<T> {
+  const written: Array<{ request: PillarWriteRequest; result: PillarWriteResult }> = [];
+  const output = await db.$transaction(async tx => perform(tx, async request => {
+    if (request.strategyId !== strategyId) throw new Error("PILLAR_BATCH_STRATEGY_MISMATCH");
+    const result = await writePillar(request, tx);
+    if (!result.success) throw new Error(result.error ?? "Écriture de pilier refusée.");
+    written.push({ request, result });
+    return result;
+  }), { timeout: 30_000, maxWait: 15_000 });
+  if (written.some(({ result }) => !result.noOp)) {
+    await invalidateOracleAfterCommit(strategyId);
+    await postWriteScore(strategyId);
+  }
+  for (const { request, result } of written) if (!result.noOp) await reconcileAndPublishPillar(request);
+  return output;
+}
+
+/** One typed recommendation can touch several pillars: all persist or none do. */
+export async function writePillarsAtomically(requests: PillarWriteRequest[]): Promise<PillarWriteResult[]> {
+  if (!requests.length) return [];
+  const strategyId = requests[0]!.strategyId;
+  if (requests.some(r => r.strategyId !== strategyId)) throw new Error("PILLAR_BATCH_STRATEGY_MISMATCH");
+  return withPillarTransaction(strategyId, async (tx, write) => {
+    await assertCurrentSourceReceipts(tx, strategyId, requests.flatMap(r => r.options?.sourceReceipts ?? []),
+      requests.flatMap(r => r.options?.requiredSourceIds ?? []), "UPDATE");
+    const results: PillarWriteResult[] = [];
+    for (const request of requests) results.push(await write(request));
+    return results;
+  });
 }
 
 /**
@@ -592,8 +827,22 @@ export async function postWriteScore(strategyId: string): Promise<void> {
  */
 export async function writePillarAndScore(request: PillarWriteRequest): Promise<PillarWriteResult> {
   const result = await writePillar(request);
-  if (result.success) {
+  if (result.success && !result.noOp) {
     await postWriteScore(request.strategyId);
+    await reconcileAndPublishPillar(request);
+  }
+  return result;
+}
+
+/** The same post-commit effects serve single writes and atomic batches. */
+async function invalidateOracleAfterCommit(strategyId: string): Promise<void> {
+  try {
+    const { markAllSectionsStale } = await import("@/server/services/oracle-section");
+    await markAllSectionsStale(strategyId);
+  } catch { /* Oracle staleness cannot roll back an already committed pillar. */ }
+}
+
+async function reconcileAndPublishPillar(request: PillarWriteRequest): Promise<void> {
     // D-2 — reconcile Pillar.completionLevel cache against the canonical
     // pillar-readiness verdict on every write. Any caller that mutates
     // pillar content goes through this function (LOI 1), so this single
@@ -611,15 +860,13 @@ export async function writePillarAndScore(request: PillarWriteRequest): Promise<
           ? String((request.author as { system: unknown }).system)
           : "unknown",
     });
-  }
-  return result;
 }
 
 /**
  * Recompute and persist the canonical `completionLevel` cache for a
- * single pillar. Idempotent. Called from `writePillarAndScore`. The
- * cache is a function of (stage, validationStatus) — never invented
- * elsewhere.
+ * single pillar. Idempotent repair for legacy/cache consumers; writePillar
+ * already persists it atomically with the content. Lock before reading so
+ * a delayed repair cannot overwrite a newer write with an obsolete result.
  */
 export async function reconcileCompletionLevelCache(
   strategyId: string,
@@ -629,31 +876,35 @@ export async function reconcileCompletionLevelCache(
   const { evaluatePillarReadiness } = await import("@/server/governance/pillar-readiness");
   const { toCanonical } = await import("@/domain");
 
-  const row = await db.pillar.findUnique({
-    where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
-    select: {
-      key: true,
-      content: true,
-      validationStatus: true,
-      completionLevel: true,
-      staleAt: true,
-    },
-  });
-  if (!row) return;
+  await db.$transaction(async tx => {
+    const [locked] = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM "Pillar"
+      WHERE "strategyId" = ${strategyId} AND key = ${pillarKey.toLowerCase()}
+      FOR UPDATE
+    `;
+    if (!locked) return;
+    const row = await tx.pillar.findUniqueOrThrow({
+      where: { id: locked.id },
+      select: { key: true, content: true, validationStatus: true, completionLevel: true, staleAt: true },
+    });
+    const readiness = evaluatePillarReadiness(row, toCanonical(pillarKey as Parameters<typeof toCanonical>[0]));
+    if (row.completionLevel === readiness.cacheLevel) return;
+    await tx.pillar.update({
+      where: { id: locked.id },
+      data: { completionLevel: readiness.cacheLevel },
+    });
+  }, { timeout: 30_000, maxWait: 15_000 });
+}
 
-  const readiness = evaluatePillarReadiness(
-    {
-      key: row.key,
-      content: row.content,
-      validationStatus: row.validationStatus,
-      completionLevel: row.completionLevel,
-      staleAt: row.staleAt,
-    },
-    toCanonical(pillarKey as Parameters<typeof toCanonical>[0]),
-  );
-  if (row.completionLevel === readiness.cacheLevel) return;
-  await db.pillar.update({
-    where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
-    data: { completionLevel: readiness.cacheLevel },
-  });
+/** ADR-0207 — emissions allowed to carry a restoration; all enter through `rollback.ts`. */
+const RESTORE_EMISSION_KINDS = ["ROLLBACK_PILLAR", "LEGACY_PILLAR_ROLLBACK_VERSION", "LEGACY_NOTORIA_REVERT_RECO"];
+
+/** A delegated role outside its zone is a refused authority, typed like any other. */
+async function restoreMayEmit(input: Parameters<typeof assertCollaboratorMayEmit>[0], tx: Prisma.TransactionClient): Promise<void> {
+  try {
+    await assertCollaboratorMayEmit(input, tx);
+  } catch (err) {
+    if (err instanceof CollaboratorWriteVetoError) throw new Error(`RESTORE_ACCESS_REFUSED: ${err.message}`);
+    throw err;
+  }
 }

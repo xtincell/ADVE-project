@@ -22,6 +22,7 @@ export function FeedbackButton() {
   const [kind, setKind] = useState<(typeof KINDS)[number]["value"]>("BUG");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
+  const me = trpc.auth.me.useQuery(undefined, { enabled: open });
 
   const submit = trpc.feedback.submit.useMutation({
     onSuccess: () => {
@@ -62,7 +63,9 @@ export function FeedbackButton() {
         {done ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
             <Badge tone="success">Envoyé — merci !</Badge>
-            <Text className="text-sm text-foreground-secondary">Votre message est bien arrivé. On regarde ça.</Text>
+            <Text className="text-sm text-foreground-secondary">Votre demande est enregistrée avec le statut « À traiter ».</Text>
+            <Text className="text-xs text-foreground-muted">Référence : {submit.data?.id}</Text>
+            {me.data?.canOperate ? <a href="/console/socle/feedback" className="text-sm text-accent underline">Ouvrir la banque de demandes</a> : null}
             <Button onClick={close}>Fermer</Button>
           </div>
         ) : (
@@ -73,7 +76,9 @@ export function FeedbackButton() {
             <Select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} aria-label="Type de retour">
               {KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
             </Select>
+            {me.data?.canOperate ? <a href="/console/socle/feedback" className="text-sm text-accent underline">Consulter les demandes à traiter et traitées</a> : null}
             <Textarea
+              aria-label="Votre message"
               placeholder="Décrivez le bug ou votre idée…"
               value={message}
               onChange={(e) => setMessage(e.target.value)}

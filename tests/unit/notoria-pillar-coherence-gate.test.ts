@@ -79,6 +79,20 @@ describe("applyPillarCoherenceGate (ADR-0023)", () => {
     expect(out.destructive).toBe(true);
   });
 
+  it.each([
+    ["v", "businessModel"],
+    ["d", "tonDeVoix.personnalite"],
+    ["e", "productExperienceMap[0].experienceDescription"],
+  ])("requires the catalogued rewrite mode for %s.%s, including nested edits", async (pillarKey, field) => {
+    const input = { ...baseInput, pillarKey, field };
+    await expect(applyPillarCoherenceGate(input)).resolves.toMatchObject({
+      blocked: true, reason: "DESTRUCTIVE_REQUIRES_STRATEGIC_REWRITE",
+    });
+    await expect(applyPillarCoherenceGate({ ...input, mode: "STRATEGIC_REWRITE" })).resolves.toMatchObject({
+      blocked: false, destructive: true,
+    });
+  });
+
   it("warns on cross-ADVE dependency for d.personas (non-blocking)", async () => {
     const out = await applyPillarCoherenceGate({
       ...baseInput,

@@ -27,6 +27,8 @@ const LANGUAGES = ["FR", "EN", "FR_EN"] as const;
 export interface CampaignDeliverableFormProps {
   /** Mode édition si fourni. */
   deliverableId?: string;
+  /** Mode édition : version lue de la tâche (updatedAt ISO). Sans elle, le serveur refuse l'édition. */
+  expectedUpdatedAt?: string;
   /** Campaign owner. Pré-rempli quand le form est ouvert depuis une page campagne. */
   campaignId: string;
   /** Strategy pivot pour audit. */
@@ -53,6 +55,7 @@ interface FormState {
 
 export function CampaignDeliverableForm({
   deliverableId,
+  expectedUpdatedAt,
   campaignId,
   strategyId,
   operatorId,
@@ -103,6 +106,7 @@ export function CampaignDeliverableForm({
         strategyId,
         operatorId,
         deliverableId,
+        expectedUpdatedAt,
         patches: {
           status: state.status,
           dueDate: state.dueDate,

@@ -20,7 +20,9 @@
  * Layer 2 — uses brand-vault engine, ingestion-pipeline data, llm-gateway.
  */
 
+import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
+import { resolveBrandSource, assertCurrentSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { createBrandAsset } from "@/server/services/brand-vault/engine";
 import { tagAsset } from "@/server/services/asset-tagger";
 import { isBrandAssetKind, type BrandAssetKind } from "@/domain/brand-asset-kinds";
@@ -30,15 +32,12 @@ import { inferPillarSource } from "./pillar-mapping";
 import type { SourceClassificationProposal } from "./types";
 
 const VISION_CONFIDENCE_THRESHOLD = 0.7;
-const DECOMPOSER_MIN_CONTENT_LENGTH = 800;
-const HEURISTIC_DECOMPOSER_TRIGGERS = new Set<BrandAssetKind>([
-  "CREATIVE_BRIEF",
-  "BRIEF_360",
-  "GENERIC",
-]);
+// A source hash alone cannot validate proposals made by an older reader.
+const CLASSIFIER_REVISION = "full-document-citations-v2";
 
 export interface ClassifierResult {
   sourceId: string;
+  sourceReceipt: SourceReceipt;
   strategyId: string;
   proposals: SourceClassificationProposal[];
   durationMs: number;
@@ -47,30 +46,20 @@ export interface ClassifierResult {
 export interface VaultProposalResult extends ClassifierResult {
   /** BrandAsset.id values for the DRAFTs persisted in the vault. */
   brandAssetIds: string[];
+  alreadyFresh: boolean;
 }
 
 /**
  * Classify a single BrandDataSource into N proposals (no DB writes).
  * Returns proposals in confidence-descending order.
  */
-export async function classifySource(sourceId: string): Promise<ClassifierResult> {
+export async function classifySource(sourceId: string, strategyId?: string): Promise<ClassifierResult> {
   const t0 = Date.now();
-  const source = await db.brandDataSource.findUnique({
-    where: { id: sourceId },
-    select: {
-      id: true,
-      strategyId: true,
-      sourceType: true,
-      fileName: true,
-      fileType: true,
-      rawContent: true,
-      rawData: true,
-      processingStatus: true,
-    },
-  });
-  if (!source) throw new Error(`BrandDataSource ${sourceId} not found`);
+  const resolved = await resolveBrandSource(sourceId, strategyId);
+  const { source, consumerStrategyId } = resolved;
+  const sourceReceipt = { sourceId, contentHash: resolved.contentHash };
   if (source.processingStatus !== "EXTRACTED" && source.processingStatus !== "PROCESSED") {
-    return { sourceId, strategyId: source.strategyId, proposals: [], durationMs: Date.now() - t0 };
+    throw new Error("SOURCE_NOT_READY: le texte du document doit être extrait avant son analyse.");
   }
 
   const mimeType = inferMimeType(source.fileType, source.sourceType);
@@ -110,7 +99,7 @@ export async function classifySource(sourceId: string): Promise<ClassifierResult
           base64Data: base64,
           fileName: source.fileName,
           mimeType,
-          strategyId: source.strategyId,
+          strategyId: consumerStrategyId,
         });
         if (visionProposal && visionProposal.confidence > heuristic.confidence) {
           proposals.unshift(visionProposal);
@@ -118,15 +107,16 @@ export async function classifySource(sourceId: string): Promise<ClassifierResult
       }
     }
 
-    return finalize(source.id, source.strategyId, proposals, t0);
+    return finalize(source.id, consumerStrategyId, proposals, t0, sourceReceipt);
   }
 
   // ── Document / text path ─────────────────────────────────────
   const content = source.rawContent ?? "";
-  const longEnough = content.length >= DECOMPOSER_MIN_CONTENT_LENGTH;
-  const heuristicWantsDecomposer = HEURISTIC_DECOMPOSER_TRIGGERS.has(heuristic.kind) && longEnough;
+  if (!content.trim()) {
+    throw new Error("SOURCE_NOT_READY: ce document ne contient pas de texte lisible.");
+  }
 
-  // Always seed the heuristic proposal (helps when LLM is unavailable / no key).
+  // File-level suggestion remains explicit; it never stands for a failed reading.
   proposals.push({
     kind: heuristic.kind,
     name: source.fileName ?? `Source ${source.id.slice(0, 6)}`,
@@ -137,28 +127,26 @@ export async function classifySource(sourceId: string): Promise<ClassifierResult
     inferredBy: "heuristic",
   });
 
-  if (heuristicWantsDecomposer || heuristic.confidence < VISION_CONFIDENCE_THRESHOLD && longEnough) {
-    const decomposed = await decomposeDocument({
-      rawContent: content,
-      fileName: source.fileName,
-      mimeType,
-      fileType: source.fileType,
-      strategyId: source.strategyId,
-    });
-    for (const proposal of decomposed) {
-      // Drop duplicate kinds (heuristic-only + LLM same kind) when LLM has higher confidence.
-      const existingIdx = proposals.findIndex((p) => p.kind === proposal.kind);
-      if (existingIdx >= 0) {
-        if (proposal.confidence > proposals[existingIdx]!.confidence) {
-          proposals[existingIdx] = proposal;
-        }
-      } else {
-        proposals.push(proposal);
-      }
-    }
+  const decomposed = await decomposeDocument({
+    rawContent: content,
+    fileName: source.fileName,
+    mimeType,
+    fileType: source.fileType,
+    strategyId: consumerStrategyId,
+  });
+  const sectionKinds = new Set(decomposed.map((p) => p.kind));
+  // A detailed reading replaces the file-level guess of that kind, not its peers.
+  if (sectionKinds.has(heuristic.kind)) proposals.length = 0;
+  for (const proposal of decomposed) {
+    const existingIdx = proposals.findIndex((p) => p.inferredBy === "decomposer"
+      && p.kind === proposal.kind && p.name.normalize("NFKC").toLocaleLowerCase("fr") === proposal.name.normalize("NFKC").toLocaleLowerCase("fr")
+      && p.sourceCitation?.charStart === proposal.sourceCitation?.charStart
+      && p.sourceCitation?.charEnd === proposal.sourceCitation?.charEnd);
+    if (existingIdx < 0) proposals.push(proposal);
+    else if (proposal.confidence > proposals[existingIdx]!.confidence) proposals[existingIdx] = proposal;
   }
 
-  return finalize(source.id, source.strategyId, proposals, t0);
+  return finalize(source.id, consumerStrategyId, proposals, t0, sourceReceipt);
 }
 
 function finalize(
@@ -166,9 +154,10 @@ function finalize(
   strategyId: string,
   proposals: SourceClassificationProposal[],
   t0: number,
+  sourceReceipt: SourceReceipt,
 ): ClassifierResult {
   proposals.sort((a, b) => b.confidence - a.confidence);
-  return { sourceId, strategyId, proposals, durationMs: Date.now() - t0 };
+  return { sourceId, sourceReceipt, strategyId, proposals, durationMs: Date.now() - t0 };
 }
 
 /**
@@ -177,79 +166,105 @@ function finalize(
  */
 export async function proposeBrandAssetsFromSource(
   sourceId: string,
-  operatorId: string,
+  _actorId: string,
+  strategyId?: string,
 ): Promise<VaultProposalResult> {
-  const classification = await classifySource(sourceId);
-  if (classification.proposals.length === 0) {
-    return { ...classification, brandAssetIds: [] };
+  const t0 = Date.now();
+  const resolved = await resolveBrandSource(sourceId, strategyId);
+  if (!["EXTRACTED", "PROCESSED"].includes(resolved.source.processingStatus)) {
+    throw new Error("SOURCE_NOT_READY: le texte du document doit être extrait avant son analyse.");
   }
-
-  // Drop any prior DRAFTs from the same source so re-classification doesn't
-  // accumulate stale proposals (operator-promoted CANDIDATE/SELECTED/ACTIVE
-  // assets are NEVER touched — they are committed work).
-  const stale = await db.brandAsset.findMany({
-    where: { strategyId: classification.strategyId, state: "DRAFT" },
+  const sourceReceipt = { sourceId, contentHash: resolved.contentHash };
+  const cached = currentBatch(await db.brandAsset.findMany({
+    where: { strategyId: resolved.consumerStrategyId, staleAt: null,
+      metadata: { path: ["sourceDataSourceId"], equals: sourceId } },
     select: { id: true, metadata: true },
-  });
-  const staleIds = stale
-    .filter((a: { id: string; metadata: unknown }) => {
-      const meta = (a.metadata as Record<string, unknown> | null) ?? null;
-      return meta?.sourceDataSourceId === sourceId;
-    })
-    .map((a: { id: string }) => a.id);
-  if (staleIds.length > 0) {
-    await db.brandAsset.deleteMany({ where: { id: { in: staleIds } } });
+  }), sourceReceipt);
+  if (cached) {
+    await assertCurrentSourceReceipts(db, resolved.consumerStrategyId, [sourceReceipt]);
+    return {
+      sourceId, strategyId: resolved.consumerStrategyId, sourceReceipt, proposals: [],
+      brandAssetIds: cached, durationMs: Date.now() - t0, alreadyFresh: true,
+    };
   }
-
-  const source = await db.brandDataSource.findUnique({
-    where: { id: sourceId },
-    select: { fileType: true, fileName: true, sourceType: true },
-  });
-
-  const brandAssetIds: string[] = [];
-  for (const proposal of classification.proposals) {
-    const safeKind: BrandAssetKind = isBrandAssetKind(proposal.kind) ? proposal.kind : "GENERIC";
-    // V1: classifier produces INTELLECTUAL DRAFTs. Operator can later
-    // upload a proper fileUrl via the brand-vault router (`supersede`)
-    // when promoting LOGO_FINAL/KV_VISUAL/PACKAGING_LAYOUT to ACTIVE.
-    const family = guessFamily(safeKind);
-    try {
+  const classification = await classifySource(sourceId, strategyId);
+  const batchHash = createHash("sha256").update(JSON.stringify({
+    revision: CLASSIFIER_REVISION, sourceReceipt: classification.sourceReceipt,
+    proposals: classification.proposals,
+  })).digest("hex");
+  const persisted = await db.$transaction(async (tx) => {
+    // An old in-flight classification cannot retire current proposals or write stale ones.
+    await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${sourceId} FOR UPDATE`;
+    await assertCurrentSourceReceipts(tx, classification.strategyId, [classification.sourceReceipt]);
+    const { source } = await resolveBrandSource(sourceId, classification.strategyId, tx);
+    // Preserve decisions AND superseded drafts for inspection; retries are idempotent.
+    const existing = await tx.brandAsset.findMany({ where: {
+      strategyId: classification.strategyId, metadata: { path: ["sourceDataSourceId"], equals: sourceId },
+      staleAt: null,
+    }, select: { id: true, metadata: true } });
+    const current = currentBatch(existing, classification.sourceReceipt);
+    if (current) return { ids: current, alreadyFresh: true };
+    // The triggering user is recorded on the intent; asset ownership comes from
+    // the consuming brand, including when the source is shared by another brand.
+    const owner = await tx.strategy.findUniqueOrThrow({
+      where: { id: classification.strategyId }, select: { operatorId: true },
+    });
+    await tx.brandAsset.updateMany({ where: {
+      strategyId: classification.strategyId, state: "DRAFT", metadata: { path: ["sourceDataSourceId"], equals: sourceId },
+    }, data: { state: "SUPERSEDED" } });
+    const ids: string[] = [];
+    for (const [proposalIndex, proposal] of classification.proposals.entries()) {
+      const kind: BrandAssetKind = isBrandAssetKind(proposal.kind) ? proposal.kind : "GENERIC";
       const asset = await createBrandAsset({
-        strategyId: classification.strategyId,
-        operatorId,
-        name: proposal.name || `Source ${sourceId.slice(0, 6)}`,
-        kind: safeKind,
-        family,
-        content: proposal.content,
-        summary: proposal.summary || undefined,
-        pillarSource: proposal.pillarSource,
-        state: "DRAFT",
-        metadata: {
-          sourceDataSourceId: sourceId,
-          classifierConfidence: proposal.confidence,
-          classifierInferredBy: proposal.inferredBy,
+        strategyId: classification.strategyId, operatorId: owner.operatorId,
+        name: proposal.name || `Source ${sourceId.slice(0, 6)}`, kind, family: guessFamily(kind),
+        content: proposal.content, summary: proposal.summary || undefined, pillarSource: proposal.pillarSource,
+        state: "DRAFT", metadata: {
+          sourceDataSourceId: sourceId, sourceContentHash: classification.sourceReceipt.contentHash,
+          classifierConfidence: proposal.confidence, classifierInferredBy: proposal.inferredBy,
+          classifierRevision: CLASSIFIER_REVISION, classifierBatchHash: batchHash,
+          classifierProposalCount: classification.proposals.length,
+          classifierProposalIndex: proposalIndex,
           ...(proposal.sourceCitation ? { sourceCitation: proposal.sourceCitation } : {}),
-          ...(source?.fileName ? { sourceFileName: source.fileName } : {}),
-          ...(source?.fileType ? { sourceFileType: source.fileType } : {}),
+          sourceFileName: source.fileName, sourceFileType: source.fileType,
         },
-      });
-      brandAssetIds.push(asset.id);
-      // Asset-tagger fills pillarTags multi-pillar (non-blocking).
-      void tagAsset(asset.id).catch((err: unknown) => {
-        console.warn(
-          "[source-classifier] tagAsset failed (non-blocking):",
-          err instanceof Error ? err.message : err,
-        );
-      });
-    } catch (err) {
-      console.warn(
-        `[source-classifier] createBrandAsset failed for proposal ${proposal.kind}:`,
-        err instanceof Error ? err.message : err,
-      );
+      }, tx);
+      ids.push(asset.id);
     }
-  }
+    return { ids, alreadyFresh: false };
+  }, { timeout: 60_000 }); // Whole batch, including every source guard; no model call holds these locks.
+  // Never launch a worker against uncommitted rows.
+  for (const id of persisted.alreadyFresh ? [] : persisted.ids) void tagAsset(id).catch((err: unknown) => {
+    console.warn("[source-classifier] tagAsset failed:", err instanceof Error ? err.message : err);
+  });
+  return { ...classification, brandAssetIds: persisted.ids, alreadyFresh: persisted.alreadyFresh };
+}
 
-  return { ...classification, brandAssetIds };
+/** Only a whole, versioned atomic batch may suppress another model call. */
+function currentBatch(
+  assets: Array<{ id: string; metadata: unknown }>, receipt: SourceReceipt,
+): string[] | null {
+  const batches = new Map<string, { expected: number; ids: Map<number, string> }>();
+  for (const asset of assets) {
+    const meta = asset.metadata as Record<string, unknown> | null;
+    if (meta?.sourceDataSourceId !== receipt.sourceId || meta.sourceContentHash !== receipt.contentHash
+      || meta.classifierRevision !== CLASSIFIER_REVISION
+      || typeof meta.classifierBatchHash !== "string" || !/^[a-f0-9]{64}$/.test(meta.classifierBatchHash)
+      || typeof meta.classifierProposalCount !== "number" || !Number.isSafeInteger(meta.classifierProposalCount)
+      || meta.classifierProposalCount < 1
+      || typeof meta.classifierProposalIndex !== "number" || !Number.isSafeInteger(meta.classifierProposalIndex)
+      || meta.classifierProposalIndex < 0 || meta.classifierProposalIndex >= meta.classifierProposalCount) continue;
+    const batch = batches.get(meta.classifierBatchHash) ?? { expected: meta.classifierProposalCount, ids: new Map<number, string>() };
+    if (batch.expected !== meta.classifierProposalCount) return null;
+    if (batch.ids.has(meta.classifierProposalIndex) && batch.ids.get(meta.classifierProposalIndex) !== asset.id) return null;
+    batch.ids.set(meta.classifierProposalIndex, asset.id);
+    batches.set(meta.classifierBatchHash, batch);
+  }
+  for (const batch of batches.values()) if (batch.ids.size === batch.expected
+    && new Set(batch.ids.values()).size === batch.expected) {
+    return [...batch.ids].sort(([a], [b]) => a - b).map(([, id]) => id);
+  }
+  return null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

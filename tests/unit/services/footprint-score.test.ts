@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from "vitest";
 import { computeFootprintScore } from "@/server/services/quick-intake/footprint-score";
+import { measuredScoreCoverage } from "@/domain/brand-scores";
 import { buildFootprintNarrativeTemplate, collectFootprintFacts } from "@/server/services/quick-intake/footprint-narrative";
 import type { EnrichedFootprint } from "@/server/services/quick-intake/public-enrichment";
 
@@ -25,6 +26,40 @@ function base(overrides: Partial<EnrichedFootprint> = {}): EnrichedFootprint {
     ...overrides,
   };
 }
+
+describe("coverage of the full weighted panel", () => {
+  const weights = [20, 30, 15, 10, 10, 10, 5, 10];
+  const dimensions = weights.map((weight, index) => ({ weight, measured: ![1, 6].includes(index), score: [75, null, 0, 0, 0, 100, null, 74][index] ?? null }));
+
+  it("75 measured points in a 110-point panel mean 68 percent, not 75", () => {
+    expect(measuredScoreCoverage(dimensions)).toBe(68);
+  });
+  it("the complete 110-point panel has 100 percent coverage", () => {
+    expect(measuredScoreCoverage(dimensions.map(d => ({ ...d, measured: true, score: 0 })))).toBe(100);
+  });
+  it("a measured zero counts; unknown and missing scores do not", () => {
+    expect(measuredScoreCoverage([{ weight: 30, measured: true, score: 0 }, { weight: 70, measured: true, score: null }])).toBe(30);
+  });
+  it("a legacy 100-point panel keeps its own denominator", () => {
+    expect(measuredScoreCoverage([{ weight: 20, measured: true, score: 100 }, { weight: 80, measured: false, score: null }])).toBe(20);
+  });
+  it("missing or invalid weights cannot manufacture coverage", () => {
+    expect(measuredScoreCoverage([])).toBe(0);
+    expect(measuredScoreCoverage([{ weight: Number.NaN, measured: true, score: 100 }])).toBe(0);
+  });
+  it("50 raw measured points remain provisional in a 110-point panel", () => {
+    const f = base();
+    f.score = { total: 80, outOf: 100, measuredWeight: 50, dimensions: [
+      { key: "site", label: "Site web", weight: 50, measured: true, score: 80, details: "mesuré" },
+      { key: "social", label: "Réseaux", weight: 60, measured: false, score: null, details: "non mesuré" },
+    ] };
+    const narrative = buildFootprintNarrativeTemplate(f, { companyName: "Marque de recette" });
+    expect(narrative).toContain("45 % du poids total");
+    expect(narrative).toContain("lecture encore partielle");
+    expect(f.score.total).toBe(80);
+    expect(f.score.measuredWeight).toBe(50);
+  });
+});
 
 const site = (tech: Partial<NonNullable<NonNullable<EnrichedFootprint["site"]>["tech"]>> = {}) => ({
   url: "https://cimencam.cm",

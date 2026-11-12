@@ -43,6 +43,7 @@ export async function huntVictories(input: HuntVictoriesInput): Promise<HuntVict
   const query = [input.subjectName, "vs", input.rivalName, input.sector, input.market].filter(Boolean).join(" ");
   const search = await braveWebSearch(query, { count: 6 });
   const realHits = search.status === "OK" ? search.hits : [];
+  if (realHits.length === 0) return { deferred: true, candidates: 0, pending: 0, autoRejected: 0 };
   const realUrls = new Set(realHits.map((h) => h.url));
   const grounding = realHits.length
     ? `\n\n${wrapUntrusted("RÉSULTATS WEB RÉELS (Brave)", formatWebHits(realHits), { max: 6000 })}\n` +
@@ -84,12 +85,10 @@ export async function huntVictories(input: HuntVictoriesInput): Promise<HuntVict
     return { deferred: true, candidates: 0, pending: 0, autoRejected: 0 };
   }
 
-  // Ne garde que les victoires dont l'URL est un résultat Brave réel (anti-hallu).
-  // Si Brave a défère (aucun hit réel), on laisse passer les sourceUrl telles
-  // quelles — la garde `candidates` auto-REJECT celles sans source de toute façon.
+  // An absent search result never becomes model-supplied evidence.
   const items: CandidateInput[] = data.victories
     .map((v) => {
-      const src = v.sourceUrl && (realUrls.size === 0 || realUrls.has(v.sourceUrl)) ? v.sourceUrl : null;
+      const src = v.sourceUrl && realUrls.has(v.sourceUrl) ? v.sourceUrl : null;
       const hit = realHits.find((h) => h.url === src);
       return {
         arena: v.arena,

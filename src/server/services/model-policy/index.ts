@@ -1,5 +1,7 @@
 /**
- * model-policy — governed `purpose → model` resolution.
+ * model-policy — governed `purpose → model defaults` resolution.
+ * Deployment priority and model pins remain inputs owned by the LLM Gateway;
+ * a stored model name or note is not proof of the model currently served.
  *
  * Layer 3 (services). Reads the `ModelPolicy` Prisma table and exposes a
  * cached `resolvePolicy(purpose)` to the LLM Gateway. Mutations only happen

@@ -24,6 +24,11 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as bootService from "@/server/services/boot-sequence";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { TRPCError } from "@trpc/server";
+import { found } from "../entity-access";
+
+/** IN1 : une marque inconnue reçoit 404 typé, jamais P2025 ; le refus du propriétaire est typé. */
+const STRATEGY_NOT_FOUND = "Marque introuvable.";
 /* lafusee:governed-active */
 
 export const bootSequenceRouter = createTRPCRouter({
@@ -39,9 +44,9 @@ export const bootSequenceRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       // Verify ownership or admin
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
+      const strategy = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId } }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse: vous n'etes pas proprietaire de cette strategie");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse: vous n'etes pas proprietaire de cette strategie" });
       }
       return bootService.start(input.strategyId);
     }),
@@ -60,9 +65,9 @@ export const bootSequenceRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
+      const strategy = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId } }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse" });
       }
       return bootService.advance(input.strategyId, input.step, input.responses);
     }),
@@ -81,9 +86,9 @@ export const bootSequenceRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
+      const strategy = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId } }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse" });
       }
       return bootService.complete(input.strategyId);
     }),
@@ -96,9 +101,9 @@ export const bootSequenceRouter = createTRPCRouter({
   getAdaptiveQuestions: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), step: z.number() }))
     .query(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
+      const strategy = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId } }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse" });
       }
       // Load current boot state then regenerate questions for the given step
       const state = await bootService.getState(input.strategyId);
@@ -119,12 +124,12 @@ export const bootSequenceRouter = createTRPCRouter({
   generateReport: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         include: { pillars: true },
-      });
+      }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse" });
       }
       const bootState = await bootService.getState(input.strategyId);
       if (bootState && !bootState.completed) {
@@ -164,9 +169,9 @@ export const bootSequenceRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
+      const strategy = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId } }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse" });
       }
       const state = await bootService.getState(input.strategyId);
       const currentPillar = state?.currentPillar ?? "a";
@@ -190,9 +195,9 @@ Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
   resume: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
+      const strategy = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId } }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse" });
       }
       const state = await bootService.getState(input.strategyId);
       if (!state) {
@@ -219,12 +224,12 @@ Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
 
   })
     .mutation(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         include: { pillars: true },
-      });
+      }), STRATEGY_NOT_FOUND);
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
-        throw new Error("Acces refuse");
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acces refuse" });
       }
       if (strategy.status === "ACTIVE") {
         return { converted: false, message: "Strategie deja active." };

@@ -48,8 +48,8 @@ git rev-list --count HEAD..origin/main
 ## 0.3 — Si la tâche touche la Phase 18 (Brand Tree / Bible / Glory annotation)
 
 ```bash
-# Résiduels pending à traiter AVANT toute action Phase 18 :
-npx tsx -e "import { db } from './src/lib/db'; db.phase18ResidualEntry.findMany({ where: { status: 'pending' } }).then(r => { console.log(JSON.stringify(r, null, 2)); process.exit(0); });"
+# Résiduels PENDING à traiter AVANT toute action Phase 18 :
+npx tsx -e "import { db } from './src/lib/db'; db.phase18ResidualEntry.findMany({ where: { status: 'PENDING' } }).then(r => { console.log(JSON.stringify(r, null, 2)); process.exit(0); });"
 ```
 
 ## 0.4 — Reformuler le besoin en vocabulaire LEXICON

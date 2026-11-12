@@ -17,6 +17,7 @@
  * — budget Thot + cascade providers + parité Sonnet 5 inclus.
  */
 
+import { z } from "zod";
 import { isTextLLMAvailable } from "@/server/services/llm-gateway";
 import {
   streamChatText,
@@ -27,11 +28,13 @@ import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured
 import { UNTRUSTED_NOTICE, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { assessAllPillarsHealth } from "@/server/services/neteru-shared/pillar-directors";
 import { buildAssistantContext, buildExpertContext } from "./context";
-import { COUNCIL_EXPERTS, COUNCIL_PERSONAS } from "./personas";
+import { COUNCIL_EXPERTS, COUNCIL_PERSONAS, COUNCIL_EVIDENCE_NOTICE, COUNCIL_SIMPLE_REPLY_NOTICE } from "./personas";
 import {
   councilDraftSchema,
   councilSynthesisSchema,
   expertCritiqueSchema,
+  withCouncilCitations,
+  type CouncilEvidenceExcerpt,
   type CouncilDraft,
   type CouncilSynthesis,
   type ExpertCritique,
@@ -39,7 +42,15 @@ import {
 
 export type FounderPillarKey = "a" | "d" | "v" | "e";
 
-const EXPERT_TIMEOUT_MS = 90_000;
+/** Même refus explicite pour les transports et la délibération sans fournisseur. */
+export const COUNCIL_UNAVAILABLE = {
+  status: "UNAVAILABLE",
+  reason: "Aucun fournisseur d'intelligence disponible — réessayez plus tard.",
+} as const;
+
+// The existing queue allows 120s by default. Reserve another 90s for expert
+// work/repairs; a 90s total deadline killed requests still waiting their turn.
+const EXPERT_TIMEOUT_MS = 120_000 + 90_000;
 const EXPERT_MAX_TOKENS = 1_500;
 const SYNTHESIS_MAX_TOKENS = 2_500;
 
@@ -53,27 +64,28 @@ export interface AskCouncilInput {
 }
 
 /**
- * `ragUsed` était calculé par `buildAssistantContext` puis **jeté** : sans
- * fournisseur d'embeddings, le bloc de recherche vaut `null` et personne
- * n'apprenait que le conseil avait répondu sans consulter la documentation. Le
- * signal descend désormais dans le prompt : le coordinateur sait ce qu'il n'a
- * pas lu, et doit le dire au lieu de le laisser croire.
+ * La contribution hybride peut ne contenir que des champs précis. La présence
+ * de documents dépend des références accompagnant le texte réellement injecté,
+ * pas de `ragUsed` ni de la disponibilité d'un fournisseur d'embeddings.
  */
-function buildCoordinatorSystem(contextBlock: string, ragUsed: boolean): string {
-  const grounding = ragUsed
-    ? "ANCRAGE — Des extraits de la documentation de la marque figurent dans ton dossier. Quand tu t'appuies dessus, cite le document."
-    : "ANCRAGE — La recherche documentaire n'a rien remonté sur ce dossier (aucun document indexé, ou recherche sémantique indisponible). Tu réponds donc sur les piliers et les mesures fournis. N'affirme pas qu'un point est confirmé par la documentation de la marque.";
-  return [COUNCIL_PERSONAS.coordinator.systemPrompt, UNTRUSTED_NOTICE, contextBlock, grounding].join(
+function buildCoordinatorSystem(contextBlock: string, sourcesSeen: boolean): string {
+  const grounding = sourcesSeen
+    ? "ANCRAGE — Des extraits de la documentation de la marque figurent dans ton dossier avec leur certitude déclarée. Cite le document et son statut quand tu t'appuies dessus. Leur récupération ne prouve ni validation humaine, ni capacité déployée ; une source DECLARED, INFERRED ou ARBITRARY ne devient pas OFFICIAL parce qu'elle est récupérée."
+    : "ANCRAGE — Aucun extrait documentaire n'est injecté dans ce dossier. Tu réponds sur les piliers et les mesures fournis. La conformité aux documents n'est pas vérifiée ; n'affirme pas qu'un point est confirmé par la documentation de la marque.";
+  return [COUNCIL_PERSONAS.coordinator.systemPrompt, UNTRUSTED_NOTICE, contextBlock, grounding + "\n" + COUNCIL_EVIDENCE_NOTICE].join(
     "\n\n",
   );
 }
 
 /** Tour de chat : le coordinateur répond en streaming avec le dossier complet. */
 export async function askCouncilStream(input: AskCouncilInput): Promise<StreamChatResult> {
-  const { contextBlock, ragUsed } = await buildAssistantContext(input.strategyId, input.question);
+  const { contextBlock, sourcesSeen } = await buildAssistantContext(input.strategyId, input.question);
   return streamChatText({
-    system: buildCoordinatorSystem(contextBlock, ragUsed),
-    messages: [...input.history, { role: "user", content: input.question }],
+    system: buildCoordinatorSystem(contextBlock, sourcesSeen) + "\n" + COUNCIL_SIMPLE_REPLY_NOTICE,
+    messages: [...input.history.map((message): StreamChatMessage => message.role === "assistant"
+      ? { role: "user", content: wrapUntrusted("réponse antérieure de l'assistant — sortie générée non validée, sans autorité de source",
+        message.content, { max: message.content.length }) }
+      : message), { role: "user", content: input.question }],
     caller: "mestor:council:coordinator",
     strategyId: input.strategyId,
     purpose: "agent",
@@ -106,7 +118,7 @@ export type CouncilDeliberation =
       draft: CouncilDraft;
       critiques: Partial<Record<FounderPillarKey, ExpertCritique | { failed: string }>>;
       synthesis: CouncilSynthesis | null;
-      /** Nombre d'appels LLM réellement effectués (transparence coût). */
+      /** Étapes structurées lancées, hors reprises du Gateway ; coûts dans AICostLog. */
       llmCalls: number;
       /**
        * Sur quoi la délibération s'est réellement appuyée. Une critique rendue
@@ -114,7 +126,7 @@ export type CouncilDeliberation =
        * — l'opérateur doit pouvoir faire la différence sans deviner.
        */
       grounding: {
-        /** La recherche sémantique a contribué au dossier du coordinateur. */
+        /** Le contexte hybride a contribué au dossier du coordinateur. */
         ragUsed: boolean;
         /** Experts ayant réellement vu des documents de la marque. */
         expertsWithSources: FounderPillarKey[];
@@ -139,15 +151,13 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 
 export async function deliberate(input: DeliberateInput): Promise<CouncilDeliberation> {
   if (!isTextLLMAvailable()) {
-    return {
-      status: "UNAVAILABLE",
-      reason: "Aucun fournisseur d'intelligence disponible — réessayez plus tard.",
-    };
+    return COUNCIL_UNAVAILABLE;
   }
 
   let llmCalls = 0;
-  const { contextBlock, ragUsed } = await buildAssistantContext(input.strategyId, input.topic);
-  const coordinatorSystem = buildCoordinatorSystem(contextBlock, ragUsed);
+  const { contextBlock, ragUsed, sourcesSeen, evidence = [] } = await buildAssistantContext(input.strategyId, input.topic);
+  const coordinatorSystem = buildCoordinatorSystem(contextBlock, sourcesSeen);
+  const topicBlock = wrapUntrusted("question à résoudre", input.topic);
 
   // ── 1. Draft du coordinateur (skippé si une position est fournie) ──────
   let draft: CouncilDraft;
@@ -176,13 +186,19 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
       // éditable par le fondateur. Tout le reste du fichier est ceinturé
       // (`draft`, contexte) ; ce point d'entrée-ci ne l'était pas.
       prompt: `${wrapUntrusted("sujet soumis par l'utilisateur", input.topic)}\n\nRédige la POSITION stratégique initiale du conseil sur ce sujet (position, arguments ancrés dans le dossier, risques identifiés).`,
-      schema: councilDraftSchema,
+      schema: withCouncilCitations(councilDraftSchema, evidence),
+      formatInstructions: "citations est obligatoire : copie les métadonnées d'une Référence de citation fournie et un extrait exact. Une référence contrôle la citation, pas la vérité de l'interprétation. N'invente aucune preuve ; une liste vide exige qu'aucun extrait citable ne soit fourni.",
       caller: "mestor:council:draft",
       strategyId: input.strategyId,
       maxOutputTokens: 2_000,
     });
     draft = res.data;
   }
+
+  const draftText = JSON.stringify(draft);
+  const draftBlock = wrapUntrusted("position soumise au conseil", draftText, {
+    max: draftText.length,
+  });
 
   // ── 2. Critiques adversariales A/D/V/E en parallèle ────────────────────
   // État déterministe des piliers (complétude, gaps) fourni à chaque expert
@@ -193,7 +209,7 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   const settled = await Promise.allSettled(
     COUNCIL_EXPERTS.map(async (expert) => {
       const pillarKey = expert.pillarKey as FounderPillarKey;
-      const { contextBlock: expertContext, sourcesSeen } = await buildExpertContext(
+      const { contextBlock: expertContext, sourcesSeen, evidence: expertEvidence = [] } = await buildExpertContext(
         input.strategyId,
         pillarKey,
         input.topic,
@@ -206,27 +222,35 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
       const res = await withTimeout(
         executeStructuredLLMCall({
           system: [expert.systemPrompt, UNTRUSTED_NOTICE, expertContext].join("\n\n"),
-          prompt: `${healthLine}\n\n${wrapUntrusted("position soumise au conseil", JSON.stringify(draft))}\n\nCHALLENGE cette position au nom de ton pilier.`,
-          schema: expertCritiqueSchema,
+          prompt: `${topicBlock}\n\n${healthLine}\n\n${draftBlock}\n\nCHALLENGE cette position au nom de ton pilier, uniquement sur ce qui change la réponse à la question posée. Distingue une objection pertinente d'un chantier général de marque hors périmètre ; ne transforme pas toute absence de preuve en obstacle à une décision bornée.`,
+          schema: withCouncilCitations(expertCritiqueSchema, expertEvidence),
+          formatInstructions: "citations est obligatoire : utilise seulement les Références de citation de TON contexte et un extrait exact. Les citations du draft ne sont pas une preuve indépendante. Une citation correcte ne valide ni une assertion éditoriale, ni ton interprétation.",
           caller: `mestor:council:expert-${pillarKey}`,
           strategyId: input.strategyId,
           maxOutputTokens: EXPERT_MAX_TOKENS,
+          signal: AbortSignal.timeout(EXPERT_TIMEOUT_MS),
         }),
         EXPERT_TIMEOUT_MS,
         `expert-${pillarKey}`,
       );
-      return { pillarKey, critique: res.data, sourcesSeen };
+      return { pillarKey, critique: res.data, sourcesSeen, evidence: expertEvidence };
     }),
   );
 
   const critiques: Partial<Record<FounderPillarKey, ExpertCritique | { failed: string }>> = {};
   const succeeded: Array<{ pillarKey: FounderPillarKey; critique: ExpertCritique }> = [];
   const expertsWithSources: FounderPillarKey[] = [];
+  const synthesisEvidence: CouncilEvidenceExcerpt[] = [...evidence];
   settled.forEach((s, i) => {
     const pillarKey = COUNCIL_EXPERTS[i]!.pillarKey as FounderPillarKey;
     if (s.status === "fulfilled") {
       critiques[pillarKey] = s.value.critique;
       succeeded.push({ pillarKey: s.value.pillarKey, critique: s.value.critique });
+      // Only quotations actually carried by successful critiques reach the
+      // synthesis prompt; don't authorize every unseen expert excerpt there.
+      for (const citation of s.value.critique.citations ?? []) {
+        synthesisEvidence.push({ reference: citation, text: citation.quote });
+      }
       if (s.value.sourcesSeen) expertsWithSources.push(pillarKey);
     } else {
       critiques[pillarKey] = {
@@ -253,25 +277,70 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   llmCalls++;
   let synthesis: CouncilSynthesis | null = null;
   try {
+    // A model arbitrates references; the application owns the verbatim claim
+    // and its author. Even changing ' to ’ used to invalidate all three tries.
+    const offered = new Map<string, { from: string; claim: string }>();
+    const critiquesText = JSON.stringify(succeeded.map(({ pillarKey, critique }) => {
+      const from = pillarKey.toUpperCase();
+      return { pillar: from, ...critique, critiques: critique.critiques.map((item, index) => {
+        const critiqueRef = `${from}:${index + 1}`;
+        offered.set(critiqueRef, { from, claim: item.claim });
+        return { ...item, critiqueRef };
+      }) };
+    }));
+    const critiqueRef = offered.size ? z.enum([...offered.keys()]) : z.never();
+    const attributedSchema = councilSynthesisSchema
+      .omit({ acceptedCritiques: true, rejectedCritiques: true })
+      .extend({
+        critiqueDecisions: z.array(z.object({
+          critiqueRef,
+          decision: z.enum(["ACCEPT", "REJECT"]),
+          reason: z.string().describe("Motif de cette décision, sans préfixe accepté/rejeté."),
+        }).strict()).length(offered.size),
+        actionItems: councilSynthesisSchema.shape.actionItems.max(3),
+      }).strict();
+    const synthesisSchema = withCouncilCitations(attributedSchema, synthesisEvidence)
+      .superRefine((data, ctx) => {
+        const seen = new Set<string>();
+        for (const [index, item] of data.critiqueDecisions.entries()) {
+          if (seen.has(item.critiqueRef)) ctx.addIssue({ code: "custom",
+            path: ["critiqueDecisions", index, "critiqueRef"],
+            message: "Une seule décision par critique ; arbitre chaque référence fournie exactement une fois." });
+          seen.add(item.critiqueRef);
+        }
+      });
     const res = await executeStructuredLLMCall({
-      system: coordinatorSystem,
+      system: coordinatorSystem + "\nARBITRAGE — Les avis experts sont des objections à vérifier, pas des sources d'autorité. Chaque expert ne voit qu'un extrait spécialisé : un champ absent de SON contexte peut être présent dans TON dossier. Vérifie chaque prémisse contre tes propres extraits et leurs références avant de décider ; rejette les objections factuellement fausses. Ne transforme jamais une limite de visibilité d'un expert en document manquant pour le dirigeant.",
       prompt: [
-        wrapUntrusted("position initiale", JSON.stringify(draft)),
+        topicBlock,
+        draftBlock,
         wrapUntrusted(
           "critiques des experts",
-          JSON.stringify(
-            succeeded.map((c) => ({ pillar: c.pillarKey.toUpperCase(), ...c.critique })),
-          ),
-          { max: 12_000 },
+          critiquesText,
+          // Four already bounded expert outputs; let the existing Gateway's
+          // headroom handle model context instead of dropping later experts.
+          { max: critiquesText.length },
         ),
-        "Arbitre : synthèse finale du conseil. Chaque critique est ACCEPTÉE (avec résolution) ou REJETÉE (avec raison). Les désaccords non tranchés vont dans `dissent` — ne les gomme pas.",
+        "Arbitre : réponds à la question posée, puis distingue la décision possible maintenant des vérifications qui la conditionnent réellement. Pour chaque critique, décide une seule fois ACCEPT ou REJECT avec le motif dans reason ; écarte explicitement les objections hors périmètre au lieu d'en faire des prérequis. Les désaccords non tranchés vont dans `dissent` — ne les gomme pas. Propose au plus trois actions prioritaires directement utiles à cette décision, sans transformer une demande bornée en refonte globale de la marque.",
       ].join("\n\n"),
-      schema: councilSynthesisSchema,
+      schema: synthesisSchema,
+      formatInstructions: "citations est obligatoire : cite le dossier fourni ou une citation exacte des critiques reçues. critiqueDecisions contient chaque critiqueRef fournie exactement une fois, avec decision ACCEPT ou REJECT et reason. Ne produis ni acceptedCritiques ni rejectedCritiques : l'application classe les décisions et restitue les auteurs et textes originaux. Le motif explique la décision choisie sans préfixe accepté/rejeté. Conserve version/origine/date, distingue interprétation et fait. Une citation correspondante ne valide pas l'affirmation stratégique.",
       caller: "mestor:council:synthesis",
       strategyId: input.strategyId,
       maxOutputTokens: SYNTHESIS_MAX_TOKENS,
     });
-    synthesis = res.data;
+    const { critiqueDecisions, ...position } = res.data;
+    synthesis = councilSynthesisSchema.parse({
+      ...position,
+      acceptedCritiques: critiqueDecisions.filter(item => item.decision === "ACCEPT")
+        .map(({ critiqueRef, reason }) => ({
+        ...offered.get(critiqueRef)!, resolution: reason,
+      })),
+      rejectedCritiques: critiqueDecisions.filter(item => item.decision === "REJECT")
+        .map(({ critiqueRef, reason }) => ({
+        ...offered.get(critiqueRef)!, reason,
+      })),
+    });
   } catch {
     synthesis = null; // les critiques restent livrées telles quelles
   }

@@ -9,6 +9,10 @@
  */
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { FinancialWorkingModelSchema } from "@/domain/financial-document";
+import { hasDocumentedNonProductExchange } from "@/domain/brand-actors";
+import { projectFinancialPillar, unitEconomicsMetricRows, unitEconomicsNote } from "@/domain/unit-economics";
+import { cataloguePriceLabel, productLadderPriceLabel, resolveProductRef } from "@/domain/product-catalog";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList,
   isEmpty, asRec, asArr, str, makeStatusFor, type Rec,
@@ -94,7 +98,7 @@ function Catalogue({ items, status }: { items: unknown; status?: string }) {
                   <span className="ck-v-prod__cat">{[p.categorie, p.skuRef].filter((x) => !isEmpty(x)).map(str).join(" · ")}</span>
                 </div>
                 <div className="ck-v-prod__econ">
-                  <div className="ck-v-prod__price">{fcfa(p.prix)}</div>
+                  <div className={`ck-v-prod__price${typeof p.conditionsTarifaires === "string" ? " ck-v-prod__price--conditions" : ""}`}>{cataloguePriceLabel(p)}</div>
                   {!isEmpty(p.margeUnitaire) ? <div className="ck-v-prod__marge">marge {fcfa(p.margeUnitaire)}</div> : null}
                 </div>
               </div>
@@ -121,7 +125,7 @@ function Catalogue({ items, status }: { items: unknown; status?: string }) {
   );
 }
 
-function ProductLadder({ items, status }: { items: unknown; status?: string }) {
+function ProductLadder({ items, catalogue, status }: { items: unknown; catalogue: unknown; status?: string }) {
   const empty = isEmpty(items);
   const arr = asArr(items);
   return (
@@ -129,10 +133,10 @@ function ProductLadder({ items, status }: { items: unknown; status?: string }) {
       {empty ? <EmptyBody /> : (
         <div className="ck-v-ladder">
           {arr.map((t, i) => (
-            <div className="ck-v-ladder__step" key={i} style={{ "--i": i, "--n": arr.length } as React.CSSProperties}>
+            <div className="ck-v-ladder__step" key={i}>
               <div className="ck-v-ladder__bar">
                 <span className="ck-v-ladder__tier">{str(t.tier)}</span>
-                <span className="ck-v-ladder__price">{fcfa(t.prix)}</span>
+                <span className="ck-v-ladder__price">{productLadderPriceLabel(t, catalogue)}</span>
               </div>
               <div className="ck-v-ladder__txt">
                 {!isEmpty(t.description) ? <span className="ck-v-ladder__desc">{str(t.description)}</span> : null}
@@ -146,21 +150,45 @@ function ProductLadder({ items, status }: { items: unknown; status?: string }) {
   );
 }
 
+function FinancialPremises({ value, status }: { value: unknown; status?: string }) {
+  const parsed = FinancialWorkingModelSchema.safeParse(value);
+  if (!parsed.success) return <ACard title="Hypothèses financières" status={status} empty={false}><p>Complétez les prémisses du modèle pour recalculer ses résultats.</p></ACard>;
+  const { breakEven: b, projection: p } = parsed.data;
+  const n = (value: number | null) => value === null ? "À préciser" : value.toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+  const origin = (value: string) => value === "ASSUMPTION" ? "Hypothèse proposée" : value === "HISTORICAL" ? "Repère historique" : "Valeur documentée";
+  const charges = (rows: typeof b.fixedCosts, indexes: number[]) => rows.map((row, i) => ({
+    poste: row.label, montant: `${n(row.value)} ${b.currency}`, origine: origin(row.qualification), justification: row.note,
+    communication: indexes.includes(i) ? "Incluse dans le budget de communication" : "Autre charge du modèle",
+  }));
+  return <ACard title="Hypothèses du modèle financier" status={status} empty={false} span>
+    <p>{b.title} · {b.payer} · {b.unit}</p><p>{b.scope}</p>
+    <p>Prix : {n(b.price.value)} {b.currency} · {origin(b.price.qualification)}. {b.price.note}</p>
+    <details><summary>Charges et coût de service</summary>
+      <ProofList title="Charges fixes mensuelles" items={charges(b.fixedCosts, p.marketingFixedCostIndexes)} cols={[["poste", "Poste"], ["montant", "Montant"], ["origine", "Origine"], ["communication", "Périmètre"], ["justification", "Justification"]]} />
+      <ProofList title="Charges par unité vendue" items={charges(b.variableCosts, p.marketingVariableCostIndexes)} cols={[["poste", "Poste"], ["montant", "Montant"], ["origine", "Origine"], ["communication", "Périmètre"], ["justification", "Justification"]]} />
+    </details>
+    <details><summary>Trajectoire et valeur du client</summary>
+      <p>{p.note}</p><p>Unités par client et par mois : {n(p.unitsPerPayerMonth.value)}. Rétention annuelle : {n(p.annualRetentionRate.value! * 100)} %. Horizon : {p.ltvHorizonMonths} mois. Récupération maximale du CAC proposée : {p.acquisitionPaybackCeilingMonths} mois.</p>
+      <ProofList title="Objectifs mensuels" items={p.monthlyVolumes.map((a, i) => ({ mois: `M${i + 1}`, volume: n(a.value), origine: origin(a.qualification), justification: a.note }))} cols={[["mois", "Mois"], ["volume", "Volume proposé"], ["origine", "Origine"], ["justification", "Justification"]]} />
+    </details>
+    <details><summary>Trésorerie, hypothèses et exclusions</summary>
+      <p>Solde initial proposé : {n(p.cashFlow.openingCash.value)} {b.currency}. Encaissements décalés de {p.cashFlow.revenueDelayMonths} mois ; paiements de {p.cashFlow.costDelayMonths} mois. {p.cashFlow.note}</p>
+      <ul>{[...b.assumptions, ...b.exclusions].map((t, i) => <li key={i}>{t}</li>)}</ul>
+    </details>
+  </ACard>;
+}
+
 function UnitEconomics({ value, status }: { value: unknown; status?: string }) {
   const empty = isEmpty(value);
   const o = asRec(value);
-  const K: Array<[string, string, (x: unknown) => string]> = [
-    ["cac", "CAC", fcfa], ["ltv", "LTV", fcfa], ["ltvCacRatio", "LTV / CAC", (x) => `${str(x)}x`],
-    ["margeNette", "Marge nette", (x) => `${str(x)} %`], ["roiEstime", "ROI estimé", str], ["paybackPeriod", "Payback", (x) => `${str(x)} mois`],
-    ["budgetCom", "Budget com", fcfa], ["caVise", "CA visé", fcfa],
-  ];
+  const note = unitEconomicsNote(o);
+  const metrics = unitEconomicsMetricRows(o).filter(r => r.value !== "—");
   return (
     <ACard title="Unit Economics" status={status} empty={empty} span>
       {empty ? <EmptyBody /> : (
         <div className="ck-v-econ">
-          {K.map(([k, label, fmt]) => (!isEmpty(o[k]) ? (
-            <div className="ck-v-econ__c" key={k}><span className="ck-v-econ__k">{label}</span><span className="ck-v-econ__v">{fmt(o[k])}</span></div>
-          ) : null))}
+          {metrics.map(r => <div className="ck-v-econ__c" key={r.key}><span className="ck-v-econ__k">{r.label}</span><span className="ck-v-econ__v">{r.value}</span></div>)}
+          {note ? <details className="col-span-full text-xs text-foreground-muted"><summary className="cursor-pointer">Hypothèses et périmètre du calcul</summary><p className="mt-2 whitespace-pre-line">{note}</p></details> : null}
         </div>
       )}
     </ACard>
@@ -214,8 +242,19 @@ function MultiSens({ value, status }: { value: unknown; status?: string }) {
 // ── Composant principal ────────────────────────────────────────────────
 
 // ── Système produit (ADR-0170 — le mécanisme interne du produit) ─────────
-function ProductSystem({ value, status }: { value: unknown; status?: string }) {
+function ProductSystem({ value, catalogue, status }: { value: unknown; catalogue: unknown; status?: string }) {
   const ps = asRec(value);
+  const products = asArr(catalogue);
+  const productNames = (refs: unknown) => Array.isArray(refs) ? refs.map((ref) => {
+    const product = typeof ref === "string" ? resolveProductRef(products, ref) : null;
+    return typeof product?.nom === "string" && product.nom.trim() ? product.nom : "Offre à vérifier";
+  }) : ["Offres à vérifier"];
+  const displayRows = (rows: unknown) => asArr(rows).map((row) => {
+    if (typeof row !== "object" || Array.isArray(row)) return row;
+    return { ...row,
+      ...(Object.hasOwn(row, "relatedProductIds") ? { relatedProductIds: productNames(row.relatedProductIds) } : {}),
+    };
+  });
   const dims: Array<[string, string, Array<[string, string]>]> = [
     ["axes", "Axes du mécanisme", [["label", "Axe"], ["poleLow", "Pôle bas"], ["poleHigh", "Pôle haut"], ["description", "Description"]]],
     ["archetypes", "Archétypes", [["name", "Nom"], ["axesSignature", "Signature"], ["essence", "Essence"], ["progressionNames", "Noms progressifs"], ["relatedProductIds", "Produits liés"]]],
@@ -232,11 +271,11 @@ function ProductSystem({ value, status }: { value: unknown; status?: string }) {
         <div className="ck-v-psys">
           {!isEmpty(ps.coreConcept) ? <p className="ck-a-stmt ck-a-stmt--big">{str(ps.coreConcept)}</p> : null}
           {!isEmpty(ps.anchorProductIds) ? (
-            <div className="ck-v-psys__anchor"><span className="ck-a-obj__k">Produits socles</span><TagRow items={ps.anchorProductIds} tone="emerald" /></div>
+            <div className="ck-v-psys__anchor"><span className="ck-a-obj__k">Produits socles</span><TagRow items={productNames(ps.anchorProductIds)} tone="emerald" /></div>
           ) : null}
           <div className="ck-a-grid">
             {present.map(([k, label, cols]) => (
-              <ProofList key={k} title={label} items={ps[k]} cols={cols} />
+              <ProofList key={k} title={label} items={displayRows(ps[k])} cols={cols} status={status} />
             ))}
           </div>
         </div>
@@ -246,8 +285,8 @@ function ProductSystem({ value, status }: { value: unknown; status?: string }) {
 }
 
 export function PillarVFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
-  const v = content;
-  const st = makeStatusFor(certainty, "v");
+  const v = projectFinancialPillar(content);
+  const st = makeStatusFor(certainty, "v", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.V as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;
@@ -268,22 +307,24 @@ export function PillarVFields({ content, certainty }: { content: Rec; certainty:
 
       <Section title="Catalogue & offre" sub="Chaque produit et sa matrice de valeur 2×2×2 (gain/coût × client/marque × concret/abstrait)">
         <div className="ck-a-grid">
-          <ProofList title="Persona × Segment" items={v.personaSegmentMap} status={st("personaSegmentMap")}
-            cols={[["personaName", "Persona"], ["productNames", "Produits"], ["devotionLevel", "Niveau d'engagement"], ["revenueContributionPct", "% CA"]]} />
+          <ProofList title="Échanges de valeur par acteur" items={asArr(v.personaSegmentMap).map(item => hasDocumentedNonProductExchange(item)
+            ? { ...asRec(item), productNames: ["Sans offre commerciale liée — échange documenté ci-dessous"] } : item)} status={st("personaSegmentMap")}
+            cols={[["personaName", "Acteur"], ["productNames", "Offres concernées"], ["valueToBrand", "Apport à la marque"], ["valueToActor", "Contrepartie"], ["actorCosts", "Coûts pour l’acteur"], ["dependencyConditions", "Conditions de participation"], ["devotionLevel", "Niveau d'engagement"], ["revenueContributionPct", "% CA documenté"]]} />
           <Catalogue items={v.produitsCatalogue} status={st("produitsCatalogue")} />
-          <ProductLadder items={v.productLadder} status={st("productLadder")} />
+          <ProductLadder items={v.productLadder} catalogue={v.produitsCatalogue} status={st("productLadder")} />
         </div>
       </Section>
 
       <Section title="Système produit" sub="Le mécanisme interne du produit — axes, archétypes, progression, modes, artefacts, règles (distinct du catalogue)">
         <div className="ck-a-grid">
-          <ProductSystem value={v.productSystem} status={st("productSystem")} />
+          <ProductSystem value={v.productSystem} catalogue={v.produitsCatalogue} status={st("productSystem")} />
         </div>
       </Section>
 
       <Section title="Économie & valeur" sub="Unit economics et la matrice valeur / coût">
         <div className="ck-a-grid">
-          <UnitEconomics value={v.unitEconomics} status={st("unitEconomics")} />
+          {v.financialModel != null && <FinancialPremises value={v.financialModel} status={st("financialModel")} />}
+          <UnitEconomics value={v.unitEconomics} status={st(v.financialModel ? "financialModel" : "unitEconomics")} />
           <ValueCostMatrix v={v} status={st("valeurClientTangible")} />
         </div>
       </Section>

@@ -10,6 +10,8 @@ import type { ValidationContext } from "@/server/services/financial-brain/types"
 import type { ApplyPolicy, QualityGateResult, RawLLMReco } from "./types";
 import { db } from "@/lib/db";
 import * as auditTrail from "@/server/services/audit-trail";
+import { getVariableSpec } from "@/lib/types/variable-bible";
+import { provenanceTopKey } from "@/domain/field-provenance";
 
 // ── Destructive markers (cross-pillar) ────────────────────────────────
 
@@ -21,12 +23,17 @@ import * as auditTrail from "@/server/services/audit-trail";
 const DESTRUCTIVE_FIELDS = new Set<string>([
   "d.personas",
   "v.unitEconomics",
+  "v.financialModel",
   "v.businessModel.coreEngine",
   "a.noyauIdentitaire",
 ]);
 
 function isDestructiveField(pillarKey: string, field: string): boolean {
-  return DESTRUCTIVE_FIELDS.has(`${pillarKey.toLowerCase()}.${field}`);
+  const key = pillarKey.toLowerCase();
+  // The editor and writer read the same policy, including a nested leaf of
+  // a strategic collection. No separate exception list per dossier or UI.
+  return DESTRUCTIVE_FIELDS.has(`${key}.${field}`) ||
+    getVariableSpec(key, provenanceTopKey(field, key))?.editableMode === "STRATEGIC_REWRITE";
 }
 
 // ── Financial field patterns ──────────────────────────────────────
@@ -38,6 +45,7 @@ function isDestructiveField(pillarKey: string, field: string): boolean {
 // (v.unitEconomics.*, v.prix, v.cout) plus the explicit list below.
 const FINANCIAL_FIELDS = new Set([
   "unitEconomics",
+  "financialModel",
   "budgetCom",
   "caVise",
   "margeNette",
@@ -48,7 +56,7 @@ const FINANCIAL_FIELDS = new Set([
   "pricingJustification",
 ]);
 
-const FINANCIAL_PILLAR_PREFIXES = ["v.unitEconomics", "v.prix", "v.cout"];
+const FINANCIAL_PILLAR_PREFIXES = ["v.unitEconomics", "v.financialModel", "v.prix", "v.cout"];
 
 function isFinancialField(pillarKey: string, field: string): boolean {
   if (FINANCIAL_FIELDS.has(field)) return true;

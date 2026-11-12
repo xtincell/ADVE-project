@@ -3,6 +3,7 @@
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
+import { BreakEvenDocumentModelSchema } from "@/domain/financial-document";
 
 export const manifest = defineManifest({
   service: "financial-brain",
@@ -19,6 +20,14 @@ export const manifest = defineManifest({
   ],
   emits: ["BUDGET_VETO", "BUDGET_DOWNGRADE"],
   capabilities: [
+    {
+      name: "composeBreakEvenDocument",
+      inputSchema: z.object({ brand: z.string(), model: BreakEvenDocumentModelSchema }),
+      outputSchema: z.object({ schema: z.literal("adve-break-even-document-v1"), state: z.enum(["INCOMPLETE", "SCENARIO", "DOCUMENTED_ESTIMATE"]) }).passthrough(),
+      sideEffects: [],
+      qualityTier: "A",
+      idempotent: true,
+    },
     {
       name: "checkCapacity",
       inputSchema: z.object({

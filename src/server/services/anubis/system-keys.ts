@@ -43,7 +43,8 @@ export function getSystemKeyStatus(): SystemKeyGroup[] {
         { key: "APIFY_TOKEN", label: "Apify (followers publics)", configured: has("APIFY_TOKEN") },
         { key: "BRAVE_API_KEY", label: "Brave Search (découverte réseaux/presse)", configured: has("BRAVE_API_KEY") },
         { key: "PAGESPEED_API_KEY", label: "PageSpeed (performance site)", configured: has("PAGESPEED_API_KEY") },
-        { key: "YOUTUBE_API_KEY", label: "YouTube (abonnés chaîne)", configured: has("YOUTUBE_API_KEY") },
+        { key: "YOUTUBE_API_KEY", label: "YouTube (chaîne, vidéos et métriques)", configured: has("YOUTUBE_API_KEY") },
+        { key: "FOREPLAY_API_KEY", label: "Foreplay (archive de publicités)", configured: has("FOREPLAY_API_KEY") },
       ],
     },
     {
@@ -54,6 +55,8 @@ export function getSystemKeyStatus(): SystemKeyGroup[] {
         { key: "OLLAMA_API_KEY", label: "Ollama Cloud (clé API)", configured: has("OLLAMA_API_KEY") },
         { key: "OLLAMA_MODEL", label: "Ollama (modèle épinglé, ex. deepseek flash)", configured: has("OLLAMA_MODEL") },
         { key: "OPENROUTER_API_KEY", label: "OpenRouter (repli)", configured: has("OPENROUTER_API_KEY") },
+        { key: "LLM_VISION_PROVIDER", label: "Vision (provider explicite)", configured: has("LLM_VISION_PROVIDER") },
+        { key: "LLM_VISION_MODEL", label: "Vision (modèle multimodal épinglé)", configured: has("LLM_VISION_MODEL") },
         { key: "ANTHROPIC_API_KEY", label: "Anthropic (premium opt-in)", configured: has("ANTHROPIC_API_KEY") },
         { key: "EMBED_SERVICE_URL", label: "Embeddings — serveur self-hosted (Ollama-compatible, chemin PROD)", configured: has("EMBED_SERVICE_URL") },
         { key: "OPENAI_API_KEY", label: "OpenAI (embeddings — repli du self-host)", configured: has("OPENAI_API_KEY") },

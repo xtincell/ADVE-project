@@ -1,13 +1,15 @@
-# syntax=docker/dockerfile:1
-#
 # La Fusée OS — container image for Cloudflare Containers (and any Node host).
 # Runs the Next.js standalone server (`output: "standalone"` in next.config.ts).
 #
 # Stages: deps → builder → runner. The runner ships only the standalone bundle
 # (+ static + public), not the full node_modules or source.
 
+# Use BuildKit's bundled frontend and the same pinned Docker Official Image
+# from its public ECR repository; no anonymous Docker Hub pull for the stages.
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+
 # ── deps ─────────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS deps
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 # Skip puppeteer's Chromium download — the runner installs system Chromium.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -18,7 +20,7 @@ COPY prisma.config.ts ./
 RUN npm ci
 
 # ── builder ──────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS builder
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -38,22 +40,23 @@ COPY . .
 # worker de build pour tenir dans la RAM du serveur.
 ENV NODE_OPTIONS="--max-old-space-size=6144"
 RUN npm run build
+RUN node scripts/release/build-editorial-calendar-cli.mjs
+RUN ./node_modules/.bin/esbuild scripts/freeze-public-brands.ts --bundle --platform=node --packages=external --format=cjs --outfile=public-brand-migration.cjs
 
 # ── runner ───────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Chromium for puppeteer (Oracle / intake PDF). Remove this block + the two
-# PUPPETEER_* envs to slim the image by ~300 MB if you don't need PDF export;
-# the PDF routes then return a clean 500 instead of generating.
+# ffmpeg/ffprobe for bounded, local frame extraction (ADR-0195).
+# The existing system Chromium serves both PDF export and the protected artwork renderer.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      chromium ca-certificates fonts-liberation \
+      chromium ffmpeg ca-certificates fonts-liberation \
       libnss3 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdrm2 libxkbcommon0 \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
     && rm -rf /var/lib/apt/lists/*
@@ -61,6 +64,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Non-root runtime user.
 RUN groupadd --system --gid 1001 nodejs \
     && useradd --system --uid 1001 --gid nodejs nextjs
+
+# Docker initializes the private named volume with the non-root ownership.
+RUN install -d -m 0700 -o nextjs -g nodejs /app/private-media /home/nextjs
+ENV HOME=/home/nextjs
 
 # Standalone server + assets. `server.js` is emitted by the standalone build;
 # `public/` and `.next/static` are not included in standalone and must be copied.
@@ -74,6 +81,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # (The `pg` driver and its deps ARE traced into standalone.)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+# The boot migration loads external packages outside Next's bundled chunks.
+# The trace retains only postgres-array's metadata and omits zod's loader.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-array ./node_modules/postgres-array
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/zod ./node_modules/zod
 
 # Migrations Prisma + applicateur maison. Le CLI Prisma N'EST PAS fiable dans
 # l'image standalone (trace élaguée → WASM + deps `@prisma/config`/`effect`
@@ -84,8 +95,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modul
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-migrations.mjs ./scripts/apply-migrations.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+COPY --from=builder --chown=nextjs:nodejs /app/import-editorial-calendar.cjs ./scripts/import-editorial-calendar.cjs
+COPY --from=builder --chown=nextjs:nodejs /app/public-brand-migration.cjs ./public-brand-migration.cjs
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/check-production-browser.mjs ./scripts/check-production-browser.mjs
 USER nextjs
+RUN node ./scripts/check-production-browser.mjs
 EXPOSE 3000
 CMD ["./scripts/docker-entrypoint.sh"]

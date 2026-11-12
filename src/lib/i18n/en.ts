@@ -1,3 +1,4 @@
+import { productionEn } from "./pages/production";
 import { intakeEntryEn } from "./pages/intake-entry";
 import { scorerEn } from "./pages/scorer";
 import { leaderboardEn } from "./pages/leaderboard";
@@ -10,6 +11,7 @@ import { parisEn } from "./pages/paris";
  * fall back to FR via `t()`.
  */
 export const en = {
+  ...productionEn,
   ...parisEn,
   ...leaderboardEn,
   ...scorerEn,
@@ -140,18 +142,36 @@ export const en = {
   "error.503.body": "We're restoring it. Sentinels are already on it.",
 
   // ── Phase 13 — Oracle 35-section UI (R6 closure) ─────────────────────
-  "oracle.forge.button.image": "Forge image",
-  "oracle.forge.button.video": "Forge video",
-  "oracle.forge.button.audio": "Forge audio",
-  "oracle.forge.button.icon": "Forge icon",
-  "oracle.forge.button.design": "Forge deck",
-  "oracle.forge.button.pending": "Forging…",
+  "oracle.forge.button.image": "Produce an image",
+  "oracle.forge.button.video": "Produce a video",
+  "oracle.forge.button.audio": "Produce audio",
+  "oracle.forge.button.icon": "Produce an icon",
+  "oracle.forge.button.design": "Produce a presentation",
+  "oracle.forge.button.pending": "Sending request…",
   "oracle.forge.dialog.title": "Confirm deliverable production",
+  "oracle.forge.dialog.description": "This request concerns this section’s deliverable. Configuration and estimated cost are checked before production.",
   "oracle.forge.dialog.cancel": "Cancel",
-  "oracle.forge.dialog.confirm": "Confirm forge",
-  "oracle.forge.result.heading": "Last forge",
-  "oracle.forge.result.async_note":
-    "AssetVersion will be available once the provider webhook is reconciled (PTAH_RECONCILE_TASK async). See BrandVault → material assets.",
+  "oracle.forge.dialog.confirm": "Confirm request",
+  "oracle.forge.result.heading": "Last request",
+  "oracle.forge.result.async_note": "The deliverable will appear in brand assets after the result has been received and checked.",
+  "oracle.forge.request.ok": "Request accepted",
+  "oracle.forge.request.vetoed": "Request declined",
+  "oracle.forge.request.failed": "Request failed",
+  "oracle.forge.request.queued": "Request queued",
+  "oracle.forge.request.downgraded": "Request adjusted",
+  "oracle.forge.request.unknown": "Request state unconfirmed",
+  "oracle.forge.result.deferred": "Awaiting configuration",
+  "oracle.forge.result.deferred_note": "No production has started. The production service needs configuration; the request is retained.",
+  "oracle.forge.result.created": "Request recorded",
+  "oracle.forge.result.created_note": "The request is recorded. No completed deliverable is confirmed yet.",
+  "oracle.forge.result.in_progress": "Production in progress",
+  "oracle.forge.result.in_progress_note": "Production is in progress. The deliverable has not been received yet.",
+  "oracle.forge.result.unknown": "Production state unconfirmed",
+  "oracle.forge.result.unknown_note": "The request is accepted, but its production state is unconfirmed.",
+  "oracle.forge.result.reason": "Reason",
+  "oracle.forge.result.task": "Request",
+  "oracle.forge.result.source": "Source",
+  "oracle.forge.result.estimated_cost": "Estimated cost",
   "oracle.section.empty": "Section not yet generated. Run the proposal assembly.",
   "oracle.tier.core": "Core (23)",
   "oracle.tier.big4": "Big4 baseline (7)",
@@ -204,7 +224,11 @@ export const en = {
   "nav.bible.sub": "What your brand is, and where it comes from",
   "nav.proposition.sub": "Your full strategy",
   "nav.livrables": "Deliverables",
-  "nav.livrables.sub": "Guidelines · Assets · Exports",
+  "nav.livrables.sub": "Documents · Versions · Exports",
+  "nav.production": "Production studio",
+  "nav.production.sub": "Briefs · Variants · Generation",
+  "nav.assets": "Asset library",
+  "nav.assets.sub": "Visuals · Files · References",
   "nav.sources": "Sources",
   "nav.sources.sub": "Your documents & data",
   "nav.campagnes": "Campaigns",

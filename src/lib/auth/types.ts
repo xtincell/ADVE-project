@@ -3,6 +3,7 @@ import "next-auth";
 declare module "next-auth" {
   interface User {
     role?: string;
+    operatorId?: string | null;
   }
   interface Session {
     user: User & {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 /**
  * Sources de marque — Le dossier complet des données brutes
@@ -20,9 +21,14 @@ import { useState, useEffect } from "react";
 
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
-import { useCanOperate } from "@/components/cockpit/use-can-operate";
+import { useCanOperate, useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
+import { DocumentLibrary, DocumentEditionDialog } from "@/components/brand/document-library";
+import { DOCUMENT_STATUS_LABEL, type DocumentEdition, type DocumentRepresentation } from "@/domain/source-document";
+import { SourceReadDialog } from "@/components/brand/source-read-dialog";
+import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
+import { FinancialDocumentPanel } from "@/components/brand/financial-document-panel";
 import {
   FileText, Upload, Image as ImageIcon, MessageSquare,
   Globe, Clock, CheckCircle, AlertCircle, Loader2,
@@ -52,7 +58,7 @@ const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1_048_576;
  * Proposer un format qu'on va rejeter, c'est faire découvrir le refus APRÈS le
  * dépôt, sur une source déjà créée en échec.
  */
-const ACCEPTED_UPLOAD = ".pdf,.docx,.doc,.txt,.md,.csv,.xlsx";
+const ACCEPTED_UPLOAD = ".pdf,.docx,.pptx,.txt,.md,.json,.csv,.xlsx";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
@@ -148,7 +154,7 @@ function renderPillarMapping(mapping: unknown): React.ReactNode {
   if (keys.length === 0) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-1">
-      <span className="text-2xs text-foreground-muted">Piliers nourris :</span>
+      <span className="text-2xs text-foreground-muted">Piliers visés :</span>
       {keys.map(key => (
         <span key={key} className="rounded-full bg-info/15 px-2 py-0.5 text-2xs text-info">
           {key.toUpperCase()}
@@ -210,15 +216,24 @@ function ProposalsPanel({
     metadata: unknown;
   }>;
   const kinds = (kindsQuery.data ?? []) as readonly string[];
+  const error = draftsQuery.error ?? kindsQuery.error ?? proposeMutation.error
+    ?? acceptMutation.error ?? rejectMutation.error ?? acceptAllMutation.error;
+  const outdated = /SOURCE_(CHANGED|RECEIPT_MISSING)/.test(error?.message ?? "");
+  const requestProposals = () => {
+    acceptMutation.reset(); acceptAllMutation.reset(); rejectMutation.reset();
+    proposeMutation.mutate({ strategyId, sourceId });
+  };
 
   if (!canOperate) return null;
 
   return (
     <div className="mt-3 rounded-lg border border-accent/15 bg-accent/5">
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
       <button
         type="button"
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium text-accent hover:bg-accent/10"
+        className="flex flex-1 items-center text-left text-xs font-medium text-accent hover:bg-accent/10"
       >
         <div className="flex items-center gap-2">
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -230,6 +245,7 @@ function ProposalsPanel({
             </span>
           ) : null}
         </div>
+      </button>
         {open && drafts.length > 0 ? (
           <button
             type="button"
@@ -243,20 +259,24 @@ function ProposalsPanel({
             {acceptAllMutation.isPending ? "Acceptation..." : "Tout accepter (≥0.8)"}
           </button>
         ) : null}
-      </button>
+      </div>
 
       {open ? (
         <div className="space-y-2 border-t border-accent/10 p-3">
+          {error ? <p role="alert" className="text-xs text-error">{error.message.replace(/^SOURCE_(?:CHANGED|UNAVAILABLE|RECEIPT_MISSING):\s*/, "")}</p> : null}
+          {outdated ? <button type="button" onClick={requestProposals} disabled={proposeMutation.isPending} className="text-xs text-accent underline disabled:opacity-50">
+            Refaire les propositions avec l’IA
+          </button> : null}
           {draftsQuery.isLoading ? (
             <p className="text-xs text-foreground-muted">Chargement des propositions…</p>
           ) : drafts.length === 0 ? (
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-foreground-muted">
-                Aucune proposition. Le filtreur tourne automatiquement après upload — vous pouvez le relancer manuellement.
+                Aucune proposition. Vous pouvez demander une analyse de cette source pour cette marque.
               </p>
               <button
                 type="button"
-                onClick={() => proposeMutation.mutate({ strategyId, sourceId })}
+                onClick={requestProposals}
                 disabled={proposeMutation.isPending}
                 className="flex items-center gap-1 rounded bg-accent/20 px-2 py-1 text-2xs text-accent hover:bg-accent/30 disabled:opacity-50"
               >
@@ -422,25 +442,70 @@ function ProposalCard({
  * Toute source est éditable — y compris la source intake et les fichiers
  * uploadés (le formulaire d'intake atterrit comme BrandDataSource exploitable).
  */
-function SourceEditModal({
+function SourceUses({ sourceId }: { sourceId: string }) {
+  const [open, setOpen] = useState(false);
+  const utils = trpc.useUtils();
+  const query = trpc.ingestion.sourceUses.useQuery({ id: sourceId }, { enabled: open });
+  const update = trpc.ingestion.updateSource.useMutation({ onSuccess: async () => {
+    await utils.ingestion.sourceUses.invalidate({ id: sourceId });
+    await utils.ingestion.listSources.invalidate();
+    await utils.ingestion.getSource.invalidate({ id: sourceId });
+  } });
+  return <div className="mt-3 border-t border-border pt-3">
+    <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="text-xs text-accent underline underline-offset-4">
+      Utiliser ce document dans d’autres marques
+    </button>
+    {open ? <div className="mt-2 space-y-2">
+      <p className="text-xs text-foreground-secondary">Un seul document, sans copie. Une correction sera visible dans tous les dossiers liés. Chaque marque conserve ses propres analyses.</p>
+      {query.isLoading ? <p className="text-xs text-foreground-muted">Chargement des marques…</p> : null}
+      {query.error || update.error ? <p role="alert" className="text-xs text-error">{query.error?.message ?? update.error?.message}</p> : null}
+      {query.data?.length === 0 ? <p className="text-xs text-foreground-muted">Aucune autre marque que vous gérez dans ce portefeuille.</p> : null}
+      {query.data?.map((target) => <div key={target.id} className="flex items-center justify-between gap-3 rounded border border-border p-2">
+        <span className="text-xs text-foreground">{target.name}{target.suspended ? <span className="block text-foreground-muted">Accès suspendu : le portefeuille a changé.</span> : null}</span>
+        <button type="button" disabled={update.isPending} className="text-xs text-accent disabled:opacity-50"
+          aria-label={`${target.linked ? "Retirer le document de" : "Lier le document à"} ${target.name}`}
+          onClick={() => update.mutate({ id: sourceId, use: { strategyId: target.id, revoke: target.linked } })}>
+          {target.linked ? "Retirer l’usage" : "Lier ce document"}
+        </button>
+      </div>)}
+      <p className="text-xs text-foreground-muted">Retirer un usage conserve les décisions passées et signale celles dont la source doit être revue.</p>
+    </div> : null}
+  </div>;
+}
+
+function SourceEditModal(props: { sourceId: string; strategyId: string; onClose: () => void; onSaved: () => void; readOnly?: boolean }) {
+  return props.readOnly ? <SourceReadDialog sourceId={props.sourceId} strategyId={props.strategyId} onClose={props.onClose} /> : <EditableSourceModal {...props} />;
+}
+
+function EditableSourceModal({
   sourceId,
+  strategyId,
   onClose,
   onSaved,
+  readOnly = false,
 }: {
   sourceId: string;
+  strategyId: string;
   onClose: () => void;
   onSaved: () => void;
+  readOnly?: boolean;
 }) {
-  const sourceQuery = trpc.ingestion.getSource.useQuery({ id: sourceId });
+  const utils = trpc.useUtils();
+  const sourceQuery = trpc.ingestion.getSource.useQuery({ id: sourceId, strategyId }, { staleTime: 0, refetchOnMount: "always" });
   const update = trpc.ingestion.updateSource.useMutation({
-    onSuccess: () => { onSaved(); onClose(); },
+    onSuccess: () => {
+      void utils.ingestion.getSource.invalidate({ id: sourceId });
+      void utils.ingestion.listSources.invalidate();
+      onSaved();
+      onClose();
+    },
   });
   
   const [title, setTitle] = useState<string | null>(null);
   const [content, setContent] = useState<string | null>(null);
 
   const data = sourceQuery.data;
-  const intakeId = data?.origin?.startsWith("intake:") ? data.origin.slice("intake:".length) : null;
+  const intakeId = !readOnly && data?.origin?.startsWith("intake:") ? data.origin.slice("intake:".length) : null;
 
   // Intake field-by-field editor state & queries
   const questionsQuery = trpc.quickIntake.getAllQuestions.useQuery(undefined, { enabled: !!intakeId });
@@ -475,6 +540,7 @@ function SourceEditModal({
   const isSaving = update.isPending || updateIntake.isPending;
 
   const handleSave = () => {
+    if (readOnly) return;
     if (intakeId && editedResponses) {
       updateIntake.mutate({
         id: intakeId,
@@ -507,9 +573,11 @@ function SourceEditModal({
   const questions = (questionsQuery.data?.[activeTab] ?? []) as any[];
 
   return (
-    <Modal open={true} onClose={onClose} title={intakeId ? "Modifier le diagnostic (Business Intake)" : "Éditer la source"} size={intakeId ? "xl" : "lg"}>
+    <Modal open={true} onClose={onClose} title={readOnly ? "Consulter la source" : intakeId ? "Modifier le diagnostic (Business Intake)" : "Éditer la source"} size={intakeId ? "xl" : "lg"}>
       {sourceQuery.isLoading || (intakeId && (intakeQuery.isLoading || questionsQuery.isLoading)) ? (
         <p className="text-sm text-foreground-muted">Chargement…</p>
+      ) : sourceQuery.error ? (
+        <p role="alert" className="text-sm text-error">{sourceQuery.error.message}</p>
       ) : (
         <div className="space-y-4 text-sm">
           {!intakeId && (
@@ -517,7 +585,9 @@ function SourceEditModal({
               <label className="mb-1 block text-xs font-medium text-foreground-muted">Titre</label>
               <input
                 type="text"
+                aria-label="Titre de la source"
                 value={titleValue}
+                readOnly={readOnly}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 text-sm text-foreground"
               />
@@ -641,10 +711,12 @@ function SourceEditModal({
           ) : (
             <div>
               <label className="mb-1 block text-xs font-medium text-foreground-muted">
-                Contenu brut (exploité par l&apos;enrichissement + l&apos;auto-fill)
+                Texte de référence
               </label>
               <textarea
+                aria-label="Texte de référence"
                 value={contentValue}
+                readOnly={readOnly}
                 onChange={(e) => setContent(e.target.value)}
                 rows={14}
                 className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 font-mono text-xs text-foreground"
@@ -657,16 +729,16 @@ function SourceEditModal({
               onClick={onClose}
               className="rounded px-3 py-1.5 text-sm text-foreground-muted hover:bg-white/5"
             >
-              Annuler
+              {readOnly ? "Fermer" : "Annuler"}
             </button>
-            <button
+            {!readOnly ? <button
               disabled={isSaving || (!intakeId && !title && !content)}
               onClick={handleSave}
               className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
             >
               {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Enregistrer
-            </button>
+            </button> : null}
           </div>
         </div>
       )}
@@ -698,9 +770,10 @@ function BrandBookIngestModal({
 }) {
   const [mode, setMode] = useState<"LLM" | "STRUCTURED">("STRUCTURED");
   const [extraction, setExtraction] = useState<unknown>(null);
+  const [sourceReceipt, setSourceReceipt] = useState<{ sourceId: string; contentHash: string } | undefined>();
 
   const previewMutation = trpc.ingestion.previewBrandBook.useMutation({
-    onSuccess: (r) => setExtraction(r.extraction),
+    onSuccess: (r) => { setExtraction(r.extraction); setSourceReceipt(r.sourceReceipt); },
   });
   const ingestMutation = trpc.ingestion.ingestBrandBook.useMutation({
     onSuccess: () => {
@@ -726,14 +799,16 @@ function BrandBookIngestModal({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setMode("STRUCTURED")}
+            disabled={pending}
+            onClick={() => { setMode("STRUCTURED"); setExtraction(null); setSourceReceipt(undefined); }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${mode === "STRUCTURED" ? "bg-accent/20 text-accent" : "border border-white/10 text-foreground-secondary hover:text-foreground"}`}
           >
             Lecture structurée
           </button>
           <button
             type="button"
-            onClick={() => setMode("LLM")}
+            disabled={pending}
+            onClick={() => { setMode("LLM"); setExtraction(null); setSourceReceipt(undefined); }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${mode === "LLM" ? "bg-accent/20 text-accent" : "border border-white/10 text-foreground-secondary hover:text-foreground"}`}
           >
             Lecture assistée
@@ -778,6 +853,7 @@ function BrandBookIngestModal({
                 extraction,
                 sourceFilename: sourceLabel,
                 sourceDataSourceId: sourceId,
+                sourceReceipt,
                 extractionMode: mode,
               })
             }
@@ -795,7 +871,15 @@ function BrandBookIngestModal({
 }
 
 export default function SourcesPage() {
+  return <Suspense fallback={<SkeletonPage />}><SourcesContent /></Suspense>;
+}
+
+function SourcesContent() {
   const strategyId = useCurrentStrategyId();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const openedReceipt = useRef<string | null>(null);
+  const { canOperateOnBrand, accessReady } = useBrandWriteAccess(strategyId);
   // Founder = lecture (liste + certitude) ; édition/purge/suppression =
   // gestes opérateur (lot 12, audit 2026-07-11 [M05-05]).
   const canOperate = useCanOperate();
@@ -803,6 +887,8 @@ export default function SourcesPage() {
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [prepareAnalysis, setPrepareAnalysis] = useState(false);
+  useEffect(() => setPrepareAnalysis(false), [strategyId]);
 
   // Dépôt de fichier par le porteur de marque. La voie serveur existait
   // (`ingestion.uploadFile`, gouvernée) mais n'était atteignable QUE depuis la
@@ -821,7 +907,10 @@ export default function SourcesPage() {
   const [bookTarget, setBookTarget] = useState<{ sourceId: string; sourceLabel: string } | null>(null);
   // Source en cours d'édition (titre + contenu). Toute source est éditable.
   const [editSourceId, setEditSourceId] = useState<string | null>(null);
+  const [readSourceId, setReadSourceId] = useState<string | null>(null);
+  const [sourcePage, setSourcePage] = useState(0);
 
+  const [classifySourceId, setClassifySourceId] = useState<string | null>(null);
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
@@ -845,6 +934,10 @@ export default function SourcesPage() {
     onSuccess: () => sourcesQuery.refetch(),
   });
 
+  const prepareSourceIndex = trpc.ingestion.prepareSourceIndex.useMutation({
+    onSuccess: () => sourcesQuery.refetch(),
+  });
+
   // PR-B (ADR-0033) — purge + re-ingest atomic. Audited via Mestor Intent
   // server-side. UI closes the modal + refetches list on success.
   const purgeReingestMutation = trpc.quickIntake.purgeAndReingest.useMutation({
@@ -861,6 +954,7 @@ export default function SourcesPage() {
       setShowAddForm(false);
       setNoteTitle("");
       setNoteContent("");
+      setPrepareAnalysis(false);
     },
   });
 
@@ -874,7 +968,7 @@ export default function SourcesPage() {
    * « traiter comme du texte » — un `application/pdf` y aurait stocké du base64
    * en guise de contenu lisible.
    */
-  async function handleFiles(files: FileList | null) {
+  async function handleFiles(files: FileList | null, sourceId?: string) {
     if (!files || files.length === 0 || !strategyId) return;
     setUploading(true);
     const results: Array<{ name: string; ok: boolean; message?: string }> = [];
@@ -900,6 +994,8 @@ export default function SourcesPage() {
             fileName: file.name,
             fileType: file.name.split(".").pop()?.toUpperCase() ?? "TXT",
             content: base64,
+            sourceId,
+            prepareAnalysis: sourceId ? false : prepareAnalysis,
           });
           results.push({ name: file.name, ok: true });
         } catch (err) {
@@ -913,12 +1009,34 @@ export default function SourcesPage() {
     } finally {
       setUploadResults(results);
       setUploading(false);
+      setPrepareAnalysis(false);
       sourcesQuery.refetch();
     }
   }
 
+  const requestedSource = searchParams.get("source");
+  const requestedMode = searchParams.get("mode");
+  useEffect(() => {
+    if (!requestedSource || openedReceipt.current === `${strategyId}:${requestedSource}`) return;
+    if (requestedMode === "edit" && !accessReady) return;
+    const selected = sourcesQuery.data?.find(row => row.id === requestedSource);
+    if (!selected) return;
+    if (requestedMode === "edit" && canOperateOnBrand && !selected.shared && !selected.document && !selected.representation) setEditSourceId(requestedSource);
+    else setReadSourceId(requestedSource);
+    openedReceipt.current = `${strategyId}:${requestedSource}`;
+    const next = new URLSearchParams(searchParams.toString()); next.delete("source"); next.delete("mode");
+    router.replace(`/cockpit/brand/sources${next.size ? `?${next}` : ""}`);
+  }, [requestedSource, requestedMode, strategyId, sourcesQuery.data, canOperateOnBrand, accessReady, searchParams, router]);
+
   if (!strategyId) return <SkeletonPage />;
   if (sourcesQuery.isLoading) return <SkeletonPage />;
+  if (sourcesQuery.error) return (
+    <div className="mx-auto max-w-5xl space-y-4 p-6">
+      <h1 className="text-2xl font-bold text-foreground">Sources de marque</h1>
+      <p role="alert" className="text-error">La liste des sources n’a pas pu être reçue. Vos documents ne sont pas déclarés absents.</p>
+      <button onClick={() => void sourcesQuery.refetch()} className="text-accent underline">Réessayer</button>
+    </div>
+  );
 
   const sources = (sourcesQuery.data ?? []) as Array<Record<string, unknown>>;
 
@@ -940,8 +1058,13 @@ export default function SourcesPage() {
         </button>
       </div>
 
+      <DocumentLibrary sources={sources as unknown as Parameters<typeof DocumentLibrary>[0]["sources"]} onRead={setReadSourceId} canManage={canOperateOnBrand} onSaved={() => { void sourcesQuery.refetch(); }} />
+      {strategyId && <FinancialDocumentPanel strategyId={strategyId} sources={sources as unknown as Parameters<typeof FinancialDocumentPanel>[0]["sources"]} canManage={canOperateOnBrand} onRead={setReadSourceId} />}
+      {classifySourceId && <DocumentEditionDialog source={sources.find(s => s.id === classifySourceId) as unknown as Parameters<typeof DocumentEditionDialog>[0]["source"]} sources={sources as unknown as Parameters<typeof DocumentEditionDialog>[0]["sources"]} onClose={() => setClassifySourceId(null)} onSaved={() => { void sourcesQuery.refetch(); }} />}
+
       {/* Dépôt de document — le porteur de marque a les documents ; il ne
           pouvait jusqu'ici que les recopier à la main. */}
+      <SourcePreparationOption checked={prepareAnalysis} onChange={setPrepareAnalysis} disabled={uploading || isSubmitting} />
       <div className="rounded-lg border border-dashed border-white/10 p-4">
         <label className={`flex cursor-pointer flex-col items-center justify-center gap-1 py-4 ${uploading ? "pointer-events-none opacity-60" : ""}`}>
           {uploading ? (
@@ -953,7 +1076,7 @@ export default function SourcesPage() {
             {uploading ? "Lecture en cours…" : "Déposez vos documents de marque"}
           </span>
           <span className="text-xs text-foreground-muted">
-            PDF, Word, texte, tableur (.xlsx, .csv) — {MAX_UPLOAD_MB} Mo par fichier maximum
+            PDF, Word, PowerPoint (.pptx), texte, observations JSON, tableur (.xlsx, .csv) — {MAX_UPLOAD_MB} Mo par fichier maximum
           </span>
           <input
             type="file"
@@ -968,8 +1091,8 @@ export default function SourcesPage() {
           />
         </label>
         <p className="text-center text-xs text-foreground-muted">
-          Ce que vous déposez ici sert de référence : vos analyses s&apos;y ancrent, et ce qui
-          n&apos;en vient pas est signalé comme tel.
+          Vos documents sont conservés comme références. Vous choisissez quand les utiliser
+          dans une analyse ; aucune modification de votre marque n’est appliquée au dépôt.
         </p>
         {uploadResults.length > 0 ? (
           <ul className="mt-3 space-y-1">
@@ -1007,6 +1130,9 @@ export default function SourcesPage() {
             rows={6}
             className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent resize-y"
           />
+          {addSourceMutation.error ? (
+            <p role="alert" className="text-xs text-error">{addSourceMutation.error.message}</p>
+          ) : null}
           <div className="flex justify-end gap-2">
             <button onClick={() => setShowAddForm(false)} className="rounded px-3 py-1.5 text-xs text-foreground-muted hover:bg-white/5">
               Annuler
@@ -1020,7 +1146,10 @@ export default function SourcesPage() {
                     strategyId,
                     title: noteTitle.trim() || "Note manuelle",
                     content: noteContent.trim(),
+                    prepareAnalysis,
                   });
+                } catch {
+                  // Keep the note in place; the mutation error is displayed above.
                 } finally {
                   setIsSubmitting(false);
                 }
@@ -1035,6 +1164,11 @@ export default function SourcesPage() {
         </div>
       ) : null}
 
+      {sources.length > 25 && <nav aria-label="Pages du registre des sources" className="flex items-center justify-between gap-3 text-sm">
+        <button className="rounded border border-border px-3 py-2 disabled:opacity-50" disabled={sourcePage === 0} onClick={() => setSourcePage(Math.max(0, sourcePage - 1))}>Sources précédentes</button>
+        <span>{sources.length} sources · page {Math.min(sourcePage + 1, Math.ceil(sources.length / 25))}/{Math.ceil(sources.length / 25)}</span>
+        <button className="rounded border border-border px-3 py-2 disabled:opacity-50" disabled={sourcePage >= Math.ceil(sources.length / 25) - 1} onClick={() => setSourcePage(sourcePage + 1)}>Sources suivantes</button>
+      </nav>}
       {sources.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/10 py-16 text-center">
           <Upload className="mb-3 h-8 w-8 text-foreground-muted" />
@@ -1045,13 +1179,18 @@ export default function SourcesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {sources.map((source, i) => {
+          {sources.slice(Math.min(sourcePage, Math.max(0, Math.ceil(sources.length / 25) - 1)) * 25, (Math.min(sourcePage, Math.max(0, Math.ceil(sources.length / 25) - 1)) + 1) * 25).map((source, i) => {
+            const edition = source.document as DocumentEdition | null;
+            const representation = source.representation as DocumentRepresentation | null;
+            const retainedDocument = Boolean(edition || representation);
+            const usableEdition = !representation && (!edition || edition.status === "REFERENCE" || edition.status === "PROPOSED");
             const status = STATUS_CONFIG[source.processingStatus as string] ?? STATUS_CONFIG.PENDING!;
+            const original = source.original as { state: string; contentHash: string; byteLength: number } | null;
             const TypeIcon = TYPE_ICONS[source.sourceType as string] ?? FileText;
             const StatusIcon = status.icon;
 
             return (
-              <div key={i} className="rounded-lg border border-white/5 bg-surface-raised p-4">
+              <div key={String(source.id ?? i)} className="rounded-lg border border-white/5 bg-surface-raised p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5">
@@ -1063,10 +1202,12 @@ export default function SourcesPage() {
                         {source.fileType as string ?? source.sourceType as string}
                         {source.createdAt ? ` — ${new Date(source.createdAt as string).toLocaleDateString("fr")}` : ""}
                       </p>
+                      {source.document ? <p className="text-xs text-foreground-secondary">{DOCUMENT_STATUS_LABEL[(source.document as DocumentEdition).status]} · {(source.document as DocumentEdition).label}</p> : null}
+                      {representation && <p className="text-xs text-foreground-secondary">Autre format d’une édition conservée. Consultez le dossier documentaire pour sa place actuelle.</p>}
                       {/* « Déposé » ≠ « exploitable ». L'indexation est
                           best-effort ; sans ce compte, une source jamais
                           indexée passait pour prise en compte. */}
-                      {typeof source.indexedChunks === "number" ? (
+                      {!usableEdition ? <p className="text-2xs text-foreground-muted">{representation ? "Fichier conservé sans compter comme une preuve supplémentaire dans les analyses." : "Édition conservée pour l’historique, exclue des analyses courantes."}</p> : typeof source.indexedChunks === "number" ? (
                         source.indexedChunks > 0 ? (
                           <p className="text-2xs text-success">
                             Lisible par vos analyses ({source.indexedChunks} fragment
@@ -1075,13 +1216,43 @@ export default function SourcesPage() {
                         ) : source.processingStatus === "EXTRACTED" ||
                           source.processingStatus === "PROCESSED" ? (
                           <p className="text-2xs text-warning">
-                            Pas encore analysable — sera indexé à la prochaine analyse de marque.
+                            Conservé pour lecture. La préparation pour l’analyse reste disponible à la demande.
                           </p>
                         ) : null
                       ) : null}
+                      {canOperateOnBrand && usableEdition && typeof source.id === "string" &&
+                        (source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED") &&
+                        source.indexedChunks === 0 ? (
+                          <div className="mt-2 space-y-1">
+                            <button
+                              type="button"
+                              disabled={prepareSourceIndex.isPending}
+                              onClick={() => prepareSourceIndex.mutate({ strategyId: strategyId!, sourceId: source.id as string })}
+                              className="inline-flex items-center gap-1 rounded border border-accent/30 px-2 py-1 text-xs text-accent hover:bg-accent/10 disabled:opacity-50"
+                            >
+                              {prepareSourceIndex.isPending && prepareSourceIndex.variables?.sourceId === source.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                              {prepareSourceIndex.isPending && prepareSourceIndex.variables?.sourceId === source.id ? "Préparation en cours…" : "Préparer le texte pour les recherches"}
+                            </button>
+                            <p className="text-2xs text-foreground-muted">Reprend le texte déjà extrait, sans analyse automatique ni modification de votre marque.</p>
+                            {prepareSourceIndex.error && prepareSourceIndex.variables?.sourceId === source.id ? (
+                              <p role="alert" className="text-xs text-error">{prepareSourceIndex.error.message}</p>
+                            ) : null}
+                            {prepareSourceIndex.isSuccess && prepareSourceIndex.variables?.sourceId === source.id && prepareSourceIndex.data?.chunks === 0 ? (
+                              <p className="text-2xs text-warning">Aucun texte utilisable. Consultez le document pour reprendre sa lecture.</p>
+                            ) : null}
+                          </div>
+                        ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {typeof source.id === "string" ? (
+                      <button onClick={() => setReadSourceId(source.id as string)}
+                        title="Consulter cette source"
+                        className="rounded p-1 text-foreground-muted hover:bg-accent/10 hover:text-accent">
+                        <FileText className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                    {canOperateOnBrand && !retainedDocument && source.shared !== true && ["EXTRACTED", "PROCESSED"].includes(source.processingStatus as string) && <button onClick={() => setClassifySourceId(source.id as string)} className="rounded border border-border px-2 py-1 text-xs text-accent">Classer le document</button>}
                     {/* PR-A (ADR-0032) — niveau de certitude éditable. Default
                         DECLARED côté DB pour les rows pré-migration et nouveaux
                         intakes ; INFERRED pour les sources extraites IA. */}
@@ -1090,7 +1261,7 @@ export default function SourcesPage() {
                         sourceId={source.id}
                         current={(source.certainty as SourceCertainty | undefined) ?? "DECLARED"}
                         pending={updateSourceMutation.isPending}
-                        readOnly={!canOperate}
+                        readOnly={!canOperate || source.shared === true || retainedDocument}
                         onChange={(next) =>
                           updateSourceMutation.mutate({ id: source.id as string, certainty: next })
                         }
@@ -1102,7 +1273,7 @@ export default function SourcesPage() {
                     </div>
                     {/* Édition de source (titre + contenu) — toute source est
                         éditable. updateSource passe par le gateway d'ingestion. */}
-                    {canOperate && typeof source.id === "string" ? (
+                    {canOperate && !retainedDocument && source.shared !== true && typeof source.id === "string" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditSourceId(source.id as string); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-accent hover:bg-accent/10 transition-colors"
@@ -1114,7 +1285,7 @@ export default function SourcesPage() {
                     {/* PR-B (ADR-0033) — Re-ingest button, only on intake-origin
                         sources. The full purge happens server-side via Mestor
                         Intent ; this button just opens the confirm modal. */}
-                    {canOperate && typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
+                    {canOperate && !retainedDocument && source.shared !== true && typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1133,7 +1304,7 @@ export default function SourcesPage() {
                     {/* ADR-0173 — `previewBrandBook`/`ingestBrandBook` étaient
                         livrés côté serveur et n'avaient AUCUN appelant : un
                         brand book officiel déposé restait un simple texte. */}
-                    {canOperate &&
+                    {canOperate && usableEdition &&
                     typeof source.id === "string" &&
                     (source.processingStatus === "EXTRACTED" ||
                       source.processingStatus === "PROCESSED") ? (
@@ -1151,7 +1322,7 @@ export default function SourcesPage() {
                         <Sparkles className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
-                    {canOperate && source.sourceType === "MANUAL_INPUT" ? (
+                    {canOperate && !retainedDocument && source.shared !== true && source.sourceType === "MANUAL_INPUT" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMutation.mutate({ id: source.id as string }); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-error hover:bg-error/10 transition-colors"
@@ -1163,12 +1334,51 @@ export default function SourcesPage() {
                   </div>
                 </div>
 
+                {source.sourceType === "FILE" && typeof source.id === "string" ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                    {original?.state === "STORED" ? (
+                      <a href={`/api/brand-sources/${encodeURIComponent(source.id)}/original?strategyId=${encodeURIComponent(strategyId!)}`}
+                        className="text-accent underline underline-offset-4"
+                        title={`Empreinte du fichier reçu : ${original.contentHash}`}>
+                        Télécharger l’original · {Math.ceil(original.byteLength / 1024)} Ko
+                      </a>
+                    ) : (
+                      <>
+                        <span className="text-warning">
+                          {original ? "Conservation de l’original à reprendre." : source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED"
+                            ? "Texte conservé ; fichier original à ajouter." : "Fichier original non conservé."}
+                        </span>
+                        {source.shared !== true && canOperate ? <label className="cursor-pointer text-accent underline underline-offset-4">
+                          {original ? "Redéposer le même fichier" : "Ajouter l’original"}
+                          <input type="file" accept={ACCEPTED_UPLOAD} className="sr-only"
+                            aria-label={`Original de ${String(source.fileName ?? "cette source")}`}
+                            disabled={uploading}
+                            onChange={(e) => { void handleFiles(e.target.files, source.id as string); e.target.value = ""; }} />
+                        </label> : null}
+                      </>
+                    )}
+                    {original?.state === "STORED" ? (
+                      <span className="text-foreground-muted">Le texte corrigé ne remplace pas le fichier reçu.</span>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {source.shared === true ? (
+                  <p className="mt-3 text-xs text-foreground-secondary">
+                    Document partagé depuis <a className="text-accent underline" href={`/cockpit/brand/sources?strategy=${encodeURIComponent(String(source.ownerStrategyId))}`}>{String(source.ownerBrandName ?? "une autre marque")}</a>. Les corrections se font dans le dossier propriétaire ; vos analyses restent propres à cette marque.
+                  </p>
+                ) : canOperate && typeof source.id === "string" ? <SourceUses sourceId={source.id} /> : null}
+
+                {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) && (source.extractedFields as Record<string, unknown>).extractionScope === "SLIDE_XML_AND_SPEAKER_NOTES" ? (
+                  <p className="mt-3 text-xs text-foreground-secondary">Texte des diapositives et notes extrait. Les images et les graphiques ne sont pas interprétés ; l’original reste consultable.</p>
+                ) : null}
+
                 {/* Extracted fields preview */}
-                {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) ? (
+                {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) && Object.keys(source.extractedFields).length > 0 ? (
                   <div className="mt-3 rounded bg-white/5 p-3">
                     <p className="mb-1 text-xs font-medium text-foreground-muted">Champs extraits :</p>
                     <div className="flex flex-wrap gap-1">
-                      {Object.keys(source.extractedFields as Record<string, unknown>).slice(0, 10).map(key => (
+                      {Object.keys(source.extractedFields as Record<string, unknown>).filter(key => !["extractionScope", "visualContentRead"].includes(key)).slice(0, 10).map(key => (
                         <span key={key} className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">
                           {key}
                         </span>
@@ -1205,10 +1415,15 @@ export default function SourcesPage() {
       {/* Modal d'édition de source (titre + contenu) — toute source. */}
       {editSourceId !== null ? (
         <SourceEditModal
+          strategyId={strategyId!}
           sourceId={editSourceId}
           onClose={() => setEditSourceId(null)}
           onSaved={() => sourcesQuery.refetch()}
         />
+      ) : null}
+
+      {readSourceId !== null ? (
+        <SourceEditModal strategyId={strategyId!} sourceId={readSourceId} readOnly onClose={() => setReadSourceId(null)} onSaved={() => undefined} />
       ) : null}
 
       {/* PR-B (ADR-0033) — Re-ingest modal. Anti-foot-gun pattern : the

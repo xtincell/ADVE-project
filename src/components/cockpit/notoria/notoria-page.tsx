@@ -13,6 +13,8 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { RtisCascadeModal } from "@/components/cockpit/rtis-cascade-modal";
 import { trpc } from "@/lib/trpc/client";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
@@ -21,22 +23,53 @@ import { useCockpitEditStore } from "@/lib/stores/cockpit-edit-store";
 import type { PillarKey } from "@/domain/pillars";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
-import { type StepperStep } from "@/components/primitives/stepper";
+import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
+import { ROUTE_SPECS } from "@/lib/strategy/roadmap-routes";
 import {
   Sparkles, Loader2, CheckCircle, ThumbsUp, ThumbsDown,
   ChevronRight, ChevronDown, Zap, Rocket, Route, Shield,
-  AlertTriangle, ArrowRight, FileText,
+  AlertTriangle, RefreshCw, FileText,
 } from "lucide-react";
 // Phase 21 F-A.5 (ADR-0069) — source unique de vérité pour le rendu chip
 // pillaire. Stale-aware via `byPillar[k]` exposé par notoria.getDashboard.
-import { getPillarChipStatus, type PillarReadinessProjection } from "./lib/pillar-chip-status";
+import { getPillarChipStatus, getPillarProductionState, type PillarReadinessProjection } from "./lib/pillar-chip-status";
 
 // ── Pillar labels ─────────────────────────────────────────────────
 
 const PILLAR_LABELS: Record<string, string> = {
   a: "Authenticité", d: "Distinction", v: "Valeur", e: "Engagement",
-  r: "Risk", t: "Track", i: "Potentiel", s: "Stratégie",
+  r: "Risques", t: "Trajectoire", i: "Potentiel", s: "Stratégie",
 };
+
+const IMPACT_LABEL: Record<string, string> = { HIGH: "Fort", MEDIUM: "Moyen", LOW: "Faible" };
+const SOURCE_LABEL: Record<string, string> = {
+  R: "Risques", T: "Trajectoire", "R+T": "Risques et trajectoire", VAULT: "Sources importées",
+  INTAKE: "Brief initial", CROSS_PILLAR: "Analyse croisée", SESHAT: "Observations",
+};
+
+/** Describe an executable decision; keep actual field values visible for amendments. */
+function typedProposalLabel(value: unknown): string | null {
+  const payload = parseRecommendationPayload(value);
+  if (!payload) return null;
+  switch (payload.kind) {
+    case "SELECT_INITIATIVE": return "Mettre l’action en favori dans le catalogue, sans la planifier.";
+    case "REJECT_INITIATIVE": return `Rejeter l’action du catalogue des propositions : ${payload.reason}`;
+    case "ADD_INITIATIVE": return `Ajouter l’action « ${payload.initiative.action} » aux propositions.`;
+    case "LINK_RISK": return "Associer l’action au risque indiqué.";
+    case "SET_RISK_STATUS": return `Marquer le risque « ${{ UNMITIGATED: "Non atténué", MITIGATED: "Atténué", ACCEPTED: "Accepté" }[payload.status]} ».`;
+    case "SELECT_ROADMAP_ROUTE": return `Choisir le scénario « ${ROUTE_SPECS.find(route => route.key === payload.routeKey)!.label} » et recalculer le plan.`;
+    case "UPDATE_ADVE_FIELD": return null;
+  }
+}
+
+function applicationWarningLabel(warning: string): string {
+  if (warning.includes("ARTICLE_SCOPE_CHANGED") || warning.includes("ARTICLE_VERDICT_CHANGED")) return "Le plan de référence a changé. Recalculez et relisez la proposition depuis son article avant de l’ajouter au catalogue.";
+  if (warning.includes("ARTICLE_COMPARISON_REQUIRED")) return "Cette piste reste à instruire. Vérifiez sa source et sa comparaison avant son application.";
+  if (warning.includes("FIELD_PROVENANCE_REFUSED")) return "Une décision humaine existante empêche ce changement. Relisez le choix conservé avant de modifier l’action.";
+  if (warning.includes("PILLAR_SOURCE_VERSION_CONFLICT")) return "Vos données ont changé depuis cette proposition. Rechargez la stratégie avant de réessayer.";
+  if (warning.startsWith("Validation:") || warning.startsWith("Bible[WARN]:")) return "Le plan reste partiel. Relisez et complétez votre stratégie avant de l’approuver.";
+  return "Un point d’application reste à vérifier dans votre stratégie.";
+}
 
 // Phase 21 F-A.5 (ADR-0069) — `COMPLETION_COLORS` legacy retiré. Le mapping
 // canonique vit dans `lib/pillar-chip-status.ts` qui inclut le statut PÉRIMÉ
@@ -49,7 +82,7 @@ const OP_RESKIN: Record<string, { label: string; c: string }> = {
   EXTEND: { label: "Enrichir", c: "accent" },
 };
 const URG_RESKIN: Record<string, { label: string; c: string }> = {
-  NOW: { label: "Urgent", c: "ko" }, SOON: { label: "Recommandé", c: "warn" }, LATER: { label: "Optionnel", c: "muted" },
+  NOW: { label: "Urgent", c: "ko" }, SOON: { label: "Prochainement", c: "warn" }, LATER: { label: "Optionnel", c: "muted" },
 };
 // Statuts de reco traduits — plus d'enum brut à l'écran (lot 11, [M04-03]).
 const STATUS_RESKIN: Record<string, string> = {
@@ -64,15 +97,20 @@ const MISSION_TYPE_RESKIN: Record<string, string> = {
 // Cascade canon (interne : ADVE → R+T → Jehuty → Notoria → I → S) — libellés
 // client business (lot 11, [M04-01]) ; les lettres ADVE/R/T/I/S restent en
 // attente de la décision Lot 0 (statut client des lettres de piliers).
-const NZ_CELLFLOW: Array<{ label: string; on?: boolean; passive?: boolean }> = [
-  { label: "Fondation" }, { label: "R + T" }, { label: "Gazette", passive: true },
-  { label: "Recos", on: true }, { label: "I" }, { label: "S" },
+const NZ_CELLFLOW = [
+  { label: "Fondation", href: "/cockpit/brand/fondation" },
+  { label: "Diagnostic R + T", href: "/cockpit/brand/market" },
+  { label: "Gazette", href: "/cockpit/brand/jehuty" },
+  { label: "Recommandations", href: "/cockpit/brand/notoria", on: true },
+  { label: "Catalogue I", href: "/cockpit/brand/potential" },
+  { label: "Stratégie S", href: "/cockpit/brand/roadmap" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────
 
 export function NotoriaPage() {
   const strategyId = useCurrentStrategyId();
+  const [cascadeOpen, setCascadeOpen] = useState(false);
   const [selectedPillar, setSelectedPillar] = useState<string | null>(null);
   // ADR-0088 — selection/review queue lives in the Zustand cockpit edit store
   // (keyed recoId → "ACCEPT"). Server (Prisma) stays authoritative; this is
@@ -85,7 +123,7 @@ export function NotoriaPage() {
   // The store is a global singleton — clear the staged queue when the operator
   // switches strategy so stale reco ids never leak across brands.
   useEffect(() => { resetRecoQueue(); }, [strategyId, resetRecoQueue]);
-  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "alternatives" | "review" | "history">("pending");
   const [applyFeedback, setApplyFeedback] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
 
   // ── Queries ──
@@ -96,14 +134,14 @@ export function NotoriaPage() {
 
   // For "pending" tab: show PENDING + ACCEPTED (not yet applied)
   // For "history" tab: show all statuses
-  const recosQuery = trpc.notoria.getRecos.useQuery(
+  const recosQuery = trpc.notoria.getRecos.useInfiniteQuery(
     {
       strategyId: strategyId ?? "",
-      status: activeTab === "history" ? undefined : undefined, // no status filter — we filter client-side
+      comparePending: activeTab !== "history",
       targetPillarKey: (selectedPillar?.toUpperCase() ?? undefined) as PillarKey | undefined,
       limit: 200,
     },
-    { enabled: !!strategyId },
+    { enabled: !!strategyId, getNextPageParam: page => page.nextCursor },
   );
 
   const pipelineQuery = trpc.notoria.getPipelineStatus.useQuery(
@@ -118,7 +156,11 @@ export function NotoriaPage() {
 
   // ── Mutations ──
   const generateMutation = trpc.notoria.generateBatch.useMutation({
-    onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
+    onSuccess: () => {
+      recosQuery.refetch(); dashboardQuery.refetch(); batchesQuery.refetch();
+      setApplyFeedback({ type: "success", message: "Analyse terminée. Les propositions sont disponibles dans la file ci-dessous ou dans l’historique. Leur génération ne modifie pas votre marque." });
+    },
+    onError: (error) => setApplyFeedback({ type: "error", message: error.message }),
   });
   // ADR-0088 — function-calling generation: typed-payload recos (by id).
   const generateTypedMutation = trpc.notoria.generateTypedRecommendations.useMutation({
@@ -128,7 +170,7 @@ export function NotoriaPage() {
       setApplyFeedback(
         data.count > 0
           ? { type: "success", message: `${data.count} recommandation(s) ciblée(s) générée(s).` }
-          : { type: "warning", message: "Aucune recommandation ciblée à générer (modèle déjà cohérent)." },
+          : { type: "warning", message: "Aucune proposition applicable aux actions et risques disponibles." },
       );
     },
   });
@@ -148,7 +190,11 @@ export function NotoriaPage() {
     },
   });
   const acceptMutation = trpc.notoria.acceptRecos.useMutation({
-    onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
+    onSuccess: data => {
+      recosQuery.refetch(); dashboardQuery.refetch();
+      setApplyFeedback({type:data.warnings.length ? "warning" : "success",message:
+        `${data.accepted} proposition(s) acceptée(s). ` + (data.warnings[0] || "Vous pouvez maintenant les appliquer.")});
+    },
   });
   const rejectMutation = trpc.notoria.rejectRecos.useMutation({
     onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
@@ -158,12 +204,13 @@ export function NotoriaPage() {
       recosQuery.refetch();
       dashboardQuery.refetch();
       if (data.applied === 0) {
-        const detail = data.warnings.length > 0 ? ` — ${data.warnings[0]}` : "";
+        const detail = data.warnings.length > 0 ? ` — ${applicationWarningLabel(data.warnings[0]!)}` : "";
         setApplyFeedback({ type: "error", message: `Aucune recommandation appliquée${detail}` });
       } else if (data.warnings.length > 0) {
-        setApplyFeedback({ type: "warning", message: `${data.applied} appliquée(s). Avertissements : ${data.warnings.join(" | ")}` });
+        const details = [...new Set(data.warnings.map(applicationWarningLabel))].join(" ");
+        setApplyFeedback({ type: "warning", message: `${data.applied} recommandation(s) appliquée(s). ${details}` });
       } else {
-        setApplyFeedback({ type: "success", message: `${data.applied} recommandation(s) appliquée(s) au pilier.` });
+        setApplyFeedback({ type: "success", message: `${data.applied} recommandation(s) appliquée(s).` });
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -185,7 +232,11 @@ export function NotoriaPage() {
   });
   const [rtVetoMessage, setRtVetoMessage] = useState<string | null>(null);
   const actualizeRTMutation = trpc.notoria.actualizeRT.useMutation({
-    onSuccess: () => { dashboardQuery.refetch(); recosQuery.refetch(); setRtVetoMessage(null); },
+    onSuccess: (result) => {
+      dashboardQuery.refetch(); recosQuery.refetch();
+      const failures = Object.values(result).filter((entry) => !entry.updated || entry.error);
+      setRtVetoMessage(failures.length ? "Le diagnostic reste partiel. Consultez les résultats avant de relancer." : null);
+    },
     onError: (err: { message?: string }) => {
       // ADR-0030 Axe 3 — gate RTIS_CASCADE refusé : ADVE pas prêt
       const msg = err?.message ?? "Veille R+T refusée";
@@ -202,12 +253,17 @@ export function NotoriaPage() {
   // (React #310 : useCanOperate sauté au rendu !strategyId).
   const canOperate = useCanOperate();
 
-  if (!strategyId) return <SkeletonPage />;
+  if (!strategyId || dashboardQuery.isLoading) return <SkeletonPage />;
+  if (dashboardQuery.error || !dashboardQuery.data) return (
+    <div role="alert" className="rounded-xl border border-border p-6">
+      <p>Impossible de lire l’état de votre marque.</p>
+      <button className="mt-3 text-accent underline" onClick={() => dashboardQuery.refetch()}>Réessayer</button>
+    </div>
+  );
 
   const dashboard = dashboardQuery.data;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allRecos: any[] = recosQuery.data?.items ?? [];
-  const pipeline = pipelineQuery.data;
+  const allRecos: any[] = recosQuery.data?.pages.flatMap(page => page.items) ?? [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const batches: any[] = batchesQuery.data ?? [];
   // Founders are not operators (init.ts operatorProcedure) — accepting/applying
@@ -217,9 +273,12 @@ export function NotoriaPage() {
   const isMutating = generateMutation.isPending || generateTypedMutation.isPending || generateFromVaultMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending || !canOperate;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)
-  const actionableRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
+  const pendingRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
+  const actionableRecos = pendingRecos.filter(r => r.comparison?.shortlisted && r.comparison.verdict !== "EQUAL");
+  const alternatives = pendingRecos.filter(r => r.comparison?.verdict === "EQUAL");
+  const toReview = pendingRecos.filter(r => !r.comparison?.shortlisted);
   const historyRecos = allRecos.filter((r) => r.status !== "PENDING" && r.status !== "ACCEPTED");
-  const recos = activeTab === "pending" ? actionableRecos : historyRecos;
+  const recos = activeTab === "history" ? historyRecos : activeTab === "review" ? toReview : activeTab === "alternatives" ? alternatives : actionableRecos;
 
   // Pillar tabs with counts (actionable, not just PENDING)
   const countByPillar: Record<string, number> = {};
@@ -261,208 +320,54 @@ export function NotoriaPage() {
   });
 
   const totalPending = actionableRecos.length;
+  const eligibleRecos = actionableRecos.filter(r => r.eligibleForApplication);
 
-  // ── Stepper state — derive from byPillar (canonical, stale-aware) ──
-  // ADR-0069 — `isReady(k)` consulte maintenant `chipStatus(k).isReadyForCascade`
-  // qui inclut le check stale. Cohérent avec `getStrategyReadiness().byPillar
-  // [k].gates.RTIS_CASCADE.ok` côté serveur. Plus de drift entre la chip
-  // (qui disait COMPLET) et le veto cascade (qui disait PILLAR_STALE).
+  // Readiness permits a run; freshness describes its stored result. Review
+  // queues are a separate workflow, never the production history of I or S.
   const isReady = (k: string) => chipStatus(k).isReadyForCascade;
-  const adveReady = isReady("a") && isReady("d") && isReady("v") && isReady("e");
-  const rtReady = isReady("r") && isReady("t");
-  const iReady = isReady("i");
-  const sReady = isReady("s");
-
-  // Identifie la 1ère page ADVE non-prête pour CTA "Compléter ADVE".
-  const ADVE_PAGE_BY_KEY: Record<string, string> = {
-    a: "identity", d: "positioning", v: "offer", e: "engagement",
+  const adveReady = ADVE_STORAGE_KEYS.every(isReady);
+  const firstAdveGapKey = ADVE_STORAGE_KEYS.find((k) => !isReady(k));
+  const advePages: Record<string, string> = { a: "identity", d: "positioning", v: "offer", e: "engagement" };
+  const stepperSteps = [
+    { label: "Fondation ADVE", keys: [...ADVE_STORAGE_KEYS], href: "/cockpit/brand/fondation" },
+    { label: "Diagnostic R + T", keys: ["r", "t"], href: "/cockpit/brand/market" },
+    { label: "Catalogue d’actions I", keys: ["i"], href: "/cockpit/brand/potential" },
+    { label: "Plan stratégique S", keys: ["s"], href: "/cockpit/brand/roadmap" },
+  ].map((step) => {
+    const states = step.keys.map((k) => getPillarProductionState(byPillar[k]));
+    const state = states.includes("missing") ? "missing" : states.includes("stale") ? "stale" : states.includes("partial") ? "partial" : "current";
+    return { ...step, state, description: { missing: "À produire", stale: "Déjà produit · à réactualiser", partial: "Produit · à compléter", current: "Renseigné · à jour" }[state] };
+  });
+  const needsRefresh = stepperSteps.slice(1).some((step) => step.state !== "current");
+  const anyPending = isMutating || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending || cascadeOpen;
+  const primary = !adveReady && firstAdveGapKey ? {
+    label: `Compléter ${PILLAR_LABELS[firstAdveGapKey]}`,
+    onClick: () => { window.location.href = `/cockpit/brand/${advePages[firstAdveGapKey]}?strategy=${encodeURIComponent(strategyId)}`; },
+    disabled: false,
+  } : needsRefresh ? {
+    label: "Réactualiser le diagnostic et le plan",
+    onClick: () => setCascadeOpen(true), disabled: anyPending,
+  } : {
+    label: "Chercher des améliorations à la fondation",
+    onClick: () => generateMutation.mutate({ strategyId, missionType: "ADVE_UPDATE" }), disabled: anyPending,
   };
-  const firstAdveGapKey = [...ADVE_STORAGE_KEYS].find((k) => !isReady(k));
-  const firstAdveGapHref = firstAdveGapKey
-    ? `/cockpit/brand/${ADVE_PAGE_BY_KEY[firstAdveGapKey]}`
-    : null;
-
-  const stage = pipeline?.currentStage ?? 0;
-  const stageInReview = (n: number) =>
-    pipeline?.stages.find((s) => s.stage === n)?.status === "REVIEW";
-  const stagePending = (n: number) =>
-    pipeline?.stages.find((s) => s.stage === n)?.pendingRecos ?? 0;
-
-  type Step = 1 | 2 | 3 | 4 | "DONE";
-  let currentStep: Step = "DONE";
-  if (!adveReady || stageInReview(1)) currentStep = 1;
-  else if (!rtReady) currentStep = 2;
-  else if (!iReady || stageInReview(2)) currentStep = 3;
-  else if (!sReady || stageInReview(3)) currentStep = 4;
-
-  const stepStatus = (n: 1 | 2 | 3 | 4): StepperStep["status"] => {
-    if (currentStep === n) return "current";
-    if (currentStep === "DONE") return "done";
-    if (typeof currentStep === "number" && currentStep > n) return "done";
-    return "pending";
-  };
-
-  const stepperSteps: StepperStep[] = [
-    { label: "ADVE", description: "Authenticité, Distinction, Valeur, Engagement (socle fondateur)", status: stepStatus(1) },
-    { label: "Risque + Track", description: "Veille marché + signaux concurrentiels", status: stepStatus(2) },
-    { label: "Potentiel (I)", description: "Innovation cataloguée", status: stepStatus(3) },
-    { label: "Stratégie (S)", description: "Synthèse + roadmap", status: stepStatus(4) },
-  ];
-
-  // ── Primary contextual action ─────────────────────────────────────
-  type PrimaryAction = {
-    label: string;
-    icon: React.ReactNode;
-    onClick: () => void;
-    disabled: boolean;
-    variant: "go" | "wait" | "done";
-  };
-  const goIcon = generateMutation.isPending || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending
-    ? <Loader2 className="h-4 w-4 animate-spin" />
-    : null;
-  const anyPending = generateMutation.isPending || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending || !canOperate;
-
-  let primary: PrimaryAction;
-  if (currentStep === 1) {
-    // ADR-0030 Axe 3 — step 1 ADVE : guider vers piliers ADVE incomplets.
-    if (!adveReady && firstAdveGapHref) {
-      // Au moins un pilier ADVE pas COMPLET → CTA navigation vers la page pilier
-      // (où le panneau needsHuman ADR-0030 PR-1 guide la saisie).
-      primary = {
-        label: `Compléter ${firstAdveGapKey?.toUpperCase()} (pilier non prêt)`,
-        icon: <ChevronRight className="h-4 w-4" />,
-        onClick: () => { window.location.href = firstAdveGapHref; },
-        disabled: false,
-        variant: "go",
-      };
-    } else if (stage === 0) {
-      // ADVE prêt mais pipeline pas démarré → option de raffiner ADVE via Notoria.
-      primary = {
-        label: "Démarrer l'analyse complète",
-        icon: goIcon ?? <Zap className="h-4 w-4" />,
-        onClick: () => pipelineMutation.mutate({ strategyId: strategyId! }),
-        disabled: anyPending,
-        variant: "go",
-      };
-    } else if (stage === 1 && stagePending(1) > 0) {
-      primary = {
-        label: `Traitez les ${stagePending(1)} reco(s) ADVE ci-dessous`,
-        icon: <ChevronRight className="h-4 w-4" />,
-        onClick: () => {},
-        disabled: true,
-        variant: "wait",
-      };
-    } else if (stage === 1) {
-      primary = {
-        label: "Avancer → lancer la veille R+T",
-        icon: goIcon ?? <ArrowRight className="h-4 w-4" />,
-        onClick: () => advanceMutation.mutate({ strategyId: strategyId! }),
-        disabled: anyPending,
-        variant: "go",
-      };
-    } else {
-      primary = {
-        label: "Actualiser ADVE",
-        icon: goIcon ?? <Sparkles className="h-4 w-4" />,
-        onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" }),
-        disabled: anyPending,
-        variant: "go",
-      };
-    }
-  } else if (currentStep === 2) {
-    // Step 2 = R+T (gate RTIS_CASCADE côté serveur garantit ADVE prêt en amont)
-    primary = {
-      label: "Lancer la veille R + T",
-      icon: goIcon ?? <Shield className="h-4 w-4" />,
-      onClick: () => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] }),
-      disabled: anyPending,
-      variant: "go",
-    };
-  } else if (currentStep === 3) {
-    if (stage === 2 && stagePending(2) > 0) {
-      primary = {
-        label: `Traitez les ${stagePending(2)} reco(s) Potentiel ci-dessous`,
-        icon: <ChevronRight className="h-4 w-4" />,
-        onClick: () => {},
-        disabled: true,
-        variant: "wait",
-      };
-    } else if (stage === 2) {
-      primary = {
-        label: "Avancer → synthétiser Stratégie (S)",
-        icon: goIcon ?? <ArrowRight className="h-4 w-4" />,
-        onClick: () => advanceMutation.mutate({ strategyId: strategyId! }),
-        disabled: anyPending,
-        variant: "go",
-      };
-    } else {
-      primary = {
-        label: "Générer Potentiel (I)",
-        icon: goIcon ?? <Rocket className="h-4 w-4" />,
-        onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "I_GENERATION" }),
-        disabled: anyPending,
-        variant: "go",
-      };
-    }
-  } else if (currentStep === 4) {
-    if (stage === 3 && stagePending(3) > 0) {
-      primary = {
-        label: `Traitez les ${stagePending(3)} reco(s) Stratégie ci-dessous`,
-        icon: <ChevronRight className="h-4 w-4" />,
-        onClick: () => {},
-        disabled: true,
-        variant: "wait",
-      };
-    } else if (stage === 3) {
-      primary = {
-        label: "Finaliser le pipeline",
-        icon: goIcon ?? <CheckCircle className="h-4 w-4" />,
-        onClick: () => advanceMutation.mutate({ strategyId: strategyId! }),
-        disabled: anyPending,
-        variant: "go",
-      };
-    } else {
-      primary = {
-        label: "Synthétiser Stratégie (S)",
-        icon: goIcon ?? <Route className="h-4 w-4" />,
-        onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" }),
-        disabled: anyPending,
-        variant: "go",
-      };
-    }
-  } else {
-    // ── State DONE — pipeline ADVERTIS au plafond, mais Notoria DOIT
-    //    continuer à proposer mieux. Une marque ICONE n'est jamais "finie" :
-    //    le marché bouge, les superfans pivotent, l'Overton glisse. Le moteur
-    //    reste actif pour produire un nouveau batch ADVE_UPDATE qui surfacera
-    //    de nouvelles recommandations à arbitrer.
-    primary = {
-      label: "Générer de nouvelles améliorations",
-      icon: goIcon ?? <Sparkles className="h-4 w-4" />,
-      onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" }),
-      disabled: anyPending,
-      variant: "go",
-    };
-  }
-
-  // ── Engine Health note (canon cascade guidance) ──
   const healthNote = !adveReady
-    ? <>Fondation pas encore consolidée. <b>{firstAdveGapKey?.toUpperCase()}</b> bloque l&apos;analyse R+T — complétez-le pour débloquer la suite.</>
-    : !rtReady
-      ? <>Fondation consolidée. Lancez la <b>veille R + T</b> pour alimenter la Gazette puis les recommandations.</>
-      : <>Cascade ouverte — les recommandations issues de <b>R+T</b> s&apos;appliquent vers I puis S.</>;
+    ? `La fondation reste à compléter : ${PILLAR_LABELS[firstAdveGapKey ?? "a"]}.`
+    : needsRefresh
+      ? "La fondation permet le calcul. Le diagnostic, le catalogue ou le plan doivent être réactualisés pour reprendre ses dernières évolutions."
+      : "La fondation, le diagnostic, le catalogue et le plan sont à jour. Vous pouvez examiner les propositions ou demander une nouvelle analyse.";
 
   return (
     <div className="ck-nz">
       {/* ─ Cascade flow (ADVE → R+T → Jehuty ▸ Notoria → I → S) ─ */}
-      <div className="ck-cellflow">
+      <nav className="ck-cellflow" aria-label="Parcours de la marque">
         {NZ_CELLFLOW.map((n, i) => (
           <div key={n.label} style={{ display: "contents" }}>
-            <span className="ck-cellflow__node" data-on={n.on ? 1 : 0} data-passive={n.passive ? 1 : 0}>{n.label}</span>
+            <Link href={`${n.href}?strategy=${encodeURIComponent(strategyId)}`} className="ck-cellflow__node" aria-current={n.on ? "page" : undefined} data-on={n.on ? 1 : 0}>{n.label}</Link>
             {i < NZ_CELLFLOW.length - 1 ? <span className="ck-cellflow__arr"><ChevronRight /></span> : null}
           </div>
         ))}
-      </div>
+      </nav>
 
       {/* ═══ Section 1: Engine Health ═══════════════════════════════ */}
       <div className="ck-nz__card">
@@ -470,7 +375,7 @@ export function NotoriaPage() {
           <div className="ck-nz__brand">
             <span className="ck-nz__brand-ic"><Sparkles /></span>
             <h1>Recommandations</h1>
-            <span className="ck-nz__brand-sub">Moteur de Recommandation</span>
+            <span className="ck-nz__brand-sub">Propositions à examiner</span>
           </div>
           {totalPending > 0 && <span className="ck-nz__pending-pill">{totalPending} en attente</span>}
         </div>
@@ -489,7 +394,7 @@ export function NotoriaPage() {
                   className="ck-nz__chip-v" data-tone={tone}
                   title={
                     status.variant === "stale-advisory"
-                      ? "Mise à jour recommandée — un pilier amont a muté, mais le contenu actuel reste utilisable. La cascade R+T peut tourner pour produire les recos qui rafraîchiront ce pilier."
+                      ? "Contenu déjà produit. Une information source a évolué ; relancez le calcul pour la prendre en compte."
                       : status.variant === "stale"
                         ? "Pilier périmé — contenu insuffisant ET un pilier amont a muté. Compléter d'abord pour débloquer la cascade."
                         : undefined
@@ -506,10 +411,10 @@ export function NotoriaPage() {
       <div className="ck-nz__card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div className="ck-nz__stepper">
           {stepperSteps.map((s, i) => (
-            <div className="ck-nz__step" data-st={s.status} key={i}>
-              <span className="ck-nz__step-n">{s.status === "done" ? <CheckCircle /> : i + 1}</span>
+            <div className="ck-nz__step" data-st={s.state === "current" ? "done" : s.state === "stale" ? "current" : "pending"} key={i}>
+              <span className="ck-nz__step-n">{s.state === "current" ? <CheckCircle /> : s.state === "stale" ? <RefreshCw /> : i + 1}</span>
               <div className="ck-nz__step-b">
-                <span className="ck-nz__step-l">{s.label}</span>
+                <Link href={`${s.href}?strategy=${encodeURIComponent(strategyId)}`} className="ck-nz__step-l hover:underline">{s.label}</Link>
                 <span className="ck-nz__step-d">{s.description}</span>
               </div>
               {i < stepperSteps.length - 1 ? <span className="ck-nz__step-arr"><ChevronRight /></span> : null}
@@ -533,22 +438,26 @@ export function NotoriaPage() {
           </div>
         ) : null}
 
+        <p className="text-sm text-foreground-secondary">
+          {needsRefresh ? "Le bouton ouvre le détail du calcul avant son lancement : diagnostic R + T, catalogue I, puis plan S. La fondation reste conservée. La Gazette se rafraîchit séparément ; l’Oracle doit ensuite être rédigé à nouveau." : "L’analyse cherche des propositions pour améliorer la fondation. Elles attendent votre décision : aucun changement n’est appliqué à leur génération."}
+        </p>
         <div className="ck-nz__launch">
-          <button className="ck-nz__primary" data-variant={primary.variant} onClick={primary.onClick} disabled={primary.disabled}>
-            {primary.icon}{primary.label}
+          <button className="ck-nz__primary" data-variant="go" onClick={primary.onClick} disabled={primary.disabled}>
+            {anyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles />}{primary.label}
           </button>
 
           <details className="ck-nz__adv">
             <summary className="ck-nz__adv-btn">Avancé<ChevronDown /></summary>
             <div className="ck-nz__adv-menu">
+              <p className="p-3 text-xs text-foreground-secondary">« Proposer » ajoute des recommandations à examiner. « Réactualiser » recalcule et enregistre le diagnostic.</p>
               <button onClick={() => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] })} disabled={anyPending}>
-                <Shield style={{ color: "var(--danger)" }} />Re-lancer R + T
+                <Shield style={{ color: "var(--danger)" }} />Réactualiser uniquement le diagnostic R + T
               </button>
               <button onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" })} disabled={anyPending}>
-                <Sparkles style={{ color: "var(--accent)" }} />Re-générer recos ADVE
+                <Sparkles style={{ color: "var(--accent)" }} />Proposer des améliorations à la fondation
               </button>
               <button onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "I_GENERATION" })} disabled={anyPending}>
-                <Rocket style={{ color: "var(--warning)" }} />Re-générer Potentiel (I)
+                <Rocket style={{ color: "var(--warning)" }} />Proposer des changements au catalogue I
               </button>
               {/* ADR-0088 — function-calling generation (typed mutations by id) */}
               <button onClick={() => generateTypedMutation.mutate({ strategyId: strategyId! })} disabled={anyPending || generateTypedMutation.isPending}>
@@ -559,25 +468,31 @@ export function NotoriaPage() {
                 <FileText style={{ color: "var(--accent)" }} />Générer depuis les sources importées
               </button>
               <button onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" })} disabled={anyPending}>
-                <Route style={{ color: "var(--danger)" }} />Re-synthétiser Stratégie (S)
+                <Route style={{ color: "var(--danger)" }} />Proposer des changements au plan S
               </button>
               <div className="ck-nz__adv-sep" />
               <button onClick={() => pipelineMutation.mutate({ strategyId: strategyId! })} disabled={anyPending}>
-                <Zap style={{ color: "var(--warning)" }} />Relancer le pipeline complet
+                <Zap style={{ color: "var(--warning)" }} />Démarrer une revue guidée de propositions
               </button>
             </div>
           </details>
         </div>
       </div>
 
+      <RtisCascadeModal open={cascadeOpen} onOpenChange={setCascadeOpen} strategyId={strategyId} onCompleted={() => {
+        dashboardQuery.refetch(); recosQuery.refetch(); pipelineQuery.refetch(); batchesQuery.refetch();
+      }} />
+
       {/* ═══ Tab bar: Pending / History ════════════════════════════ */}
       <div className="ck-nz__tabbar">
-        <button data-on={activeTab === "pending" ? 1 : 0} onClick={() => setActiveTab("pending")}>En attente ({totalPending})</button>
+        <button data-on={activeTab === "pending" ? 1 : 0} onClick={() => setActiveTab("pending")}>Présélection ({totalPending})</button>
+        {alternatives.length > 0 && <button data-on={activeTab === "alternatives" ? 1 : 0} onClick={() => setActiveTab("alternatives")}>Alternatives équivalentes ({alternatives.length})</button>}
+        <button data-on={activeTab === "review" ? 1 : 0} onClick={() => setActiveTab("review")}>À instruire ou à écarter</button>
         <button data-on={activeTab === "history" ? 1 : 0} onClick={() => setActiveTab("history")}>Historique</button>
       </div>
 
       {/* ═══ Section 3: Reco Panel ═════════════════════════════════ */}
-      {activeTab === "pending" && (
+      {activeTab !== "history" && (
         <>
           {/* Pillar tabs */}
           <div className="ck-nz__ptabs">
@@ -598,18 +513,18 @@ export function NotoriaPage() {
           )}
 
           {/* Batch actions */}
-          {recos.length > 0 && (
+          {activeTab === "pending" && recos.length > 0 && (
             <div className="ck-nz__batch">
-              {recos.some((r) => r.status === "PENDING") && (
+              {eligibleRecos.some((r) => r.status === "PENDING") && (
                 <button className="ck-nz__bb emerald" disabled={isMutating}
-                  onClick={() => { const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
-                  <CheckCircle /> Tout accepter ({recos.filter((r) => r.status === "PENDING").length})
+                  onClick={() => { const ids = eligibleRecos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  <CheckCircle /> Tout accepter ({eligibleRecos.filter((r) => r.status === "PENDING").length})
                 </button>
               )}
-              {recos.some((r) => r.status === "ACCEPTED") && (
+              {eligibleRecos.some((r) => r.status === "ACCEPTED") && (
                 <button className="ck-nz__bb blue" disabled={isMutating}
-                  onClick={() => { setApplyFeedback(null); const ids = recos.filter((r) => r.status === "ACCEPTED").map((r) => r.id); if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
-                  <Zap /> Appliquer tout ({recos.filter((r) => r.status === "ACCEPTED").length})
+                  onClick={() => { setApplyFeedback(null); const ids = eligibleRecos.filter((r) => r.status === "ACCEPTED").map((r) => r.id); if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  <Zap /> Appliquer tout ({eligibleRecos.filter((r) => r.status === "ACCEPTED").length})
                 </button>
               )}
               <button className="ck-nz__bb accent" disabled={selectedRecoIds.length === 0 || isMutating}
@@ -617,17 +532,17 @@ export function NotoriaPage() {
                   setApplyFeedback(null);
                   const ids = selectedRecoIds;
                   if (ids.length === 0) return;
-                  const pendingIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "PENDING");
+                  const pendingIds = ids.filter((id) => eligibleRecos.find((r) => r.id === id)?.status === "PENDING");
                   if (pendingIds.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: pendingIds });
-                  const acceptedIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "ACCEPTED");
+                  const acceptedIds = ids.filter((id) => eligibleRecos.find((r) => r.id === id)?.status === "ACCEPTED");
                   if (acceptedIds.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: acceptedIds });
                   resetRecoQueue();
                 }}>
                 <ThumbsUp /> Sélection ({selectedRecoIds.length})
               </button>
-              {recos.some((r) => r.status === "PENDING") && (
+              {eligibleRecos.some((r) => r.status === "PENDING") && (
                 <button className="ck-nz__bb red" disabled={isMutating}
-                  onClick={() => { const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) rejectMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  onClick={() => { const ids = eligibleRecos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) rejectMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
                   <ThumbsDown /> Rejeter
                 </button>
               )}
@@ -636,10 +551,11 @@ export function NotoriaPage() {
 
           {/* Reco cards */}
           <div className="ck-nz__recos">
-            {recos.length === 0 && <div className="ck-nz__empty">Aucune recommandation en attente.</div>}
+            {recos.length === 0 && <div className="ck-nz__empty">{activeTab === "pending" ? "Aucune proposition présélectionnée dans cette liste." : "Aucune autre proposition dans cette liste."}</div>}
             {recos.map((reco) => {
+              const proposalLabel = typedProposalLabel(reco.proposedValue);
               const isSelected = !!recoQueue[reco.id];
-              const isActionable = reco.status === "PENDING" || reco.status === "ACCEPTED";
+              const isActionable = activeTab === "pending" && reco.eligibleForApplication && (reco.status === "PENDING" || reco.status === "ACCEPTED");
               const op = OP_RESKIN[reco.operation] ?? { label: reco.operation, c: "blue" };
               const urg = URG_RESKIN[reco.urgency] ?? URG_RESKIN.SOON!;
               const advantages = Array.isArray(reco.advantages) ? reco.advantages as string[] : [];
@@ -656,9 +572,9 @@ export function NotoriaPage() {
                       <span className="ck-nz__op" data-c={op.c}>{op.label}</span>
                       <span className="ck-nz__reco-field">{getFieldLabel(reco.targetField)}</span>
                       <span className="ck-nz__reco-pillar">{PILLAR_LABELS[reco.targetPillarKey] ?? reco.targetPillarKey}</span>
-                      <span className="ck-nz__reco-impact" data-i={reco.impact}>{reco.impact}</span>
+                      <span className="ck-nz__reco-impact" data-i={reco.impact}>{IMPACT_LABEL[reco.impact] ?? "À qualifier"}</span>
                       <span className="ck-nz__reco-urg" data-c={urg.c}>{urg.label}</span>
-                      <span className="ck-nz__reco-src">{reco.source}</span>
+                      <span className="ck-nz__reco-src">{SOURCE_LABEL[reco.source] ?? "Origine à qualifier"}</span>
                       <span className="ck-nz__reco-conf" data-hi={reco.confidence >= 0.7 ? 1 : 0}>{Math.round(reco.confidence * 100)}%</span>
                       {/* ADR-0090 — score pondéré déterministe (ruler + impact + confidence) */}
                       {typeof reco.weightedScore === "number" && (
@@ -671,8 +587,25 @@ export function NotoriaPage() {
                       <span className="ck-nz__status" data-s={reco.status}>{STATUS_RESKIN[reco.status] ?? reco.status}</span>
                     </div>
 
-                    <p className="ck-nz__reco-explain">{reco.explain}</p>
+                    <p className="ck-nz__reco-explain">{reco.articleEvidence ? (proposalLabel ?? reco.explain) : reco.explain}</p>
+                    {reco.comparison && <div className="text-sm text-foreground-secondary">
+                      <strong>{reco.comparison.objective}</strong>
+                      <p>{reco.comparison.reason}</p>
+                      {reco.comparison.shortlisted && !reco.eligibleForApplication && <p>Alternative à conserver. Le gain reste sous la marge requise pour remplacer la valeur en place.</p>}
+                      <small>{reco.comparison.criterion && reco.comparison.criterion + " · "}{reco.comparison.basis === "measurement" ? "Mesuré" : reco.comparison.basis === "structural" ? "Évaluation du champ" : "Projection"}</small>
+                    </div>}
 
+                    {reco.articleEvidence && <details onClick={event => event.stopPropagation()}>
+                      <summary className="ck-nz__reco-toggle">Relire le passage de l’article</summary>
+                      <blockquote className="my-2 border-l border-border pl-3">{reco.articleEvidence.quote}</blockquote>
+                      <p>{reco.articleEvidence.implication}</p>
+                      <p className="mt-2">Vérification prévue · {reco.articleEvidence.measure}</p>
+                      <a href={reco.articleEvidence.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent underline">{reco.articleEvidence.title}</a>
+                    </details>}
+                    {activeTab === "alternatives" && reco.eligibleForApplication && <button className="ck-nz__bb accent" disabled={isMutating}
+                      onClick={event => { event.stopPropagation(); (reco.status === "ACCEPTED" ? applyMutation : acceptMutation).mutate({ strategyId: strategyId!, recoIds: [reco.id] }); }}>
+                      {reco.status === "ACCEPTED" ? "Ajouter cette alternative au catalogue" : "Retenir cette alternative"}
+                    </button>}
                     {hasAnalysis && (
                       <details onClick={(e) => e.stopPropagation()}>
                         <summary className="ck-nz__reco-toggle">Avantages / Risques</summary>
@@ -687,7 +620,7 @@ export function NotoriaPage() {
                       <div className="ck-nz__reco-diff">
                         <div className="ck-nz__diff-prop">
                           <span className="ck-nz__diff-l ok">{reco.operation === "ADD" ? "À ajouter" : reco.operation === "REMOVE" ? "À supprimer" : "Proposé"}</span>
-                          {typeof reco.proposedValue === "string" ? reco.proposedValue : JSON.stringify(reco.proposedValue, null, 1).slice(0, 200)}
+                          {proposalLabel ?? (typeof reco.proposedValue === "string" ? reco.proposedValue : JSON.stringify(reco.proposedValue, null, 1).slice(0, 200))}
                         </div>
                       </div>
                     )}
@@ -737,6 +670,8 @@ export function NotoriaPage() {
           })}
         </div>
       )}
+      {recosQuery.hasNextPage && <button type="button" disabled={recosQuery.isFetchingNextPage}
+        onClick={() => recosQuery.fetchNextPage()}>Charger la suite</button>}
     </div>
   );
 }

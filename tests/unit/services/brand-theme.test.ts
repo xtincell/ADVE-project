@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildBrandTheme,
+  extractFontFamilies,
   collectHexes,
   hexToRgb,
   contrastRatio,
@@ -37,6 +38,10 @@ const MOTION19_CHROMATIC = {
 };
 
 describe("brand-theme — résolution & lisibilité", () => {
+  it("lit les familles ingérées sans inventer le rôle des polices non qualifiées", () => {
+    expect(extractFontFamilies({ fonts: [{ family: "Fonte sans rôle", role: null }] })).toEqual({ display: null, body: null, all: ["Fonte sans rôle"] });
+    expect(extractFontFamilies({ fonts: [{ family: "Titre déclaré", role: "display" }, { family: "Texte déclaré", role: "body" }] })).toEqual({ display: "Titre déclaré", body: "Texte déclaré", all: ["Titre déclaré", "Texte déclaré"] });
+  });
   it("collectHexes récolte les hex des 2 formes (valeurs ET clés roles)", () => {
     const s = collectHexes(SPAWT_CHROMATIC);
     expect(s.accent).toBe("#C8A44E");

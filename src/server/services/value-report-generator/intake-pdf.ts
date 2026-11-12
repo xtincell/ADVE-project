@@ -13,7 +13,24 @@
  * its caller — it just renders.
  */
 
-import { db } from "@/lib/db";
+interface SessionCookie { name: string; value: string; url: string; httpOnly: boolean; secure: boolean; sameSite: "Lax" }
+
+/** Forward only the existing session, scoped to our configured origin, never as a global header. */
+export function intakePdfSessionCookies(baseUrl: string, header = ""): SessionCookie[] {
+  const base = new URL(baseUrl);
+  const configured = [process.env.NEXT_PUBLIC_BASE_URL, process.env.AUTH_URL, process.env.NEXTAUTH_URL]
+    .filter((v): v is string => Boolean(v)).map(v => new URL(v).origin);
+  if (!["http:", "https:"].includes(base.protocol) || base.username || base.password
+    || (!configured.includes(base.origin) && !["localhost", "127.0.0.1", "[::1]"].includes(base.hostname))) {
+    throw new Error("intake-pdf: application origin not configured");
+  }
+  return header.split(";").flatMap(part => {
+    const at = part.indexOf("=");
+    const name = part.slice(0, at).trim(), value = part.slice(at + 1).trim();
+    if (at < 1 || !value || !/^(?:__Secure-)?(?:authjs|next-auth)\.session-token(?:\.\d+)?$/.test(name)) return [];
+    return [{ name, value, url: base.origin, httpOnly: true, secure: base.protocol === "https:", sameSite: "Lax" as const }];
+  });
+}
 
 interface PuppeteerLike {
   launch: (opts: unknown) => Promise<{
@@ -22,7 +39,9 @@ interface PuppeteerLike {
       pdf: (opts: unknown) => Promise<Uint8Array>;
       setViewport: (vp: { width: number; height: number; deviceScaleFactor?: number }) => Promise<void>;
       emulateMediaType: (type: string) => Promise<void>;
-      waitForTimeout?: (ms: number) => Promise<void>;
+      setCookie: (...cookies: SessionCookie[]) => Promise<void>;
+      waitForFunction: (expression: string, opts: { timeout: number }) => Promise<unknown>;
+      evaluate: (fn: () => Promise<void>) => Promise<void>;
     }>;
     close: () => Promise<void>;
   }>;
@@ -46,6 +65,8 @@ export interface RenderIntakePdfOptions {
   baseUrl?: string;
   /** A4 (default) or Letter. */
   format?: "A4" | "Letter";
+  /** Existing ADMIN session from the authenticated route, memory only, never logged/persisted. */
+  sessionCookieHeader?: string;
 }
 
 export interface IntakePdfResult {
@@ -61,21 +82,9 @@ export async function renderIntakePdf(opts: RenderIntakePdfOptions): Promise<Int
     process.env.NEXTAUTH_URL ??
     "http://localhost:3000";
 
-  // Look up an existing paid reference for this intake. We pass it in the
-  // result-page URL so the React page boots in `isPaid=true` state and the
-  // PDF carries the full unlocked content. Auth is validated by the caller
-  // (route handler) before calling this service — we just need the ref to
-  // satisfy the page's client-side gate.
-  const paid = await db.intakePayment.findFirst({
-    where: { intakeToken: opts.token, status: "PAID" },
-    orderBy: { paidAt: "desc" },
-    select: { reference: true },
-  });
-  if (!paid) {
-    throw new Error("intake-pdf: no paid IntakePayment for this token — cannot render");
-  }
-
-  const renderUrl = `${baseUrl}/intake/${opts.token}/result?ref=${encodeURIComponent(paid.reference)}&status=paid&pdfMode=1`;
+  // The page rechecks the same stored payment/session. A URL parameter is not a right.
+  const cookies = intakePdfSessionCookies(baseUrl, opts.sessionCookieHeader);
+  const renderUrl = new URL(`/intake/${encodeURIComponent(opts.token)}/result?pdfMode=1`, baseUrl).href;
 
   const puppeteer = await loadPuppeteer();
 
@@ -91,13 +100,12 @@ export async function renderIntakePdf(opts: RenderIntakePdfOptions): Promise<Int
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 1800, deviceScaleFactor: 1 });
-    await page.goto(renderUrl, { waitUntil: "networkidle0", timeout: 60_000 });
+    if (cookies.length) await page.setCookie(...cookies);
+    await page.goto(renderUrl, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await page.waitForFunction('document.querySelector(\'[data-intake-report-ready="true"]\') !== null', { timeout: 60_000 });
     // Tailwind v4 print queries kick in once we emulate the print media.
     await page.emulateMediaType("print");
-    if (typeof page.waitForTimeout === "function") {
-      // Small breather so any post-render async (fonts, images) settles.
-      await page.waitForTimeout(500);
-    }
+    await page.evaluate(async () => { await document.fonts.ready; });
 
     const pdfBytes = await page.pdf({
       format: opts.format ?? "A4",

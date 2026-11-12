@@ -12,7 +12,7 @@
  */
 
 import { db } from "@/lib/db";
-import { sendEmail, sendViaBrevo, type SendEmailInput, type SendEmailResult } from "./email-sender";
+import { sendEmail, sendViaBrevo, systemEmailIsArmed, type SendEmailInput, type SendEmailResult } from "./email-sender";
 
 export interface BrandEmailConnectorView {
   provider: string;
@@ -69,12 +69,7 @@ export async function sendBrandEmail(
 export async function brandEmailIsArmed(strategyId: string): Promise<boolean> {
   const c = await db.brandEmailConnector.findUnique({ where: { strategyId } });
   if (c && c.status === "ACTIVE" && c.apiKey) return true;
-  return Boolean(
-    process.env.RESEND_API_KEY ||
-      (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) ||
-      process.env.SENDGRID_API_KEY ||
-      process.env.BREVO_API_KEY,
-  );
+  return systemEmailIsArmed();
 }
 
 // ── Validation fournisseur (Brevo) — clé réelle, aucun mock ──────────────────

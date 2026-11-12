@@ -14,9 +14,9 @@
  * devient OPTIONNELLE (enrichissement social-listening premium futur), jamais
  * un prérequis du socle.
  *
- * # Contrat (inchangé)
+ * # Contrat
  *
- * `fetchSectorSignal(operatorId, sectorSlug)` → `ConnectorResult<TarsisSignal>` :
+ * `fetchSectorSignal(operatorId, sectorSlug, scope?)` → `ConnectorResult<TarsisSignal>` :
  *   - `LIVE`     — signal réel dérivé des digests RSS du secteur (`_mocked:false`).
  *   - `DEGRADED + INSUFFICIENT_DATA` — aucun digest exploitable (PAS de zéro
  *     silencieux : on dégrade, on n'invente pas — P22-1 + ADR-0046).
@@ -24,11 +24,15 @@
  * Plus de branche `DEFERRED_AWAITING_CREDENTIALS` : le socle ne dépend plus d'une
  * clé. Les consommateurs (`sector-intelligence/`) gèrent déjà LIVE/DEGRADED.
  *
+ * Le digest propre à la marque est prioritaire. Les articles sectoriels restent
+ * distincts de mentions spontanées de la marque : aucun gain de réputation
+ * ni déplacement Overton n’est déduit de leur seule présence.
+ *
  * Cap APOGEE 7/7 préservé — connecteur, pas un Neter.
  */
 
 import { db } from "@/lib/db";
-import type { ConnectorResult } from "@/domain";
+import type { ConnectorResult, OvertonSectorArticle } from "@/domain";
 
 /** Slug Vault (credential OPTIONNELLE — enrichissement premium futur). */
 export const TARSIS_CONNECTOR_TYPE = "tarsis-monitoring" as const;
@@ -37,6 +41,7 @@ export const TARSIS_DISPLAY_NAME = "Tarsis (monitoring signaux faibles — La Fu
 /** Payload sectoriel. Champs optionnels : certains axes exigent contexte marque
  *  + embeddings (Ollama/OpenAI) et restent absents tant que non calculés. */
 export interface TarsisSignal {
+  sectorArticles?: ReadonlyArray<OvertonSectorArticle>;
   vocabularyOverlap?: number;
   claimImitations?: ReadonlyArray<{ competitorId: string; phrase: string; observedAt: string; sourceUrl?: string }>;
   unpaidPress?: ReadonlyArray<{ publication: string; headline: string; publishedAt: string; sourceUrl?: string }>;
@@ -47,71 +52,63 @@ export interface TarsisSignal {
   _mocked?: boolean;
 }
 
-const WINDOW_DAYS = 7;
-
 interface DigestData {
+  items?: Array<{ title?: string; link?: string; sourceUrl?: string; source?: string; publishedAt?: string }>;
   weakSignals?: Array<{ event?: string; causalChain?: string[] }>;
-  macroSignals?: Array<{ trend?: string }>;
   generatedAt?: string;
   feedSource?: string;
 }
+function sourceUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || !URL.canParse(value)) return;
+  const url = new URL(value);
+  return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : undefined;
+}
+function date(value: unknown): string | undefined {
+  return typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : undefined;
+}
 
-/**
- * Signal sectoriel RÉEL dérivé du dernier digest RSS (`EXTERNAL_FEED_DIGEST`)
- * du secteur. `unpaidPress` = mentions presse réelles ; les axes marque/embedding
- * restent absents (honnête) tant qu'ils ne sont pas calculés.
- */
+/** Read existing collected evidence, never fetch or manufacture observations. */
 export async function fetchSectorSignal(
   _operatorId: string,
   sectorSlug: string,
+  scope?: { strategyId: string; countryCode?: string | null },
 ): Promise<ConnectorResult<TarsisSignal>> {
   try {
-    const digest = await db.knowledgeEntry.findFirst({
+    const select = { data: true, createdAt: true } as const;
+    const owned = scope ? await db.knowledgeEntry.findFirst({
+      where: { entryType: "EXTERNAL_FEED_DIGEST", market: `brand:${scope.strategyId}` },
+      orderBy: { createdAt: "desc" }, select,
+    }) : null;
+    const digest = owned ?? await db.knowledgeEntry.findFirst({
       where: {
         entryType: "EXTERNAL_FEED_DIGEST",
-        sector: { contains: sectorSlug, mode: "insensitive" },
+        sector: { equals: sectorSlug, mode: "insensitive" },
+        OR: [{ market: null }, { market: { not: { startsWith: "brand:" } } }],
+        ...(scope?.countryCode ? { countryCode: scope.countryCode } : {}),
       },
-      orderBy: { createdAt: "desc" },
-      select: { data: true, createdAt: true },
+      orderBy: { createdAt: "desc" }, select,
     });
-    if (!digest) {
-      return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
-    }
-
+    if (!digest) return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
     const data = (digest.data ?? {}) as DigestData;
-    const weak = Array.isArray(data.weakSignals) ? data.weakSignals : [];
-    const publishedAt = data.generatedAt ?? digest.createdAt.toISOString();
-    const unpaidPress = weak
-      .filter((w): w is { event: string; causalChain?: string[] } => typeof w.event === "string" && w.event.length > 0)
-      .map((w) => ({
-        publication: data.feedSource ?? "presse",
-        headline: w.event,
-        publishedAt,
-        sourceUrl: Array.isArray(w.causalChain) ? w.causalChain[0] : undefined,
-      }));
-
-    if (unpaidPress.length === 0) {
-      return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
+    const items = Array.isArray(data.items) ? data.items : [];
+    const sectorArticles: OvertonSectorArticle[] = items.flatMap((item) => {
+      const url = sourceUrl(item.sourceUrl) ?? sourceUrl(item.link);
+      return url && typeof item.title === "string" && item.title.trim()
+        ? [{ headline: item.title, sourceUrl: url, publication: item.source || new URL(url).hostname, publishedAt: date(item.publishedAt) }] : [];
+    });
+    // Legacy sourced digests remain readable, but are not evidence of an unpaid
+    // brand mention. A causal-chain sentence is not a publisher URL.
+    for (const weak of Array.isArray(data.weakSignals) ? data.weakSignals : []) {
+      const url = weak.causalChain?.map(sourceUrl).find(Boolean);
+      if (url && weak.event) sectorArticles.push({ headline: weak.event, publication: new URL(url).hostname, sourceUrl: url });
     }
-
-    const observedAt = new Date().toISOString();
-    return {
-      state: "LIVE",
-      data: {
-        unpaidPress,
-        // Axes spécifiques marque / embedding : absents tant que non calculés
-        // (pas de zéro silencieux). Nécessitent contexte marque + embeddings.
-        vocabularyOverlap: undefined,
-        claimImitations: [],
-        embeddingDelta: undefined,
-        windowFrom: new Date(Date.now() - WINDOW_DAYS * 24 * 3600 * 1000).toISOString(),
-        windowTo: observedAt,
-        _mocked: false,
-      },
-      observedAt,
-    };
+    if (!sectorArticles.length) return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
+    const observedAt = date(data.generatedAt) ?? digest.createdAt.toISOString();
+    return { state: "LIVE", observedAt, data: {
+      sectorArticles, unpaidPress: [], claimImitations: [],
+      windowTo: observedAt, _mocked: false,
+    } };
   } catch {
-    // P22-1 : échec transitoire → DEGRADED, jamais avalé en LIVE.
     return { state: "DEGRADED", reason: "VENDOR_OUTAGE" };
   }
 }

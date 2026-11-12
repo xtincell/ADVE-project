@@ -39,8 +39,8 @@ export function SwotInterne({ data }: Props) {
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Plan de mitigation</h3>
           <DataTable
-            headers={["Risque", "Action", "Priorite"]}
-            rows={data.mitigations.map((m) => [m.risque, m.action, m.priorite])}
+            headers={["Risque", "Action", "Priorité", "Responsable", "Échéance", "Moyens"]}
+            rows={data.mitigations.map((m) => [m.risque, m.action, m.priorite, m.owner ?? null, m.timeline ?? null, m.investment ?? null])}
           />
         </div>
       )}

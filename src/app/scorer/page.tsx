@@ -24,7 +24,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { useT } from "@/lib/i18n/use-t";
+import { OvertonEntry } from "@/components/shared/overton-entry";
+import type { EntryOvertonClaim } from "@/domain/overton-positioning";
 import { ScoreBadge } from "@/components/shared/score-badge";
+import { measuredScoreCoverage } from "@/domain/brand-scores";
 import {
   Button,
   Card,
@@ -234,11 +237,14 @@ function buildWhatScanSays(dims: Dim[], facts: FactsView, i: I18nCtx): string[] 
         : i.tf("scorer.says.presence", { count: facts.socials.length }),
     );
   }
-  const site = by.get("site");
-  const domain = by.get("domain");
-  const email = by.get("email");
-  if (site?.measured || domain?.measured || email?.measured) {
-    out.push(i.t("scorer.says.foundations"));
+  const foundations = ["site", "domain", "email", "perf"].filter((key) => {
+    const dimension = by.get(key);
+    return dimension?.measured && dimension.score !== null;
+  });
+  if (foundations.length > 0) {
+    out.push(i.tf("scorer.says.foundations", {
+      signals: foundations.map((key) => i.t(DIMENSION_LABEL_KEYS[key] ?? key)).join(", "),
+    }));
   }
   if (by.get("reviews")?.measured && facts.reviews?.rating != null) {
     out.push(i.tf("scorer.says.reviews", { rating: facts.reviews.rating }));
@@ -424,6 +430,7 @@ export default function ScorerPage() {
   const { t, locale } = useT();
   const [brandName, setBrandName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [overtonClaim, setOvertonClaim] = useState<EntryOvertonClaim | null>(null);
   const [socialLinksRaw, setSocialLinksRaw] = useState("");
 
   // Helpers i18n : formatage nombres/dates aligné sur la locale UI + interpolation.
@@ -476,6 +483,7 @@ export default function ScorerPage() {
     `/intake?company=${encodeURIComponent(brandName.trim())}` +
     (websiteUrl.trim() ? `&website=${encodeURIComponent(websiteUrl.trim())}` : "") +
     (socialLinksRaw.trim() ? `&social=${encodeURIComponent(socialLinksRaw.trim())}` : "") +
+    (overtonClaim ? `&overton=${encodeURIComponent(JSON.stringify(overtonClaim))}` : "") +
     `&source=scorer`;
 
   const dims = (result?.dimensions ?? []) as Dim[];
@@ -486,7 +494,7 @@ export default function ScorerPage() {
   const factSocials = facts?.socials ?? [];
   const totalFollowers = factSocials.reduce((s, f) => s + (f.followerCount ?? 0), 0);
   const maxFollowers = Math.max(0, ...factSocials.map((f) => f.followerCount ?? 0));
-  const coveragePct = result?.measuredWeight ?? 0;
+  const coveragePct = measuredScoreCoverage(dims);
   const scanDate = result?.capturedAt
     ? new Date(result.capturedAt).toLocaleDateString(intlTag, { day: "numeric", month: "long", year: "numeric" })
     : null;
@@ -554,7 +562,7 @@ export default function ScorerPage() {
             <Input
               placeholder={t("scorer.form.brandPlaceholder")}
               value={brandName}
-              onChange={(e) => setBrandName(e.target.value)}
+              onChange={(e) => { setBrandName(e.target.value); setOvertonClaim(null); }}
               required
             />
             <div className="flex flex-col gap-1">
@@ -639,7 +647,7 @@ export default function ScorerPage() {
                   <div className="flex shrink-0 flex-col items-center gap-1">
                     {result.total !== null ? (
                       <>
-                        <ScoreBadge score={result.total} maxScore={100} mode="cockpit" size="xl" />
+                        <ScoreBadge score={result.total} maxScore={100} showClassification={false} size="xl" />
                         {/* Le chiffre ne voyage jamais seul quand il repose sur
                             une fraction du spectre : le badge le qualifie à
                             l'endroit exact où l'œil se pose (audit 2026-07-30). */}
@@ -1037,6 +1045,7 @@ export default function ScorerPage() {
               </CardBody>
             </Card>
           ) : null}
+        <OvertonEntry key={brandName.trim()} brand={brandName.trim()} onChange={setOvertonClaim} />
         </article>
       ) : null}
 

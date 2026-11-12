@@ -23,6 +23,7 @@
  */
 
 import { db } from "@/lib/db";
+import { sourceScope, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import type { SourceCertainty } from "@/domain/source-certainty";
 import { indexBrandSource } from "@/server/services/seshat/context-store/indexer";
 import { topKWithinStrategy } from "@/server/services/seshat/context-store/ranker";
@@ -49,7 +50,7 @@ export async function ensureSourcesIndexed(
   strategyId: string,
 ): Promise<{ indexedChunks: number; embedded: boolean }> {
   const sources = await db.brandDataSource.findMany({
-    where: { strategyId, processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },
+    where: { AND: [await sourceScope(strategyId)], processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },
     select: { id: true, rawContent: true },
   });
 
@@ -57,7 +58,7 @@ export async function ensureSourcesIndexed(
   for (const s of sources) {
     if (!s.rawContent || s.rawContent.trim().length < 40) continue;
     try {
-      const r = await indexBrandSource(s.id);
+      const r = await indexBrandSource(s.id, strategyId);
       if (!r.alreadyFresh) indexedChunks += r.chunks;
     } catch (err) {
       console.warn(
@@ -78,6 +79,7 @@ export interface SourceContextHit {
    * sans elle, un extrait ne peut plus être rattaché — donc plus vérifié.
    */
   sourceId: string | null;
+  contentHash?: string;
   text: string;
   fileName: string;
   /** Certitude déclarée du document (OFFICIAL > DECLARED > INFERRED > ARBITRARY). */
@@ -87,17 +89,6 @@ export interface SourceContextHit {
   /** Position du chunk dans le `rawContent` — rend l'extrait retrouvable. */
   charStart: number | null;
   similarity: number;
-}
-
-/** Hydrate la certitude des documents cités (absente du payload des chunks). */
-async function loadCertainties(ids: string[]): Promise<Map<string, SourceCertainty>> {
-  const unique = Array.from(new Set(ids));
-  if (unique.length === 0) return new Map();
-  const rows = await db.brandDataSource.findMany({
-    where: { id: { in: unique } },
-    select: { id: true, certainty: true },
-  });
-  return new Map(rows.map((r) => [r.id, r.certainty as SourceCertainty]));
 }
 
 /**
@@ -116,14 +107,15 @@ export async function retrieveSourceChunksForField(
     topK,
   });
 
-  const mapped = hits
+  return hits
     .map((h) => {
       const p = (h.payload ?? {}) as Record<string, unknown>;
       return {
         sourceId: h.sourceId,
+        contentHash: typeof p.sourceContentHash === "string" ? p.sourceContentHash : undefined,
         text: typeof p.text === "string" ? p.text : "",
         fileName: typeof p.fileName === "string" ? p.fileName : "source",
-        certainty: null as SourceCertainty | null,
+        certainty: h.sourceCertainty ?? null,
         chunkIndex: typeof p.chunkIndex === "number" ? p.chunkIndex : null,
         charStart: typeof p.charStart === "number" ? p.charStart : null,
         similarity: h.similarity ?? 0,
@@ -131,13 +123,6 @@ export async function retrieveSourceChunksForField(
     })
     .filter((h) => h.text.length > 0);
 
-  const certainties = await loadCertainties(
-    mapped.map((h) => h.sourceId).filter((id): id is string => Boolean(id)),
-  );
-  for (const h of mapped) {
-    if (h.sourceId) h.certainty = certainties.get(h.sourceId) ?? null;
-  }
-  return mapped;
 }
 
 /**
@@ -149,13 +134,14 @@ export async function retrieveSourceChunksForField(
 export async function buildRetrievedSourceBrief(
   strategyId: string,
   fieldQueries: Array<{ field: string; query: string }>,
-  opts: { perFieldTopK?: number; maxChars?: number } = {},
+  opts: { perFieldTopK?: number; maxChars?: number; sourceReceipts?: SourceReceipt[] } = {},
 ): Promise<string> {
   const perFieldTopK = opts.perFieldTopK ?? 3;
   const maxChars = opts.maxChars ?? 9000;
 
   const seen = new Set<string>();
   const blocks: string[] = [];
+  const separator = "\n\n---\n\n";
   let totalChars = 0;
 
   for (const { field, query } of fieldQueries) {
@@ -164,12 +150,14 @@ export async function buildRetrievedSourceBrief(
       const key = `${h.fileName}::${h.text.slice(0, 60)}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const block = `[${field} ← ${h.fileName}] ${h.text}`;
-      if (totalChars + block.length > maxChars) continue;
+      const block = `[${field} ← ${h.fileName}, source:${h.sourceId}, certitude:${h.certainty ?? "non renseignée"}] ${h.text}`;
+      const addedChars = block.length + (blocks.length > 0 ? separator.length : 0);
+      if (totalChars + addedChars > maxChars) continue;
       blocks.push(block);
-      totalChars += block.length;
+      if (h.sourceId && h.contentHash) opts.sourceReceipts?.push({ sourceId: h.sourceId, contentHash: h.contentHash });
+      totalChars += addedChars;
     }
   }
 
-  return blocks.join("\n\n---\n\n");
+  return blocks.join(separator);
 }

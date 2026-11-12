@@ -12,7 +12,9 @@
  */
 
 import { NextResponse } from "next/server";
-import { reconcileTask, findTaskBySecretAndId } from "@/server/services/ptah";
+import { findTaskBySecretAndId } from "@/server/services/ptah";
+import { emitIntent } from "@/server/services/mestor/intents";
+import type { ForgeReconciled } from "@/server/services/ptah/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +30,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { ok } = await findTaskBySecretAndId(taskId, secret);
+  const { ok, task } = await findTaskBySecretAndId(taskId, secret);
   if (!ok) {
     return NextResponse.json({ error: "Invalid taskId/secret" }, { status: 403 });
   }
+
+  if (!task?.strategyId) return NextResponse.json({ ok: false, error: "PTAH_TASK_SCOPE_MISMATCH" }, { status: 409 });
 
   let payload: unknown;
   try {
@@ -41,7 +45,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await reconcileTask(taskId, payload);
+    const receipt = await emitIntent({ kind: "PTAH_RECONCILE_TASK",
+      strategyId: task.strategyId, taskId, webhookPayload: payload }, { caller: "webhook:ptah", operatorId: task.operatorId });
+    if (receipt.status !== "OK" || !receipt.output) {
+      return NextResponse.json({ ok: false, error: receipt.reason ?? receipt.summary },
+        { status: receipt.status === "VETOED" ? 409 : 500 });
+    }
+    const result = receipt.output as ForgeReconciled;
     return NextResponse.json({
       ok: true,
       taskId: result.taskId,

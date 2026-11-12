@@ -36,23 +36,9 @@ async function runDuePublications(): Promise<Array<{ brandActionId: string; stat
   const due = await listDueScheduledPublications();
   const out: Array<{ brandActionId: string; status: string }> = [];
   for (const job of due) {
-    // Round-12 (double-publish) : CLAIM ATOMIQUE `SCHEDULED → PUBLISHING`. Deux
-    // ticks concurrents (chemin quotidien + tick `?mode=publish`, ou une
-    // redélivrance at-least-once) lisaient tous deux la même action `pending` et
-    // ré-émettaient → le POST partait 2× sur les réseaux RÉELS de la marque
-    // (effet externe irréversible). Seul le 1er claim (count===1) émet ; le
-    // handler résout ensuite le statut (EXECUTED, ou SCHEDULED si en attente de
-    // connexion) via upsertPublishAction, écrasant PUBLISHING.
-    const claim = await db.brandAction.updateMany({
-      where: { id: job.brandActionId, status: "SCHEDULED" },
-      data: { status: "PUBLISHING" },
-    });
-    if (claim.count !== 1) {
-      out.push({ brandActionId: job.brandActionId, status: "SKIPPED_ALREADY_CLAIMED" });
-      continue;
-    }
+    // Le handler acquiert le claim atomique également utilisé par le bouton manuel.
     try {
-      await emitIntentTyped(
+      const result = await emitIntentTyped<{ mode: string }>(
         {
           kind: "ANUBIS_PUBLISH_SOCIAL_POST",
           strategyId: job.input.strategyId,
@@ -63,21 +49,18 @@ async function runDuePublications(): Promise<Array<{ brandActionId: string; stat
           imageUrl: job.input.imageUrl,
           scheduleAt: null,
           brandActionId: job.brandActionId,
+          scheduledVersion: job.input.scheduledVersion,
+          publicationPackageId: job.input.publicationPackageId,
+          publicationPackageHash: job.input.publicationPackageHash,
+          publicationTarget: job.input.publicationTarget,
           brief: job.input.brief,
           visualCopy: job.input.visualCopy,
         },
         { caller: "cron:social-sync:publish" },
       );
-      out.push({ brandActionId: job.brandActionId, status: "EMITTED" });
+      out.push({ brandActionId: job.brandActionId, status: result.mode });
     } catch (err) {
-      // Échec PRÉ-POST → restaurer SCHEDULED pour un nouveau tick. round-16a : le
-      // handler résout lui-même le statut (→ EXECUTED) quand un POST a RÉUSSI mais que
-      // le persist échoue — donc si on arrive ici après un POST réel, l'action n'est
-      // plus en PUBLISHING et ce updateMany est un NO-OP (le prédicat status=PUBLISHING
-      // ne matche pas) → jamais de re-POST irréversible.
-      await db.brandAction
-        .updateMany({ where: { id: job.brandActionId, status: "PUBLISHING" }, data: { status: "SCHEDULED" } })
-        .catch(() => {});
+      // Un handler interrompu après un POST garde PUBLISHING pour rapprochement.
       out.push({
         brandActionId: job.brandActionId,
         status: `FAILED: ${err instanceof Error ? err.message.slice(0, 120) : "?"}`,

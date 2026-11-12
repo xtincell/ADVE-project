@@ -82,7 +82,7 @@ export interface AcquireLockResult {
 
 export interface RecordResult {
   ok: boolean;
-  reason?: "LOCK_TOKEN_MISMATCH" | "SECTION_NOT_FOUND" | "WRONG_STATUS" | "INTERNAL_ERROR";
+  reason?: "LOCK_TOKEN_MISMATCH" | "SECTION_NOT_FOUND" | "WRONG_STATUS" | "INTERNAL_ERROR" | "SOURCE_CHANGED";
   section?: OracleSectionRow;
 }
 
@@ -216,6 +216,7 @@ export async function acquireGenerationLock(
       lockToken,
       lockExpiresAt,
       lastGenerationStartedAt: now,
+      staleAt: null, // a later invalidation belongs to this generation
       generationCount: { increment: 1 },
     },
   });
@@ -249,6 +250,7 @@ export async function recordGenerationSuccess(
       sectionId,
       status: "GENERATING",
       lockToken,
+      staleAt: null,
     },
     data: {
       status: "COMPLETE",
@@ -264,6 +266,13 @@ export async function recordGenerationSuccess(
     },
   });
   if (updated.count !== 1) {
+    // Retain the previous payload. A source edit during this run cannot be
+    // erased by its late success; only the current lock holder may release it.
+    const invalidated = await db.oracleSection.updateMany({
+      where: { strategyId, sectionId, status: "GENERATING", lockToken, staleAt: { not: null } },
+      data: { status: "STALE", lockToken: null, lockExpiresAt: null, errorCode: "SOURCE_CHANGED" },
+    });
+    if (invalidated.count === 1) return { ok: false, reason: "SOURCE_CHANGED" };
     return { ok: false, reason: await diagnoseFailure(strategyId, sectionId, lockToken) };
   }
   const section = await db.oracleSection.findUnique({
@@ -357,18 +366,23 @@ export async function releaseGenerationLock(
  * Mark ALL sections as STALE for a strategy. Cascade canonique appelée par
  * `writePillar` (pillar-gateway) à chaque mutation de pilier — chemin commun
  * à tous les callers depuis l'audit 2026-07-13 (T5). Only transitions
- * COMPLETE → STALE (PENDING/FAILED stay as-is, GENERATING is left untouched
- * to avoid race with active generation).
+ * COMPLETE → STALE. A running generation keeps its lock but receives a dirty
+ * marker, so its late result cannot erase a source edit. No generation starts.
  *
  * La variante ciblée `markSectionsStale(sectionIds)` a été DÉPOSÉE (T4,
  * audit 2026-07-13) : code mort sans caller — une invalidation ciblée
  * exigerait une map pilier→sections qui n'existe pas ; l'invalidation en
  * bloc est conservatrice et sûre (régénération déterministe).
  */
-export async function markAllSectionsStale(strategyId: string): Promise<{ count: number }> {
-  const result = await db.oracleSection.updateMany({
+export async function markAllSectionsStale(strategyId: string,
+  client: Pick<Prisma.TransactionClient, "oracleSection"> = db): Promise<{ count: number }> {
+  const result = await client.oracleSection.updateMany({
     where: { strategyId, status: "COMPLETE" },
     data: { status: "STALE", staleAt: new Date() },
+  });
+  await client.oracleSection.updateMany({
+    where: { strategyId, status: "GENERATING" },
+    data: { staleAt: new Date() },
   });
   return { count: result.count };
 }
@@ -425,8 +439,24 @@ async function diagnoseFailure(
 // ── Manifest exposure for governance ──────────────────────────────────
 
 /**
+ * Un contenu rédigé est enregistré : `{}` / `[]` / `""` / `null` (JSON de 2
+ * caractères au plus) ne sont pas une rédaction. Même seuil que `payloadSize`
+ * dans `oracle.listSections` et les compteurs « Rédigées » du cockpit.
+ */
+export function isWrittenPayload(payload: unknown): boolean {
+  return payload != null && JSON.stringify(payload).length > 2;
+}
+
+/**
  * Snapshot of section status for a strategy — convenience for UI and
- * monitoring. Returns { total, pending, generating, complete, failed, stale }.
+ * monitoring. Returns { total, pending, generating, complete, failed, stale,
+ * written, current }.
+ *
+ * `complete` compte le STATUT « rédaction terminée », pas le contenu : une
+ * rédaction peut se terminer vide. `written` = sections avec un contenu rédigé
+ * enregistré (même périmé) ; `current` = rédigées ET terminées, donc à jour.
+ * Sans cette distinction, l'instantané annonçait des sections complètes pour un
+ * Oracle sans aucune section rédigée (plan 4.11.e).
  */
 export async function snapshotStrategy(strategyId: string): Promise<{
   total: number;
@@ -435,22 +465,27 @@ export async function snapshotStrategy(strategyId: string): Promise<{
   complete: number;
   failed: number;
   stale: number;
+  written: number;
+  current: number;
 }> {
-  const groups = await db.oracleSection.groupBy({
-    by: ["status"],
+  const rows = await db.oracleSection.findMany({
     where: { strategyId },
-    _count: { _all: true },
+    select: { status: true, payload: true },
   });
-  const counts = { total: 0, pending: 0, generating: 0, complete: 0, failed: 0, stale: 0 };
-  for (const g of groups) {
-    const n = g._count._all;
-    counts.total += n;
-    switch (g.status) {
-      case "PENDING": counts.pending = n; break;
-      case "GENERATING": counts.generating = n; break;
-      case "COMPLETE": counts.complete = n; break;
-      case "FAILED": counts.failed = n; break;
-      case "STALE": counts.stale = n; break;
+  const counts = { total: 0, pending: 0, generating: 0, complete: 0, failed: 0, stale: 0, written: 0, current: 0 };
+  for (const row of rows) {
+    counts.total++;
+    const written = isWrittenPayload(row.payload);
+    if (written) counts.written++;
+    switch (row.status) {
+      case "PENDING": counts.pending++; break;
+      case "GENERATING": counts.generating++; break;
+      case "COMPLETE":
+        counts.complete++;
+        if (written) counts.current++;
+        break;
+      case "FAILED": counts.failed++; break;
+      case "STALE": counts.stale++; break;
     }
   }
   return counts;
