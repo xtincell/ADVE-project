@@ -670,7 +670,14 @@ présentes, 243 champs absents à côté de clés hors schéma, 17 absents. Mêm
 chemins relus en base sur un PostgreSQL jetable peuplé par les seeds du dépôt
 (plus 7 pour la démonstration CIMENCAM), instantané `READ ONLY` confirmé ; UPgraders
 A/D/V/E et La Fusée D/V/E y sont VALIDATED et complets à 100 % malgré 7 à 46
-chemins refusés chacun. Pas encore lancé sur la production.
+chemins refusés chacun.
+**Lancé en production le 12 novembre 2026** (6.27.584, tâche Coolify ponctuelle supprimée
+après usage, `node adve-shapes-audit.cjs --sans-extraits`) : transaction `READ ONLY` /
+`REPEATABLE READ` confirmée, 4 s. 69 stratégies, 274 piliers lus, 263 refusés ; 2 691
+chemins refusés — valeur présente refusée 708 (dont 546 comptées présentes par la
+maturité), absents à côté de clés hors schéma 1 422 (dont les clés plates d'intake
+`a_*`, `d_*`, `e_*`), absents 561. La sortie nominative reste hors checkout ; seuls ces
+comptes sont publiés ici.
 **Lancer en production.** Depuis 6.27.584, l'image embarque l'inventaire, bundlé
 comme le script de démarrage : `node adve-shapes-audit.cjs --sans-extraits` dans le
 conteneur (commande ponctuelle ou tâche planifiée Coolify supprimée après usage), avec
