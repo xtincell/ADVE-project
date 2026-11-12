@@ -44,6 +44,7 @@ import * as cm from "@/server/services/campaign-manager";
 import { canAccessStrategy, canAccessCampaign, getOperatorContext, scopeCampaigns } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { metricObservationTime } from "@/domain/external-metric";
+import { accessible, entityNotFound, found } from "../entity-access";
 /* lafusee:governed-active */
 
 /** Helper to enforce strategy access or throw FORBIDDEN */
@@ -193,7 +194,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
-      return ctx.db.campaign.findUniqueOrThrow({
+      return found(await ctx.db.campaign.findUnique({
         where: { id: input.id },
         include: {
           strategy: true,
@@ -215,7 +216,7 @@ export const campaignManagerRouter = createTRPCRouter({
           budgetLines: true,
           links: true,
         },
-      });
+      }), "Campagne introuvable.");
     }),
 
   /** listBrandActions — actions stratégiques (BrandAction, ADR-0094/0119) liées à la campagne. */
@@ -248,11 +249,10 @@ export const campaignManagerRouter = createTRPCRouter({
     inputSchema: z.object({ brandActionId: z.string() }),
     caller: "campaign-manager:generateBriefFromAction",
   }).mutation(async ({ ctx, input }) => {
-    const ba = await ctx.db.brandAction.findUniqueOrThrow({
+    await accessible(ctx.db.brandAction.findUnique({
       where: { id: input.brandActionId },
       select: { campaignId: true },
-    });
-    if (ba.campaignId) await enforceCampaignAccess(ctx, ba.campaignId);
+    }), "Action introuvable.", (ba) => ba.campaignId ? enforceCampaignAccess(ctx, ba.campaignId) : undefined);
     return cm.generateBriefFromBrandAction(input.brandActionId);
   }),
 
@@ -441,7 +441,7 @@ export const campaignManagerRouter = createTRPCRouter({
     inputSchema: z.object({ campaignId: z.string() }),
   }).mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
-      const campaign = await ctx.db.campaign.findUniqueOrThrow({ where: { id: input.campaignId } });
+      const campaign = found(await ctx.db.campaign.findUnique({ where: { id: input.campaignId } }), "Campagne introuvable.");
       if (campaign.state !== "BRIEF_DRAFT") {
         return { success: false, error: "Seules les campagnes en BRIEF_DRAFT peuvent etre migrees" };
       }
@@ -585,9 +585,10 @@ export const campaignManagerRouter = createTRPCRouter({
       // IDOR round-10 : campaignId est caller-owned (middleware), mais `actionId`
       // est une relation CampaignAction surfacée par listExecutions.include →
       // vérifier que l'action appartient bien à CETTE campagne.
-      const action = await ctx.db.campaignAction.findUniqueOrThrow({ where: { id: input.actionId }, select: { campaignId: true } });
-      if (action.campaignId !== input.campaignId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cette action n'appartient pas à la campagne." });
+      // Inconnue ou d'une autre campagne : la même réponse 404 (IN1).
+      const action = await ctx.db.campaignAction.findUnique({ where: { id: input.actionId }, select: { campaignId: true } });
+      if (!action || action.campaignId !== input.campaignId) {
+        throw entityNotFound("Cette action n'appartient pas à la campagne.");
       }
       return ctx.db.campaignExecution.create({ data: input });
     }),
@@ -643,8 +644,8 @@ export const campaignManagerRouter = createTRPCRouter({
       toState: productionStateEnum,
     }),
   }).mutation(async ({ ctx, input }) => {
-      const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.id } });
-      await enforceCampaignAccess(ctx, exec.campaignId); // anti-IDOR : cross-opérateur sinon
+      const exec = await accessible(ctx.db.campaignExecution.findUnique({ where: { id: input.id } }), "Exécution introuvable.",
+        (e) => enforceCampaignAccess(ctx, e.campaignId)); // anti-IDOR : cross-opérateur sinon
       const validTransitions: Record<string, string[]> = {
         DEVIS: ["BAT", "ANNULE"],
         BAT: ["EN_PRODUCTION", "DEVIS", "ANNULE"],
@@ -984,8 +985,8 @@ export const campaignManagerRouter = createTRPCRouter({
       gateReview: z.record(z.string(), z.unknown()).optional(),
     }),
   }).mutation(async ({ ctx, input }) => {
-      const ms = await ctx.db.campaignMilestone.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
-      await enforceCampaignAccess(ctx, ms.campaignId); // anti-IDOR : cross-opérateur sinon
+      await accessible(ctx.db.campaignMilestone.findUnique({ where: { id: input.id }, select: { campaignId: true } }), "Jalon introuvable.",
+        (ms) => enforceCampaignAccess(ctx, ms.campaignId)); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignMilestone.update({
         where: { id: input.id },
         data: {
@@ -1182,8 +1183,8 @@ export const campaignManagerRouter = createTRPCRouter({
       comment: z.string().optional(),
     }),
   }).mutation(async ({ ctx, input }) => {
-      const appr = await ctx.db.campaignApproval.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
-      await enforceCampaignAccess(ctx, appr.campaignId); // anti-IDOR : cross-opérateur sinon
+      await accessible(ctx.db.campaignApproval.findUnique({ where: { id: input.id }, select: { campaignId: true } }), "Validation introuvable.",
+        (appr) => enforceCampaignAccess(ctx, appr.campaignId)); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignApproval.update({
         where: { id: input.id },
         data: { status: input.status, comment: input.comment, decidedAt: new Date() },
@@ -1281,8 +1282,8 @@ export const campaignManagerRouter = createTRPCRouter({
       return next();
     })
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.campaignAsset.findUniqueOrThrow({ where: { id: input.id } });
-      await enforceCampaignAccess(ctx, existing.campaignId); // anti-IDOR : asset d'une autre marque sinon
+      const existing = await accessible(ctx.db.campaignAsset.findUnique({ where: { id: input.id } }), "Élément de campagne introuvable.",
+        (asset) => enforceCampaignAccess(ctx, asset.campaignId)); // anti-IDOR : asset d'une autre marque sinon
       return ctx.db.campaignAsset.update({
         where: { id: input.id },
         data: { fileUrl: input.fileUrl, fileSize: input.fileSize, version: existing.version + 1 },
@@ -1295,11 +1296,11 @@ export const campaignManagerRouter = createTRPCRouter({
     requireOperator: true,
     inputSchema: z.object({ id: z.string() }),
   }).mutation(async ({ ctx, input }) => {
-      const asset = await ctx.db.campaignAsset.findUniqueOrThrow({
+      const asset = await accessible(ctx.db.campaignAsset.findUnique({
         where: { id: input.id },
         include: { campaign: true },
-      });
-      await enforceCampaignAccess(ctx, asset.campaignId); // anti-IDOR : publie l'asset d'une autre marque sinon
+      }), "Élément de campagne introuvable.",
+      (a) => enforceCampaignAccess(ctx, a.campaignId)); // anti-IDOR : publie l'asset d'une autre marque sinon
       // Create BrandAsset from campaign asset
       await ctx.db.brandAsset.create({
         data: {
@@ -1427,8 +1428,8 @@ export const campaignManagerRouter = createTRPCRouter({
       return next();
     })
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.campaignBrief.findUniqueOrThrow({ where: { id: input.id } });
-      await enforceCampaignAccess(ctx, existing.campaignId); // anti-IDOR : brief d'une autre marque sinon
+      const existing = await accessible(ctx.db.campaignBrief.findUnique({ where: { id: input.id } }), "Brief introuvable.",
+        (brief) => enforceCampaignAccess(ctx, brief.campaignId)); // anti-IDOR : brief d'une autre marque sinon
       return ctx.db.campaignBrief.update({
         where: { id: input.id },
         data: {
@@ -1452,11 +1453,10 @@ export const campaignManagerRouter = createTRPCRouter({
       // Étage « Briefs → [validation] → Missions » : la validation matérialise la
       // mission liée (briefId + budget définitif du brief + brandActionId). Voie
       // unique service `createMissionFromValidatedBrief` (idempotent par briefId).
-      const brief = await ctx.db.campaignBrief.findUniqueOrThrow({
+      await accessible(ctx.db.campaignBrief.findUnique({
         where: { id: input.id },
         select: { campaignId: true },
-      });
-      if (brief.campaignId) await enforceCampaignAccess(ctx, brief.campaignId);
+      }), "Brief introuvable.", (brief) => brief.campaignId ? enforceCampaignAccess(ctx, brief.campaignId) : undefined);
       const res = await cm.createMissionFromValidatedBrief(input.id);
       return { success: true, briefId: res.briefId, missionId: res.missionId, created: res.created };
     }),
@@ -1522,9 +1522,8 @@ export const campaignManagerRouter = createTRPCRouter({
   getReport: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const report = await ctx.db.campaignReport.findUniqueOrThrow({ where: { id: input.id } });
-      await enforceCampaignAccess(ctx, report.campaignId); // anti-IDOR : lecture cross-tenant sinon
-      return report;
+      return accessible(ctx.db.campaignReport.findUnique({ where: { id: input.id } }), "Rapport introuvable.",
+        (report) => enforceCampaignAccess(ctx, report.campaignId)); // anti-IDOR : lecture cross-tenant sinon
     }),
 
   // ==========================================================================
@@ -1699,10 +1698,10 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
-      const campaign = await ctx.db.campaign.findUniqueOrThrow({
+      const campaign = found(await ctx.db.campaign.findUnique({
         where: { id: input.campaignId },
         include: { actions: true, amplifications: true },
-      });
+      }), "Campagne introuvable.");
       // Load V pillar for product catalog
       const pillarV = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: campaign.strategyId, key: "v" } },
@@ -1772,8 +1771,8 @@ export const campaignManagerRouter = createTRPCRouter({
   getFieldOp: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const fo = await ctx.db.campaignFieldOp.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
-      await enforceCampaignAccess(ctx, fo.campaignId); // anti-IDOR : lecture cross-tenant sinon
+      await accessible(ctx.db.campaignFieldOp.findUnique({ where: { id: input.id }, select: { campaignId: true } }), "Opération terrain introuvable.",
+        (fo) => enforceCampaignAccess(ctx, fo.campaignId)); // anti-IDOR : lecture cross-tenant sinon
       return cm.getFieldOp(input.id);
     }),
 
@@ -1888,9 +1887,10 @@ export const campaignManagerRouter = createTRPCRouter({
       // IDOR round-10 : campaignId caller-owned (middleware), mais `fieldOpId`
       // (relation CampaignFieldOp surfacée par getFieldReport.include) doit
       // appartenir à CETTE campagne — sinon lecture cross-tenant du brief terrain.
-      const fieldOp = await ctx.db.campaignFieldOp.findUniqueOrThrow({ where: { id: input.fieldOpId }, select: { campaignId: true } });
-      if (fieldOp.campaignId !== input.campaignId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cette opération terrain n'appartient pas à la campagne." });
+      // Inconnue ou d'une autre campagne : la même réponse 404 (IN1).
+      const fieldOp = await ctx.db.campaignFieldOp.findUnique({ where: { id: input.fieldOpId }, select: { campaignId: true } });
+      if (!fieldOp || fieldOp.campaignId !== input.campaignId) {
+        throw entityNotFound("Cette opération terrain n'appartient pas à la campagne.");
       }
       const { data: reportData, photos, ...rest } = input;
       return ctx.db.campaignFieldReport.create({
@@ -1909,12 +1909,10 @@ export const campaignManagerRouter = createTRPCRouter({
   getFieldReport: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({
+      return accessible(ctx.db.campaignFieldReport.findUnique({
         where: { id: input.id },
         include: { fieldOp: true },
-      });
-      await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : lecture cross-tenant sinon
-      return fr;
+      }), "Rapport terrain introuvable.", (fr) => enforceCampaignAccess(ctx, fr.campaignId)); // anti-IDOR : lecture cross-tenant sinon
     }),
 
   validateFieldReport: governedProcedure({
@@ -1927,8 +1925,8 @@ export const campaignManagerRouter = createTRPCRouter({
       overrides: z.record(z.string(), z.unknown()).optional(),
     }),
   }).mutation(async ({ ctx, input }) => {
-      const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
-      await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : cross-opérateur sinon
+      await accessible(ctx.db.campaignFieldReport.findUnique({ where: { id: input.id }, select: { campaignId: true } }), "Rapport terrain introuvable.",
+        (fr) => enforceCampaignAccess(ctx, fr.campaignId)); // anti-IDOR : cross-opérateur sinon
       return cm.validateFieldReport(input.id, input.validatorId, input.overrides);
     }),
 
@@ -1942,8 +1940,8 @@ export const campaignManagerRouter = createTRPCRouter({
     requireOperator: true,
     inputSchema: z.object({ id: z.string(), reason: z.string() }),
   }).mutation(async ({ ctx, input }) => {
-      const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
-      await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : cross-opérateur sinon
+      await accessible(ctx.db.campaignFieldReport.findUnique({ where: { id: input.id }, select: { campaignId: true } }), "Rapport terrain introuvable.",
+        (fr) => enforceCampaignAccess(ctx, fr.campaignId)); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignFieldReport.update({
         where: { id: input.id },
         data: { status: "SUBMITTED", data: { rejected: true, reason: input.reason } as Prisma.InputJsonValue },
@@ -2001,11 +1999,10 @@ export const campaignManagerRouter = createTRPCRouter({
       return next();
     })
     .mutation(async ({ ctx, input }) => {
-      const action = await ctx.db.brandAction.findUniqueOrThrow({
+      await accessible(ctx.db.brandAction.findUnique({
         where: { id: input.brandActionId },
         select: { id: true, strategyId: true },
-      });
-      await enforceStrategyAccess(ctx, action.strategyId);
+      }), "Action introuvable.", (action) => enforceStrategyAccess(ctx, action.strategyId));
       return ctx.db.brandAction.update({
         where: { id: input.brandActionId },
         data: { status: input.status },
@@ -2023,11 +2020,11 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string(), missionId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
-      const mission = await ctx.db.mission.findUniqueOrThrow({
+      const mission = await ctx.db.mission.findUnique({
         where: { id: input.missionId },
         select: { id: true, strategyId: true, campaignId: true },
       });
-      if (mission.campaignId !== input.campaignId) throw new TRPCError({ code: "NOT_FOUND", message: "Mission introuvable dans cette campagne" });
+      if (!mission || mission.campaignId !== input.campaignId) throw entityNotFound("Mission introuvable dans cette campagne");
       await enforceStrategyAccess(ctx, mission.strategyId);
       // Récence RÉELLE des remontées externes (ADR-0146) : une source est dite
       // « connectée » si elle a poussé une métrique dans les 30 derniers jours,
@@ -2187,13 +2184,16 @@ export const campaignManagerRouter = createTRPCRouter({
   }).mutation(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
 
-      const action = await ctx.db.brandAction.findUniqueOrThrow({
+      // L'action doit appartenir à la marque gardée : inconnue ou d'une autre
+      // marque, la même réponse 404 (IN1), avant toute création ni écriture.
+      const action = await ctx.db.brandAction.findUnique({
         where: { id: input.actionId },
       });
+      if (!action || action.strategyId !== input.strategyId) throw entityNotFound("Action introuvable dans cette marque.");
 
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
-      });
+      }), "Marque introuvable.");
 
       const campaignCode = cm.generateCampaignCode();
       const budgetPlanned = action.budgetMin ?? 0;
@@ -2265,10 +2265,10 @@ export const campaignManagerRouter = createTRPCRouter({
   }).mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
 
-      const campaign = await ctx.db.campaign.findUniqueOrThrow({
+      const campaign = found(await ctx.db.campaign.findUnique({
         where: { id: input.campaignId },
         include: { strategy: true, briefs: true },
-      });
+      }), "Campagne introuvable.");
 
       let mission = await ctx.db.mission.findFirst({
         where: { campaignId: input.campaignId },
@@ -2321,7 +2321,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
 
-      const campaign = await ctx.db.campaign.findUniqueOrThrow({
+      const campaign = found(await ctx.db.campaign.findUnique({
         where: { id: input.campaignId },
         include: {
           aarrMetrics:   true,
@@ -2331,7 +2331,7 @@ export const campaignManagerRouter = createTRPCRouter({
           missions:      { select: { id: true, title: true, status: true } },
           milestones:    { orderBy: { dueDate: "asc" } },
         },
-      });
+      }), "Campagne introuvable.");
 
       // ── Métriques AARRR groupées par stage ──────────────────────────────
       const metricsByStage = campaign.aarrMetrics.reduce<
@@ -2403,7 +2403,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
 
-      const campaign = await ctx.db.campaign.findUniqueOrThrow({
+      const campaign = found(await ctx.db.campaign.findUnique({
         where: { id: input.campaignId },
         select: {
           id: true,
@@ -2435,7 +2435,7 @@ export const campaignManagerRouter = createTRPCRouter({
             },
           },
         },
-      });
+      }), "Campagne introuvable.");
 
       return {
         campaignId: campaign.id,

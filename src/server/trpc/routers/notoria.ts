@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateBatch } from "@/server/services/notoria/engine";
@@ -511,7 +512,7 @@ export const notoriaRouter = createTRPCRouter({
       strategyId: z.string(),
       recoIds: z.array(z.string()).min(1),
     }),
-  }).mutation(({ input }) => applyRecos(input.strategyId, input.recoIds)),
+  }).mutation(({ input, ctx }) => applyRecos(input.strategyId, input.recoIds, "REVIEW", { intentId: ctx.intentId })),
 
   applyBatch: governedProcedure({
     kind: "LEGACY_NOTORIA_APPLY_BATCH",
@@ -543,7 +544,7 @@ export const notoriaRouter = createTRPCRouter({
       if (accepted.length > 0) {
         return applyRecos(
           input.strategyId,
-          accepted.map((r) => r.id), "SHORTLIST",
+          accepted.map((r) => r.id), "SHORTLIST", { intentId: ctx.intentId },
         );
       }
 
@@ -559,9 +560,13 @@ export const notoriaRouter = createTRPCRouter({
       recoId: z.string(),
       reason: z.string(),
     }),
-  }).mutation(({ input }) =>
-      revertReco(input.strategyId, input.recoId, input.reason),
-    ),
+  }).mutation(async ({ input, ctx }) => {
+      // Same restorer and typed refusals as the journal and the history action (ADR-0207).
+      const result = await revertReco(input.strategyId, input.recoId, input.reason,
+        { operatorId: ctx.session.user.id, intentId: ctx.intentId });
+      if (!result.reverted) throw new TRPCError({ code: result.refusal, message: result.reason });
+      return result;
+    }),
 
   // ══════════════════════════════════════════════════════════════════
   // PUBLICATION (Jehuty)

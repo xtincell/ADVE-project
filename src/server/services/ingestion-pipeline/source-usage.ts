@@ -6,12 +6,25 @@ import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { TypedRefusal, type TypedRefusalCode } from "@/domain/typed-refusal";
 import { sourceOriginalSummary } from "@/domain/source-original";
 import type { SourceReceipt } from "@/domain/source-certainty";
 import { getPillarDependents, type PillarKey } from "@/lib/types/advertis-vector";
 import { markPillarsStale } from "@/server/services/pillar-gateway/review-invalidation";
 
 export type SourceDb = Prisma.TransactionClient;
+
+/**
+ * Refus métier d'un document, typé pour la réponse HTTP (557, RESIDUAL-DEBT) :
+ * même message qu'avant, mais 409/403/404/400 au lieu de 500. Le message reste
+ * lisible par les appelants qui le reconnaissent (`SOURCE_CHANGED:`).
+ * Pas de `@trpc/server` ici : ce module entre dans le script de démarrage de
+ * l'image, où ce paquet n'existe pas. Le middleware de base des procédures
+ * convertit `TypedRefusal` en `TRPCError` du même code.
+ */
+export function sourceRefusal(code: TypedRefusalCode, message: string): TypedRefusal {
+  return new TypedRefusal(code, message);
+}
 export type { SourceReceipt } from "@/domain/source-certainty";
 
 function canonical(value: unknown): unknown {
@@ -280,22 +293,28 @@ export async function setSourceUse(input: {
 }) {
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.sourceId} FOR UPDATE`;
-    const { source } = await resolveBrandSource(input.sourceId, undefined, tx);
+    // Retirée entre la garde du routeur et ce verrou : 404 typé, jamais 500.
+    const { source } = await resolveBrandSource(input.sourceId, undefined, tx).catch((error: unknown) => {
+      if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) throw sourceRefusal("NOT_FOUND", "Ce document n’est plus accessible dans ce dossier.");
+      throw error;
+    });
     await tx.$queryRaw(Prisma.sql`SELECT id FROM "Strategy" WHERE id IN (${Prisma.join([source.strategyId, input.strategyId].sort())}) ORDER BY id FOR UPDATE`);
     const owner = await tx.strategy.findUniqueOrThrow({ where: { id: source.strategyId }, select: { operatorId: true, userId: true } });
-    const target = await tx.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true, operatorId: true, userId: true } });
-    if (target.id === source.strategyId) throw new Error("Le document appartient déjà à cette marque.");
+    // An unknown target (another installation's id) gets exactly the answer of
+    // a target outside the portfolio, never a Prisma record-not-found error.
+    const target = await tx.strategy.findUnique({ where: { id: input.strategyId }, select: { id: true, operatorId: true, userId: true } });
+    if (target?.id === source.strategyId) throw sourceRefusal("CONFLICT", "Le document appartient déjà à cette marque.");
     const manages = (s: { userId: string; operatorId: string | null }) => input.admin
       || s.userId === input.userId || Boolean(input.operatorId && s.operatorId === input.operatorId);
-    if (!manages(owner)) throw new Error("Seul le responsable du document peut modifier cet usage.");
+    if (!manages(owner)) throw sourceRefusal("FORBIDDEN", "Seul le responsable du document peut modifier cet usage.");
     const key = { sourceId: input.sourceId, strategyId: input.strategyId };
     if (input.revoke) {
       await tx.brandSourceUse.updateMany({ where: { ...key, revokedAt: null }, data: { revokedAt: new Date(), updatedById: input.userId } });
       await invalidateSourceDerivatives(tx, input.sourceId, input.strategyId);
       return { linked: false };
     }
-    if (!target.operatorId || target.operatorId !== owner.operatorId) throw new Error("Le partage exige deux marques du même opérateur.");
-    if (!manages(target)) throw new Error("Seul le responsable des deux dossiers peut ajouter cet usage.");
+    if (!target?.operatorId || target.operatorId !== owner.operatorId) throw sourceRefusal("FORBIDDEN", "Le partage exige deux marques du même opérateur.");
+    if (!manages(target)) throw sourceRefusal("FORBIDDEN", "Seul le responsable des deux dossiers peut ajouter cet usage.");
     const previous = await tx.brandSourceUse.findUnique({ where: { sourceId_strategyId: key } });
     if (previous && !previous.revokedAt && previous.operatorId === target.operatorId) return { linked: true };
     await tx.brandSourceUse.upsert({ where: { sourceId_strategyId: key },

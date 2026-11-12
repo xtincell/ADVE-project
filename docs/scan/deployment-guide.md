@@ -1,7 +1,7 @@
 # Deployment Guide
 
 > Target platform: **Vercel** ([vercel.json](../../vercel.json)) with PostgreSQL (Supabase or any Postgres).
-> CI: **GitHub Actions** (11 workflows under [.github/workflows/](../../.github/workflows/)).
+> CI: **GitHub Actions** (15 workflows, recounted 2026-11-10, under [.github/workflows/](../../.github/workflows/)).
 
 ---
 
@@ -100,7 +100,6 @@ All 11 workflows live under [.github/workflows/](../../.github/workflows/). Summ
 | [`chromatic.yml`](../../.github/workflows/chromatic.yml) | PR + push | Visual regression on Storybook | informational |
 | [`lighthouse.yml`](../../.github/workflows/lighthouse.yml) | nightly | Lighthouse audit on /, /intake, /cockpit | informational |
 | [`claude.yml`](../../.github/workflows/claude.yml) | manual / PR comment | Triggers Claude Code on a PR | manual |
-| [`release.yml`](../../.github/workflows/release.yml) | tag push | Release notes + changelog | manual |
 
 ### CI env (stubs)
 
@@ -172,4 +171,4 @@ There is **no APM SDK** wired into the codebase as of 2026-05-13 — observabili
 7. ELB/CDN passes SSE long-poll traffic through `/api/nsp` and `/api/notifications/stream` (no idle timeout < 30 s).
 8. Storybook + Chromatic baseline accepted.
 9. [CHANGELOG.md](../../CHANGELOG.md) updated with the version bump.
-10. Tag the release: `git tag v6.x.y && git push --tags` (triggers `release.yml`).
+10. Deliver: run *Build image (ghcr)*, then restart the Coolify resource ([BUILD-DEPORT.md](../deploy/BUILD-DEPORT.md)). No workflow runs on tags.

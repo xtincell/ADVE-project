@@ -29,7 +29,11 @@ import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init
 import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un client inconnu reçoit 404 typé, jamais P2025 ni un message Prisma. */
+const CLIENT_NOT_FOUND = "Client introuvable.";
 
 export const clientRouter = createTRPCRouter({
   create: governedProcedure({
@@ -99,7 +103,7 @@ export const clientRouter = createTRPCRouter({
 
       const {id,expectedUpdatedAt,...data}=input;
       if (data.sector) data.sector=classifyCanonicalSector(data.sector).code;
-      const client=await ctx.db.client.findUniqueOrThrow({where:{id},select:{operatorId:true}});
+      const client=found(await ctx.db.client.findUnique({where:{id},select:{operatorId:true}}),CLIENT_NOT_FOUND);
       return writeClientOrganization(ctx.db,ctx.session.user,{operatorId:client.operatorId,id,expectedUpdatedAt,data});
     }),
 
@@ -114,7 +118,7 @@ export const clientRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      return ctx.db.client.findUniqueOrThrow({
+      return found(await ctx.db.client.findUnique({
         where: { id: input.id },
         include: {
           parentClient: { select: { id:true,name:true,organizationKind:true } },
@@ -124,7 +128,7 @@ export const clientRouter = createTRPCRouter({
           },
           operator: { select: { id: true, name: true } },
         },
-      });
+      }), CLIENT_NOT_FOUND);
     }),
 
   list: protectedProcedure
@@ -204,7 +208,7 @@ export const clientRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      const client=await ctx.db.client.findUniqueOrThrow({where:{id:input.id},select:{operatorId:true}});
+      const client=found(await ctx.db.client.findUnique({where:{id:input.id},select:{operatorId:true}}),CLIENT_NOT_FOUND);
       return writeClientOrganization(ctx.db,ctx.session.user,{operatorId:client.operatorId,id:input.id,
         expectedUpdatedAt:input.expectedUpdatedAt,data:{status:"ARCHIVED"}});
     }),
@@ -230,7 +234,7 @@ export const clientRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      const client = await ctx.db.client.findUniqueOrThrow({ where: { id: input.clientId } });
+      const client = found(await ctx.db.client.findUnique({ where: { id: input.clientId } }), CLIENT_NOT_FOUND);
 
       if (client.status === "ARCHIVED") throw new TRPCError({ code: "BAD_REQUEST", message: "Client archivé." });
       const actor = { ...ctx.session.user, id: await resolveSessionUserId(ctx) };

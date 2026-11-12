@@ -13,7 +13,11 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessCampaign } from "@/server/services/operator-isolation";
 import * as mp from "@/server/services/media-plan";
 import * as perf from "@/server/services/media-perf";
+import { accessible } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un plan ou une ligne inconnus, ou d'une autre campagne, reçoivent le même 404. */
+const PLAN_NOT_FOUND = "Plan média introuvable.";
 
 type Ctx = { session: { user: { id: string; role: string; operatorId?: string | null } } };
 
@@ -39,8 +43,8 @@ export const mediaPlanRouter = createTRPCRouter({
   pca: protectedProcedure
     .input(z.object({ planId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const plan = await ctx.db.mediaPlan.findUniqueOrThrow({ where: { id: input.planId }, select: { campaignId: true } });
-      await assertCampaignAccess(ctx, plan.campaignId);
+      await accessible(ctx.db.mediaPlan.findUnique({ where: { id: input.planId }, select: { campaignId: true } }), PLAN_NOT_FOUND,
+        (plan) => assertCampaignAccess(ctx, plan.campaignId));
       return mp.getMediaPlanPca(input.planId);
     }),
 
@@ -81,8 +85,8 @@ export const mediaPlanRouter = createTRPCRouter({
     }),
     caller: "media-plan:addLine",
   }).mutation(async ({ ctx, input }) => {
-    const plan = await ctx.db.mediaPlan.findUniqueOrThrow({ where: { id: input.planId }, select: { campaignId: true } });
-    await assertCampaignAccess(ctx, plan.campaignId);
+    await accessible(ctx.db.mediaPlan.findUnique({ where: { id: input.planId }, select: { campaignId: true } }), PLAN_NOT_FOUND,
+      (plan) => assertCampaignAccess(ctx, plan.campaignId));
     return mp.addMediaPlanLine(input);
   }),
 
@@ -96,8 +100,8 @@ export const mediaPlanRouter = createTRPCRouter({
     }),
     caller: "media-plan:recordActuals",
   }).mutation(async ({ ctx, input }) => {
-    const line = await ctx.db.mediaPlanLine.findUniqueOrThrow({ where: { id: input.lineId }, select: { plan: { select: { campaignId: true } } } });
-    await assertCampaignAccess(ctx, line.plan.campaignId);
+    await accessible(ctx.db.mediaPlanLine.findUnique({ where: { id: input.lineId }, select: { plan: { select: { campaignId: true } } } }),
+      "Ligne de plan média introuvable.", (line) => assertCampaignAccess(ctx, line.plan.campaignId));
     return mp.recordLineActuals(input);
   }),
 

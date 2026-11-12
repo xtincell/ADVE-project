@@ -35,12 +35,12 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 769,
+    line: 785,
     reason: "Transaction atomique interne (batch et projection) — contenu et cache utilisent la transaction partagée ; scoring et événements suivent le commit (ADR-0198, reçu PostgreSQL).",
   },
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 813,
+    line: 829,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
   {
@@ -51,7 +51,7 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
   },
   {
     file: "src/server/trpc/routers/quick-intake.ts",
-    line: 89,
+    line: 94,
     reason:
       "seedPillarFromIntake (reroute C1, P2-b) — bare writePillar VOLONTAIRE : préserve l'advertis_vector calculé à l'intake. writePillarAndScore recalculerait le score depuis le contenu brut partiel → régression du score affiché. Validation Zod + PillarVersion + cache canonique atomique + cascade staleness + author trail sont appliqués ; le score est recalculé à l'activation.",
   },

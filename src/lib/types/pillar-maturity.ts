@@ -120,6 +120,15 @@ export interface PillarAssessment {
    * à fabriquer). Alimente uniquement le gate du bouton Enrichir. Jamais un nombre.
    */
   optionalFillable: string[];
+  /**
+   * Chemins PRÉSENTS mais refusés par le schéma strict du pilier (piliers de
+   * `STRICT_CONTENT_PILLARS`, aujourd'hui S — ADR-0214 amendement 6.27.564).
+   * Comptés manquants (needsHuman) et retirés du % ; un pilier qui en porte n'est
+   * ni composé (ENRICHED) ni complet. `satisfied` n'est PAS modifié : le score
+   * structurel reste gelé (ADR-0102). L'auto-filler ne réécrit jamais ces valeurs
+   * présentes — leur reprise passe par le recalcul gouverné.
+   */
+  invalid: string[];
   /** Percentage of COMPLETE requirements satisfied */
   completionPct: number;
   /** True when currentStage === "COMPLETE" */

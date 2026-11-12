@@ -29,10 +29,14 @@ export async function assertProcessAccess(userId: string, processId: string): Pr
   const proc = await db.process.findUnique({ where: { id: processId }, select: { strategyId: true } });
   if (!proc) throw new TRPCError({ code: "NOT_FOUND", message: "Process introuvable" });
   if (proc.strategyId) {
-    await assertStrategyRead(userId, proc.strategyId);
+    await assertStrategyRead(userId, proc.strategyId).catch((error: unknown) => {
+      if (error instanceof TRPCError && error.code === "FORBIDDEN") throw new TRPCError({ code: "NOT_FOUND", message: "Process introuvable" });
+      throw error;
+    });
     return;
   }
   const opCtx = await getOperatorContext(userId);
   if (opCtx.role === "ADMIN" || opCtx.operatorId) return;
-  throw new TRPCError({ code: "FORBIDDEN", message: "Process système réservé au staff" });
+  // IN1 : un process hors d'atteinte reçoit la réponse d'un process inconnu.
+  throw new TRPCError({ code: "NOT_FOUND", message: "Process introuvable" });
 }

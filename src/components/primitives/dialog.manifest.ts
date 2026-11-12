@@ -3,7 +3,7 @@ import { defineComponentManifest } from "@/lib/design/define-component-manifest"
 export const manifest = defineComponentManifest({
   component: "dialog",
   governor: "NETERU_UI",
-  version: "1.0.0",
+  version: "1.1.0",
   anatomy: ["overlay", "content", "header", "title", "description", "body", "footer", "close"],
   variants: [
     { name: "alert", description: "Information bloquante, 1 CTA" },
@@ -11,6 +11,7 @@ export const manifest = defineComponentManifest({
     { name: "form", description: "Édition rapide modale" },
     { name: "wide", description: "Lecture (PDF preview, Oracle section)" },
     { name: "fullscreen", description: "Mobile primarily, ou édition longue desktop" },
+    { name: "note", description: "Ouvert de lui-même (note de version, accueil) : blocking={false}, ne capte aucun geste destiné à la page" },
   ],
   sizes: ["sm", "md", "lg", "xl", "fullscreen"],
   states: ["closed", "opening", "open", "closing"],

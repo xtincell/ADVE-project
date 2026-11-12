@@ -1,14 +1,15 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { getBlogIndex } from "@/components/upgraders/blog-data";
+import { listPublicDossierEntries } from "@/server/services/seshat/argos";
 
 // site-prober finding: no sitemap.xml. Native Next sitemap route.
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? "https://lafusee-app.vercel.app";
 
 // Public, indexable STATIC routes. Hardcoded : la marketing/public surface.
 // Le contenu DYNAMIQUE (articles blog, missions Guilde publiées, dossiers Argos
-// PASS) est ajouté plus bas via la DB — chaque source en try/catch pour que le
-// sitemap reste valide même si la DB tombe.
+// publiés) est ajouté plus bas — chaque source en try/catch pour que le
+// sitemap reste valide même si la DB ou la bibliothèque Argos tombe.
 const PUBLIC_PATHS = [
   "",
   "/lafusee",
@@ -79,16 +80,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     /* missions indisponibles — skip */
   }
 
-  // ── Dossiers Argos publics (safety verdict PASS uniquement) ──
+  // ── Dossiers Argos publics — même source que /argos/[ref] (SHK-0002) :
+  // bibliothèque canonique si raccordée, sinon dossiers PASS de La Fusée.
   try {
-    const dossiers = await db.campaignReferenceDossier.findMany({
-      where: { published: true, safetyVerdict: "PASS" },
-      select: { ref: true, updatedAt: true },
-    });
+    const { entries: dossiers } = await listPublicDossierEntries();
     for (const d of dossiers) {
       entries.push({
         url: `${BASE}/argos/${encodeURIComponent(d.ref)}`,
-        lastModified: d.updatedAt,
+        ...(d.updatedAt ? { lastModified: new Date(d.updatedAt) } : {}),
         changeFrequency: "monthly",
         priority: 0.5,
       });

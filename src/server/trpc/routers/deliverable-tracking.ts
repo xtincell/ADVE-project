@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found, refusalAsNotFound } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessMission, getOperatorContext } from "@/server/services/operator-isolation";
 /* lafusee:governed-active */
@@ -18,8 +19,9 @@ async function assertDeliverableAccess(
   missionId: string,
 ): Promise<void> {
   const opCtx = await getOperatorContext(ctx.session.user.id);
+  // IN1 : hors d'atteinte, la même réponse 404 qu'une entité inconnue.
   if (!(await canAccessMission(missionId, opCtx))) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce livrable." });
+    throw new TRPCError({ code: "NOT_FOUND", message: "Livrable introuvable" });
   }
 }
 
@@ -89,10 +91,10 @@ export const deliverableTrackingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      await assertDeliverableAccess(ctx, await missionIdOfTracking(ctx, input.trackingId));
-      const tracking = await ctx.db.deliverableTracking.findUniqueOrThrow({
+      await refusalAsNotFound(async () => assertDeliverableAccess(ctx, await missionIdOfTracking(ctx, input.trackingId)), "Suivi introuvable");
+      const tracking = found(await ctx.db.deliverableTracking.findUnique({
         where: { id: input.trackingId },
-      });
+      }), "Suivi introuvable");
       const receivedSignals = Array.isArray(tracking.receivedSignals) ? tracking.receivedSignals : [];
       receivedSignals.push(input.signal as unknown as Prisma.JsonValue);
       return ctx.db.deliverableTracking.update({
@@ -142,7 +144,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      await assertDeliverableAccess(ctx, await missionIdOfTracking(ctx, input.trackingId));
+      await refusalAsNotFound(async () => assertDeliverableAccess(ctx, await missionIdOfTracking(ctx, input.trackingId)), "Suivi introuvable");
       return ctx.db.deliverableTracking.update({
         where: { id: input.trackingId },
         data: { status: "EXPIRED" },

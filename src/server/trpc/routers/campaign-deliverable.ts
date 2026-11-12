@@ -75,6 +75,8 @@ export const campaignDeliverableRouter = createTRPCRouter({
       strategyId: StringId,
       operatorId: StringId,
       deliverableId: StringId,
+      /** Version lue : requise pour remplacer contenu, visuel ou délégation (sinon CONFLICT). */
+      expectedUpdatedAt: z.string().datetime().nullable().optional(),
       patches: z.object({
         status: z.enum(["TODO", "IN_PROGRESS", "DELIVERED", "VALIDATED"]).optional(),
         dueDate: z.string().nullable().optional(),

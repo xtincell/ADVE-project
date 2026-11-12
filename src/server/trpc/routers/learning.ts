@@ -5,6 +5,7 @@
 import { z } from "zod";
 import type { Prisma, CourseLevel } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertTalentProfileAccess } from "./_talent-access-guard";
 /* lafusee:governed-active */
@@ -46,7 +47,7 @@ export const learningRouter = createTRPCRouter({
   getCourse: protectedProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.course.findUniqueOrThrow({ where: { slug: input.slug }, include: { enrollments: true } });
+      return found(await ctx.db.course.findUnique({ where: { slug: input.slug }, include: { enrollments: true } }), "Formation introuvable.");
     }),
 
   publishCourse: governedProcedure({

@@ -48,6 +48,11 @@ export function ForceSection({ token }: { token: string }) {
 
   return (
     <section className="mb-10 print:hidden">
+      {/* Phrase-pont portée ICI (recette F16) : elle annonce la force /200 et ne
+          doit apparaître que si cette force est réellement affichée. */}
+      <p className="mx-auto mb-6 max-w-[60ch] text-center text-sm text-foreground-secondary">
+        {t("intakeResult.bridge.force")}
+      </p>
       <div className="mb-6"><OvertonPositioningView value={data.overton} compact /></div>
       <header className="mb-2 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">

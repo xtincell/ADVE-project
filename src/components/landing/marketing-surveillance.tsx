@@ -6,8 +6,8 @@ const TARGETS = [
   {
     id: "founder", actor: "01 · founder", name: "FONDATEUR",
     angle: -135, dist: 140, coord: "NW.41 / -42",
-    pillar: "PILIER E · EXPÉRIENCE",
-    score: "−42", scoreLabel: "/100 vs benchmark",
+    pillar: "PILIER E · ENGAGEMENT",
+    score: "E", scoreLabel: "pilier en tension · illustration",
     quote: "Tu paies tier 1, tu reçois tier 3.",
     copy: "Bureaux internationaux qui te traitent en client secondaire. Localement, choix entre débrouille et boîte aux lettres premium.",
     meta: [["DOULEUR", "Sous-traitance"], ["STATUT", "DÉFAILLANT"]],
@@ -15,8 +15,8 @@ const TARGETS = [
   {
     id: "agency", actor: "02 · agence", name: "AGENCE",
     angle: -45, dist: 160, coord: "NE.78 / -58",
-    pillar: "PILIER S · SYSTÈME",
-    score: "−58", scoreLabel: "/100 vs benchmark",
+    pillar: "PILIER S · STRATÉGIE",
+    score: "S", scoreLabel: "pilier en tension · illustration",
     quote: "Tu réinventes la roue à chaque brief.",
     copy: "Pas de scoring, pas de gates, pas de pipeline. Chaque chef de projet improvise.",
     meta: [["DOULEUR", "Improvisation"], ["STATUT", "ABSENT"]],
@@ -24,8 +24,8 @@ const TARGETS = [
   {
     id: "creator", actor: "03 · créatif", name: "CRÉATIF",
     angle: 45, dist: 130, coord: "SE.22 / -51",
-    pillar: "PILIER T · TRACTION",
-    score: "−51", scoreLabel: "/100 vs benchmark",
+    pillar: "PILIER T · TRACK",
+    score: "T", scoreLabel: "pilier en tension · illustration",
     quote: "Talent oui. Distribution non.",
     copy: "Bouche-à-oreille comme seule voie. Aucun tier reconnu, aucune progression lisible.",
     meta: [["DOULEUR", "Distribution"], ["STATUT", "FRACTURÉ"]],
@@ -111,9 +111,11 @@ export function MarketingSurveillance() {
 
             <footer className="flex justify-between gap-4 font-mono text-2xs uppercase tracking-widest pt-3 border-t border-dashed" style={{ color: "var(--color-foreground-muted)", borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>
               {/* Plus de « n=412 » — taille d'échantillon d'une étude inexistante
-                  (audit 2026-07-16). Le radar est une ILLUSTRATION du protocole. */}
+                  (audit 2026-07-16). Le radar est une ILLUSTRATION du protocole.
+                  Recette F16 : les écarts « −42/100 vs benchmark » étaient eux
+                  aussi inventés — remplacés par la lettre du pilier en tension. */}
               <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> PROTOCOLE DE VEILLE</span>
-              <span>illustration · secteurs suivis en continu</span>
+              <span>illustration · aucune mesure</span>
             </footer>
           </div>
 

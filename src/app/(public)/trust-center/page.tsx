@@ -16,7 +16,7 @@ export default function TrustCenterPage() {
   return (
     <LegalShell
       title="Trust Center"
-      updated="16 octobre 2026"
+      updated="11 novembre 2026"
       intro={
         <>
           Cette page documente les mécanismes par lesquels La Fusée tient ses engagements à l&apos;échelle.
@@ -50,7 +50,8 @@ export default function TrustCenterPage() {
           <li>
             <strong>Fallback déterministe intégral</strong> : la compilation de l&apos;Oracle (35/35 sections)
             fonctionne <em>sans aucun LLM</em> — composition depuis les données réelles, provenance tracée. Un
-            incident fournisseur IA ne bloque jamais une livraison.
+            incident fournisseur IA ne bloque pas la compilation de l&apos;Oracle ; les traitements assistés,
+            eux, attendent le retour du service.
           </li>
           <li>
             <strong>Connecteurs externes honnêtes</strong> : sans credentials, un connecteur répond par un statut
@@ -63,8 +64,8 @@ export default function TrustCenterPage() {
         <ul>
           <li>
             <strong>Gouvernance par intents</strong> : toute mutation métier transite par un bus unique, journalisé
-            en chaîne d&apos;empreintes (hash-chain) — ~480 types d&apos;opérations cataloguées, chacune avec ses
-            objectifs de latence/coût (SLO) déclarés.
+            en chaîne d&apos;empreintes (hash-chain) — plus de 600 types d&apos;opérations cataloguées (634 au relevé
+            du 11 novembre 2026), chacun avec ses objectifs de latence/coût (SLO) déclarés.
           </li>
           <li>
             <strong>Calculs déterministes</strong> : les fonctions de score, de prix et de compilation
@@ -92,11 +93,11 @@ export default function TrustCenterPage() {
           headers={["Surface", "Mécanisme"]}
           rows={[
             ["Transport", "TLS 1.2+ partout (web, API, webhooks)"],
-            ["Stockage", "Chiffrement au repos AES-256 (PostgreSQL managé)"],
+            ["Stockage", "Base PostgreSQL auto-hébergée sur le serveur de production ; documents originaux, médias archivés et jetons de connexion chiffrés par l'application (AES-256-GCM) ; chiffrement du disque et des sauvegardes à attester"],
             ["Mots de passe", "bcrypt 12 rounds ; MFA TOTP exigible pour les administrateurs"],
             ["Clés API", "Empreinte SHA-256 seule persistée — le secret n'est affiché qu'une fois"],
             ["Secrets système", "Variables d'environnement exclusivement — jamais en base (ADR-0075)"],
-            ["Credentials connecteurs", "Coffre applicatif chiffré, géré en console, jamais exposé client"],
+            ["Credentials connecteurs", "Coffre applicatif en base, géré en console, jamais renvoyé au client ; chiffrement applicatif des configurations pas encore en place"],
             ["Paiements", "Aucune donnée carte chez UPgraders — prestataires certifiés (CinetPay, Stripe, PayPal)"],
           ]}
         />
@@ -104,9 +105,9 @@ export default function TrustCenterPage() {
 
       <LegalSection title="4. Continuité et réversibilité">
         <ul>
-          <li>Sauvegardes automatiques de la base (fournisseur managé) + migrations de schéma versionnées appliquées au déploiement.</li>
+          <li>Sauvegardes de la base sur le serveur de production + migrations de schéma versionnées appliquées au démarrage. Une restauration complète n&apos;a pas encore été éprouvée.</li>
           <li><strong>Réversibilité client</strong> : export du patrimoine en format ouvert à tout moment ; fenêtre de portabilité de 90 jours post-contrat ; aucune rétention en otage.</li>
-          <li>Le journal d&apos;intents fournit la preuve d&apos;exécution opposable (qui, quoi, quand) sans exposer de données personnelles en clair.</li>
+          <li>Le journal d&apos;intents fournit la preuve d&apos;exécution opposable (qui, quoi, quand). Il conserve les données transmises avec une opération, qui peuvent inclure un nom ou un numéro (voir le DPA, §6).</li>
         </ul>
       </LegalSection>
 

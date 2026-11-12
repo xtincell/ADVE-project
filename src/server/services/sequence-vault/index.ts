@@ -293,9 +293,16 @@ export async function checkPrerequisites(
   // Load pillar maturity for PILLAR prerequisites
   const pillars = await db.pillar.findMany({
     where: { strategyId },
-    select: { key: true, validationStatus: true, confidence: true },
+    select: { key: true, validationStatus: true, confidence: true, content: true },
   });
   const pillarMap = new Map(pillars.map(p => [p.key, p]));
+  // S maturity is its canonical contract (composition bounded by the strict
+  // schema — ADR-0214 amendment), never its confidence: a calculated S carries
+  // confidence 0 by design and a legacy S could carry .9 while refused.
+  const synthesisStage = async (content: unknown) => {
+    const { assessPillar } = await import("@/server/services/pillar-maturity/assessor");
+    return assessPillar("s", (content ?? null) as Record<string, unknown> | null).currentStage;
+  };
 
   const met: SequencePrerequisite[] = [];
   const unmet: SequencePrerequisite[] = [];
@@ -325,10 +332,18 @@ export async function checkPrerequisites(
           unmet.push(req);
           break;
         }
-        // Check maturity via confidence threshold.
-        // lafusee:allow-adhoc-completion -- pré-flight gate de séquence sur un pilier déjà chargé, distinct de l'affichage de complétude UI (notoria consomme la readiness canonique)
-        const isComplete = (pillar.confidence ?? 0) >= 0.6 || pillar.validationStatus === "VALIDATED";
-        const isEnriched = (pillar.confidence ?? 0) >= 0.3 || isComplete;
+        let isComplete: boolean;
+        let isEnriched: boolean;
+        if (req.key === "s") {
+          const stage = await synthesisStage(pillar.content);
+          isComplete = stage === "COMPLETE";
+          isEnriched = stage === "ENRICHED" || isComplete;
+        } else {
+          // Check maturity via confidence threshold.
+          // lafusee:allow-adhoc-completion -- pré-flight gate de séquence sur un pilier déjà chargé, distinct de l'affichage de complétude UI (notoria consomme la readiness canonique)
+          isComplete = (pillar.confidence ?? 0) >= 0.6 || pillar.validationStatus === "VALIDATED";
+          isEnriched = (pillar.confidence ?? 0) >= 0.3 || isComplete;
+        }
 
         if (req.maturity === "COMPLETE" && isComplete) met.push(req);
         else if (req.maturity === "ENRICHED" && isEnriched) met.push(req);

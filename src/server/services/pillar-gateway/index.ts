@@ -20,7 +20,7 @@
  */
 
 import { db } from "@/lib/db";
-import { ensureProductIds, rebindProductRefs, type CatalogueProduct } from "@/domain/product-catalog";
+import { ensureProductIds, rebindProductRefs, retiredCatalogueIdentities, type CatalogueProduct } from "@/domain/product-catalog";
 import { acquirePillarEntityIds } from "@/domain/pillar-entity-ids";
 import { randomUUID } from "node:crypto";
 import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
@@ -30,12 +30,12 @@ import { Prisma } from "@prisma/client";
 import { isDeepStrictEqual } from "node:util";
 import { createCheckpoint, pillarMetadata, planCompensation, readCheckpoint, type PillarMetadata } from "@/server/services/pillar-versioning/checkpoint";
 import { getOperatorContext, canAccessStrategy } from "@/server/services/operator-isolation";
-import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
+import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "@/server/governance/collaborator-firewall";
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
 import { getFieldZod, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
-import { createVersion } from "@/server/services/pillar-versioning";
+import { createVersion, readCatalogueArchives } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
 import { assertCurrentSourceReceipts, readSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { markPillarsStale, withdrawSynthesisReview } from "./review-invalidation";
@@ -312,10 +312,10 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         const actor = await getOperatorContext(author.userId, tx);
         if (!(await canAccessStrategy(strategyId, actor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
         const emission = await tx.intentEmission.findUnique({ where: { id: author.intentId }, select: { strategyId: true, intentKind: true } });
-        if (!emission || emission.strategyId !== strategyId || !["ROLLBACK_PILLAR", "LEGACY_PILLAR_ROLLBACK_VERSION"].includes(emission.intentKind)) {
+        if (!emission || emission.strategyId !== strategyId || !RESTORE_EMISSION_KINDS.includes(emission.intentKind)) {
           throw new Error("RESTORE_EMISSION_REQUIRED: intention de restauration introuvable pour cette marque.");
         }
-        await assertCollaboratorMayEmit({ userId: actor.userId, role: actor.role, strategyId, kind: emission.intentKind }, tx);
+        await restoreMayEmit({ userId: actor.userId, role: actor.role, strategyId, kind: emission.intentKind }, tx);
         const snapshot = await tx.pillarVersion.findUnique({ where: { id: operation.versionId } });
         if (!snapshot || snapshot.pillarId !== pillar.id || (operation.compensatedFrom && snapshot.intentId !== operation.compensatedFrom)) {
           throw new Error("RESTORE_ARCHIVE_UNAVAILABLE: archive étrangère ou absente.");
@@ -346,7 +346,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         await tx.$queryRaw`SELECT id FROM "StrategyCollaborator" WHERE "strategyId" = ${strategyId} AND "userId" = ${author.userId} FOR SHARE`;
         const currentActor = await getOperatorContext(author.userId, tx);
         if (!(await canAccessStrategy(strategyId, currentActor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
-        await assertCollaboratorMayEmit({ userId: currentActor.userId, role: currentActor.role, strategyId, kind: emission.intentKind }, tx);
+        await restoreMayEmit({ userId: currentActor.userId, role: currentActor.role, strategyId, kind: emission.intentKind }, tx);
         await tx.$queryRaw`SELECT id FROM "Pillar" WHERE id = ${pillar.id} FOR UPDATE`;
         const locked = await tx.pillar.findUniqueOrThrow({ where: { id: pillar.id } });
         if (locked.currentVersion !== pillar.currentVersion || !isDeepStrictEqual(locked.content, pillar.content) || !isDeepStrictEqual(pillarMetadata(locked), pillarMetadata(pillar))) {
@@ -457,7 +457,11 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       // ── VALIDATE: SHAPE gate (corruption structurelle uniquement) ──────────
       // Bloque un scalaire-là-où-conteneur (casse le rendu) sans toucher aux advisories
       // DRAFT. Couvre le runtime (CRUD/amend) que le gate seed ne voyait pas.
-      if (!restoration && options?.shapeGate) {
+      // S (ADR-0214 amendement 6.27.564) : tout écrivain de S — calcul, import de
+      // canon, édition partielle, complétion — persiste un contenu que le contrat
+      // unique sait classer (brouillon ou composé). Une corruption de forme n'est
+      // ni l'un ni l'autre : refusée pour tous les auteurs, quelle que soit l'option.
+      if (!restoration && (options?.shapeGate || pillarKey === "s")) {
         const { classifyPillarConformance } = await import("@/lib/types/pillar-conformance");
         const conf = classifyPillarConformance(
           pillarKey.toUpperCase() as Parameters<typeof classifyPillarConformance>[0],
@@ -583,11 +587,23 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         );
         if (namedProducts(newContent.produitsCatalogue)) {
           const previous = namedProducts(previousContent.produitsCatalogue) ? previousContent.produitsCatalogue : [];
-          const products = ensureProductIds(newContent.produitsCatalogue, previous);
+          // Every archived state, not only the previous one: a product retired two
+          // versions ago keeps its identity out of reach of a new homonym (ADR-0205, 568).
+          const archives = await readCatalogueArchives(pillar.id, tx);
+          const { reservedIds, retired } = retiredCatalogueIdentities(archives.map(a => a.catalogue), previousContent.produitsCatalogue);
+          const products = ensureProductIds(newContent.produitsCatalogue, previous, reservedIds);
           const ids = products.map(p => p.id);
           if (new Set(ids).size !== ids.length) throw new Error("CATALOGUE_ID_CONFLICT: deux produits portent le même identifiant — corriger le catalogue avant de réappliquer.");
+          // Allocation never yields a retired id: one here was sent explicitly. The only
+          // proof accepted for a reintroduction is the restoration of its archive.
+          const retiredIds = new Set(retired.flatMap(p => typeof p.id === "string" && p.id.trim() ? [p.id] : []));
+          const reused = products.filter(p => retiredIds.has(p.id!));
+          if (reused.length) {
+            throw new Error(`CATALOGUE_RETIRED_ID: ${reused.map(p => `« ${p.id} »`).join(", ")} identifie un produit retiré du catalogue. ` +
+              "Une réintroduction sous cet identifiant passe par la restauration de la version qui le contenait ; sinon, ajoutez le produit sans identifiant pour qu'il en reçoive un nouveau.");
+          }
           newContent.produitsCatalogue = products;
-          newContent = rebindProductRefs(newContent, previous, products);
+          newContent = rebindProductRefs(newContent, previous, products, retired);
         }
       }
 
@@ -878,4 +894,17 @@ export async function reconcileCompletionLevelCache(
       data: { completionLevel: readiness.cacheLevel },
     });
   }, { timeout: 30_000, maxWait: 15_000 });
+}
+
+/** ADR-0207 — emissions allowed to carry a restoration; all enter through `rollback.ts`. */
+const RESTORE_EMISSION_KINDS = ["ROLLBACK_PILLAR", "LEGACY_PILLAR_ROLLBACK_VERSION", "LEGACY_NOTORIA_REVERT_RECO"];
+
+/** A delegated role outside its zone is a refused authority, typed like any other. */
+async function restoreMayEmit(input: Parameters<typeof assertCollaboratorMayEmit>[0], tx: Prisma.TransactionClient): Promise<void> {
+  try {
+    await assertCollaboratorMayEmit(input, tx);
+  } catch (err) {
+    if (err instanceof CollaboratorWriteVetoError) throw new Error(`RESTORE_ACCESS_REFUSED: ${err.message}`);
+    throw err;
+  }
 }

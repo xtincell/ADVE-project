@@ -48,11 +48,11 @@ describe("ADR-0142 — MCP Advertis (outbound) : expose une marque à un agent",
 
   it("est enregistré dans l'agrégateur MCP (découvrable + billable)", async () => {
     const mod = await import("@/server/services/anubis/mcp-server");
-    const src = (await import("node:fs")).readFileSync(
-      "src/server/services/anubis/mcp-server.ts",
-      "utf8",
-    );
-    expect(src).toContain('"advertis"');
+    // La liste des serveurs agrégés vit dans le module feuille partagé avec la
+    // console des clés (6.27.558) ; on vérifie le chargement réel, pas une chaîne.
+    const { MCP_SERVER_NAMES } = await import("@/server/services/anubis/mcp-scope-kind");
+    expect(MCP_SERVER_NAMES).toContain("advertis");
+    expect((await mod.loadAllServers()).map((s) => s.serverName)).toContain("advertis");
     expect(typeof mod.buildAggregatedManifest).toBe("function");
   });
 });

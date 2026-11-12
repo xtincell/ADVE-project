@@ -6,7 +6,7 @@ import { findDanglingReferences, type PillarBag } from "@/domain/pillar-referenc
 import { measuredConfidence } from "@/lib/confidence";
 import { getFieldLabel } from "@/lib/types/field-labels";
 import type { z } from "zod";
-import { PillarSSchema } from "@/lib/types/pillar-schemas";
+import { strictContentIssues } from "@/lib/types/pillar-maturity-contracts";
 import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
 import { applicableRequirements, isFieldSatisfied } from "@/server/services/pillar-maturity/assessor";
@@ -37,20 +37,22 @@ function synthesisFieldLabel(path: string) {
 export function inspectSynthesis(pillar: Pillar | null) {
   const readiness = evaluatePillarReadiness(pillar, "S");
   const content = (pillar?.content ?? {}) as Record<string, unknown>;
-  const parsed = PillarSSchema.safeParse(content);
   const stages = getContract("s").stages;
   const criteria = new Map<string, string>();
   for (const req of applicableRequirements([...stages.INTAKE, ...stages.ENRICHED], content)) {
     if (!isFieldSatisfied(content, req)) criteria.set(req.path, req.description || "À renseigner dans la stratégie.");
   }
-  for (const issue of parsed.error?.issues ?? []) {
-    criteria.set(issue.path.join(".") || "syntheseExecutive", describeInvalidField(issue));
+  // Same strict-schema reading as the maturity assessor (single contract).
+  for (const { path, issue } of strictContentIssues("s", content)) {
+    criteria.set(path || "syntheseExecutive", describeInvalidField(issue));
   }
   const fieldIssues = [...criteria].map(([path, reason]) => ({ path, reason, label: synthesisFieldLabel(path) }));
   const missing = fieldIssues.map(issue => issue.path);
-  // ENRICHED is the existing composed synthesis contract. COMPLETE includes
-  // extra Glory-specific inputs, and must not be claimed by human approval.
-  const composed = Boolean(pillar) && parsed.success
+  // ENRICHED is the composed synthesis contract. Since the ADR-0214 amendment
+  // the maturity stage of S is bounded by its strict schema, so this single
+  // verdict is the composition: no second parse that could disagree with it.
+  // COMPLETE includes extra Glory-specific inputs, never claimed by approval.
+  const composed = Boolean(pillar)
     && (readiness.stage === "ENRICHED" || readiness.stage === "COMPLETE");
   return { exists: Boolean(pillar), composed, missing, fieldIssues, readiness,
     currentVersion: pillar?.currentVersion ?? null, canValidate: composed && !readiness.stale };

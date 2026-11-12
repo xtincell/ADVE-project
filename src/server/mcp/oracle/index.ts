@@ -83,7 +83,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "snapshot",
     description:
-      "Instantané de complétude de l'Oracle d'une marque : nombre de sections par statut (total/pending/generating/complete/failed/stale). Pour jauger l'avancement du livrable.",
+      "Instantané de l'Oracle d'une marque : nombre de sections par statut (total/pending/generating/complete/failed/stale), plus written (sections avec un contenu rédigé enregistré) et current (rédigées et à jour). complete est le statut de rédaction terminée, pas une preuve de contenu : annoncer les sections rédigées à partir de written/current.",
     inputSchema: z.object({ strategyId: z.string().describe("ID de la marque") }),
     handler: async (input) => {
       const strategyId = input.strategyId as string;

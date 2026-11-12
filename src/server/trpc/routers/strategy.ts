@@ -29,7 +29,11 @@ import { PublicBrandPublicationInput } from "@/domain/public-brand";
 import { previewPublicBrand, publishPublicBrand, PublicBrandError } from "@/server/services/brand-vault/publication";
 import { inspectSynthesisForReview, transitionPillarStatus, assertApprovedSynthesis } from "@/server/services/pillar-gateway/validation-status";
 import { measuredConfidence } from "@/lib/confidence";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : une marque inconnue reçoit 404 typé, jamais P2025 ni un message Prisma. */
+const STRATEGY_NOT_FOUND = "Marque introuvable.";
 
 export const strategyRouter = createTRPCRouter({
   create: governedProcedure({
@@ -133,7 +137,7 @@ export const strategyRouter = createTRPCRouter({
         }
         try {
           await publishPublicBrand(id, ctx.session.user.id, ctx.intentId, publicPage);
-          return await ctx.db.strategy.findUniqueOrThrow({ where: { id } });
+          return found(await ctx.db.strategy.findUnique({ where: { id } }), STRATEGY_NOT_FOUND);
         } catch (error) {
           if (error instanceof PublicBrandError) throw new TRPCError({ code: error.code, message: error.message, cause: error });
           if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
@@ -156,7 +160,7 @@ export const strategyRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      const previous = await ctx.db.strategy.findUniqueOrThrow({ where: { id } });
+      const previous = found(await ctx.db.strategy.findUnique({ where: { id } }), STRATEGY_NOT_FOUND);
       // Secteur / sujets de veille : MERGE dans businessContext (jamais un
       // écrasement du JSON). watchSubjects: [] = purge (retour au dérivé ADVE).
       const mergedBusinessContext =
@@ -225,7 +229,7 @@ export const strategyRouter = createTRPCRouter({
         role: ctx.session.user.role ?? "USER",
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
-      return ctx.db.strategy.findUniqueOrThrow({
+      return found(await ctx.db.strategy.findUnique({
         where: { id: input.id },
         include: {
           pillars: true,
@@ -235,7 +239,7 @@ export const strategyRouter = createTRPCRouter({
           brandAssets: { take: 10 },
           client: { select: { id: true, name: true, sector: true, country: true } },
         },
-      });
+      }), STRATEGY_NOT_FOUND);
     }),
 
   /**
@@ -669,10 +673,10 @@ export const strategyRouter = createTRPCRouter({
       // invisible à la garde de tête ADR-0175) → fuite complète des piliers ADVE
       // d'une marque arbitraire. Garde de lecture explicite.
       await assertStrategyRead(ctx.session.user.id, input.id);
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.id },
         include: { pillars: true, client: { select: { id: true, name: true } } },
-      });
+      }), STRATEGY_NOT_FOUND);
       // Absence ≠ zéro (canon du repo). Une marque jamais évaluée n'a pas
       // `advertis_vector` : le code fabriquait alors `composite = 0` puis la
       // classait au palier le plus bas, et le cockpit affichait « Score 0/200 »
@@ -908,7 +912,7 @@ export const strategyRouter = createTRPCRouter({
     }),
     caller: "strategy:generateCanonicalCampaigns",
   }).mutation(async ({ ctx, input }) => {
-    const strat = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true } });
+    const strat = found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId }, select: { id: true } }), STRATEGY_NOT_FOUND);
     const { generateCanonicalCampaigns } = await import("@/server/services/campaign-canon");
     return generateCanonicalCampaigns({ strategyId: strat.id, routeKey: input.routeKey, startDate: input.startDate });
   }),
@@ -932,7 +936,7 @@ export const strategyRouter = createTRPCRouter({
     }),
     caller: "strategy:createPunctualCampaign",
   }).mutation(async ({ ctx, input }) => {
-    await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true } });
+    found(await ctx.db.strategy.findUnique({ where: { id: input.strategyId }, select: { id: true } }), STRATEGY_NOT_FOUND);
     const { createPunctualCampaign } = await import("@/server/services/campaign-canon");
     return createPunctualCampaign(input);
   }),

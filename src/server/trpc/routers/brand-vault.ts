@@ -26,6 +26,7 @@ import { assetUploadSchema, assetProvenanceSchema, retainAssetFile, transferAsse
 import { SourceAssetClassificationInputSchema } from "@/domain/source-document";
 import { assetTransferInputSchema, anyAssetOriginalReceiptSchema } from "@/domain/source-original";
 import { PublicWebUrl } from "@/domain/public-brand";
+import { accessible, found } from "../entity-access";
 /* lafusee:governed-active */
 
 // BrandVault 3 levels: system / operator / production
@@ -38,13 +39,13 @@ type AssetLevel = "system" | "operator" | "production";
  * chokepoint `canAccessStrategy`. Fuite IDOR CRITIQUE sinon : lecture/suppression
  * (dont `purge` = hard delete) des actifs de n'importe quel tenant par son id.
  */
+// IN1 : un actif inconnu et l'actif d'une autre marque reçoivent le même 404.
+const ASSET_NOT_FOUND = "Actif introuvable.";
 async function assertBrandAssetAccess(ctx: Context, assetId: string): Promise<string> {
-  const asset = await ctx.db.brandAsset.findUnique({
+  const asset = await accessible(ctx.db.brandAsset.findUnique({
     where: { id: assetId },
     select: { strategyId: true },
-  });
-  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Actif introuvable." });
-  await assertStrategyAccessForAsset(ctx, asset.strategyId);
+  }), ASSET_NOT_FOUND, (a) => assertStrategyAccessForAsset(ctx, a.strategyId));
   return asset.strategyId;
 }
 
@@ -206,7 +207,7 @@ export const brandVaultRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      const asset = found(await ctx.db.brandAsset.findUnique({ where: { id: input.id } }), ASSET_NOT_FOUND);
       const original = await ctx.db.fileUpload.findFirst({ where: { entityType: "BRAND_ASSET", entityId: asset.id }, select: { fileName: true, storageReceipt: true } });
       const receipt = anyAssetOriginalReceiptSchema.safeParse(original?.storageReceipt);
       const documentarySource = receipt.success && receipt.data.state === "STORED" ? await ctx.db.brandDataSource.findFirst({
@@ -264,7 +265,7 @@ export const brandVaultRouter = createTRPCRouter({
         if (Object.keys(input.pillarTags).length) throw new TRPCError({ code: "BAD_REQUEST", message: "Classez le fichier et modifiez les tags de stratégie dans deux actions distinctes." });
         return vaultResult(() => classifyAssetOriginal(input.id, input.sourceClassification!, ctx.session.user.id));
       }
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      const asset = found(await ctx.db.brandAsset.findUnique({ where: { id: input.id } }), ASSET_NOT_FOUND);
       await vaultResult(async () => assertOrdinaryAsset(asset.format));
       const existing = (asset.pillarTags as Record<string, unknown>) ?? {};
       return ctx.db.brandAsset.update({
@@ -287,7 +288,7 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      const asset = found(await ctx.db.brandAsset.findUnique({ where: { id: input.id } }), ASSET_NOT_FOUND);
       await vaultResult(async () => assertOrdinaryAsset(asset.format));
       return vaultResult(() => engineArchive({ brandAssetId: input.id, archivedById: ctx.session.user.id, reason: "Archivage manuel depuis les actifs" }));
     }),

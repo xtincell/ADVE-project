@@ -56,11 +56,14 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 76 modules (src/domain, cœur métier pur)
+## Domain — 82 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
+- **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
 - **argos-projection**
+- **barre-actor-attestation** — Acteur authentifié des décisions La Barre (point LB3 du programme Shinkiro, ADR-0245).
 - **barre-brand-context**
+- **barre-campaign-review** — Bilan de campagne arrêté dans La Barre (point LB4 du programme Shinkiro).
 - **brand-actors**
 - **brand-asset-formats**
 - **brand-asset-kinds** — BrandAsset.kind — taxonomie complète des actifs de marque.
@@ -73,6 +76,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **calendar-editions**
 - **calendar-production**
 - **campaign-code** — Phase 18-A1-α (audit MATANGA V4) — auto-générateur `Campaign.code` aligné
+- **canonical-json** — JSON canonique RFC 8785 : clés triées par unités UTF-16, nombres ECMAScript,
 - **classification-coherence** — Domain helper — invariants APOGEE de cohérence Classification ↔ Superfans ↔ Cult Tier.
 - **client-organization**
 - **collaborator-access** — ADR-0131 — Zones d'accès des collaborateurs délégués par marque.
@@ -85,10 +89,11 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **creative-source-types**
 - **creative-sources**
 - **cult-index-tier** — Domain — Cult Index tier (échelle de maturité culturelle de la marque).
+- **datacollector-receipt** — DataCollector receipt, schema `datacollector/observation-receipt` v1 (DC3 Shinkiro).
 - **devotion-ladder** — Domain — Devotion Ladder canonique (rungs du parcours superfan).
 - **editorial-source**
-- **entity-ids**
-- **external-metric**
+- **entity-ids** — Shared identity acquisition for existing JSON collections. No fuzzy or positional matching.
+- **external-metric** — ADR-0146 ingress contract for external metrics and observations, shared by HTTP and governed admission.
 - **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.
 - **financial-document**
 - **forecast** — ADR-0156 — Moteur de forecast déterministe (pur, zéro IO, zéro LLM).
@@ -133,6 +138,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **source-original**
 - **superfan-conditions** — Domain — Superfan à conditions strictes (ADR-0141).
 - **touchpoints** — src/domain/touchpoints.ts — Touchpoint families & AARRR pirate metrics.
+- **typed-refusal** — Refus métier typé, levé par un service sans dépendre de la couche tRPC.
 - **unit-economics**
 
 ---
@@ -304,7 +310,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **VariableStoreConfig** (7 fields)
 - **OrchestrationPlan** (13 fields)
 - **OrchestrationStep** (17 fields)
-- **Recommendation** (52 fields)
+- **Recommendation** (53 fields)
 - **RecommendationBatch** (17 fields)
 - **BrandMoment** (11 fields)
 - **CampaignCanonTemplate** (12 fields)
@@ -1189,7 +1195,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Intent kinds — 634 (par governor)
+## Intent kinds — 635 (par governor)
 
 ### SESHAT (63)
 
@@ -1257,7 +1263,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### MESTOR (85)
+### MESTOR (86)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
@@ -1285,11 +1291,11 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `OPERATOR_ATTACH_STRATEGY_TO_NODE` → brand-node (sync) — Lie un Strategy existant à un BrandNode opérationnel (REGIONAL_BRAND ou SKU dépl…
 - `OPERATOR_TAG_NODE_ROLE` → brand-node (sync) — Ajoute/retire un tag dans nodeRole[] (SEASONAL, LIMITED_EDITION, LICENSED, JV_PA…
 - `OPERATOR_CREATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Crée un CampaignDeliverable matrice 6D (targetNodeId × countryCode × deliverable…
-- `OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId. Auto-recompute …
+- `OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId sous verrou. Ver…
 - `OPERATOR_DELETE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont…
-- `OPERATOR_OVERRIDE_RAG` → campaign-deliverable (sync) — Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit tra…
+- `OPERATOR_OVERRIDE_RAG` → campaign-deliverable (sync) — Force le manualRagOverride sur un CampaignDeliverable OU une Campaign ; null ren…
 - `OPERATOR_CREATE_CHANGE_REQUEST` → campaign-change-request (sync) — Crée un ticket de reprise sur un CampaignDeliverable, lié à sa marque et son opé…
-- `OPERATOR_UPDATE_CHANGE_REQUEST` → campaign-change-request (sync) — Modifie status/assignation/resolutionNotes d'un ticket. Auto-stamp resolvedAt si…
+- `OPERATOR_UPDATE_CHANGE_REQUEST` → campaign-change-request (sync) — Modifie status/assignation/resolutionNotes d'un ticket. Version lue requise pour…
 - `OPERATOR_RESOLVE_CHANGE_REQUEST` → campaign-change-request (sync) — Marque RESOLVED + resolutionNotes obligatoires + lien optionnel vers nouveau Cam…
 - `OPERATOR_ESCALATE_CHANGE_REQUEST` → campaign-change-request (sync) — Escalade un ticket MAJOR vers status ESCALATED. Audit trail Slack-side hors scop…
 - `OPERATOR_CREATE_ACTION` → operator-action (sync) — Crée une OperatorAction (sub-tâche transverse jour-le-jour). Categories AVANT_DE…
@@ -1303,6 +1309,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `MORNING_BRIEF_BATCH_CONFIRM` → morning-batch (async) — Matérialisation drafts ACCEPTED|EDITED → Campaign + CampaignBrief (NEW_BRIEF) ou…
 - `OPERATOR_CREATE_INGESTED_SOURCE` → morning-batch (sync) — Saisie manuelle d'une source (mail/slack/whatsapp) sans LLM. Manual-first parity…
 - `OPERATOR_CREATE_BRIEF_DRAFT` → morning-batch (sync) — Saisie manuelle d'un BriefIngestionDraft sans LLM. Confidence=1.0 (full operator…
+- `INGEST_BARRE_CAMPAIGN_REVIEW` → ingestion-pipeline (sync) — Reçoit un bilan de campagne arrêté dans La Barre : version relue dans la base en…
 - `CLASSIFY_BRAND_SOURCE` → source-classifier (async) — Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind pro…
 - `PROPOSE_VAULT_FROM_SOURCE` → source-classifier (async) — Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator r…
 - `LIFT_INTAKE_TO_STRATEGY` → mestor (async) — Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade.…

@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
 
 // Catalogue + statut de commande = gestion STAFF (audit round-6 : tout compte
@@ -30,7 +31,7 @@ export const boutiqueRouter = createTRPCRouter({
   getItem: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.boutiqueItem.findUniqueOrThrow({ where: { id: input.id } });
+      return found(await ctx.db.boutiqueItem.findUnique({ where: { id: input.id } }), "Article introuvable.");
     }),
 
   createItem: governedProcedure({
@@ -106,7 +107,7 @@ export const boutiqueRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const item = await ctx.db.boutiqueItem.findUniqueOrThrow({ where: { id: input.itemId } });
+      const item = found(await ctx.db.boutiqueItem.findUnique({ where: { id: input.itemId } }), "Article introuvable.");
       const quantity = input.quantity ?? 1;
       return ctx.db.boutiqueOrder.create({
         data: {

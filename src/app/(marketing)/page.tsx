@@ -94,7 +94,7 @@ function Hero({ salesPath }: { salesPath?: string }) {
             </p>
             <p className="mt-4 border-t border-dashed border-border-subtle pt-4 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
               La Fusée — notre OS produit
-              <Link href="/scorer" className="ml-2 text-accent transition-colors hover:underline">→ Scorer ma marque · 1 min</Link>
+              <Link href="/scorer" className="ml-2 text-accent transition-colors hover:underline">→ Scorer ma marque · ~1 min</Link>
               <Link href="/intake" className="ml-2 text-foreground-secondary transition-colors hover:text-accent">→ Diagnostic gratuit</Link>
               <Link href="/lafusee" className="ml-2 text-foreground-secondary transition-colors hover:text-accent">→ Découvrir l&apos;OS</Link>
             </p>

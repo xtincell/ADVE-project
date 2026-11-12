@@ -12,6 +12,7 @@
  */
 
 import { devisGeneratorCalculator, pricingStrategyCalculator } from "@/server/services/artemis/tools/commercial-offer";
+import { calculateBreakeven } from "@/domain/financial-document";
 
 type Ctx = Record<string, unknown>;
 type Result = Record<string, unknown>;
@@ -92,12 +93,32 @@ function codbCalculator(ctx: Ctx): Result {
   const codbMonthly = fixedMonthly + variableMonthly;
   const codbAnnual = codbMonthly * 12;
   const costPerHead = headcount > 0 ? Math.round(codbAnnual / headcount) : 0;
-  const breakeven = revenueTarget > 0 ? Math.round(codbAnnual / (revenueTarget / codbAnnual)) : 0;
   const overheadRate = billableRatio > 0 ? Math.round((100 - billableRatio) / billableRatio * 100) : 0;
 
+  // Plan 4.11.b — le seuil n'est plus `codbAnnual / (revenueTarget / codbAnnual)`,
+  // un chiffre qui variait avec l'objectif de CA sans marge de contribution.
+  // Il est délégué au calcul canonique : charges fixes MENSUELLES / (prix − coût
+  // variable unitaires). Sans ces entrées, il reste non calculable (null) ; les
+  // charges fixes absentes ne deviennent pas un zéro. `revenue_target` reste une
+  // entrée du CODB mais ne participe plus au seuil.
+  const seuil = calculateBreakeven({
+    fixedCosts: num(ctx, "fixed_costs", NaN),
+    variableCostPerUnit: num(ctx, "variable_cost_per_unit", NaN),
+    pricePerUnit: num(ctx, "price_per_unit", NaN),
+    costPeriod: "MONTH",
+  });
+  const seuilSummary = seuil.status === "COMPUTED"
+    ? `Seuil : ${seuil.breakEvenUnits} unités/mois, CA ${Math.round(seuil.breakEvenRevenue!)}/mois (devise du modèle)`
+    : `Seuil non calculable : ${seuil.issues.join(" ; ")}`;
+
   return {
-    codbMonthly, codbAnnual, costPerHead, breakeven, overheadRate, headcount,
-    summary: `CODB: ${codbMonthly} XAF/mois (${codbAnnual} XAF/an) | Seuil: ${breakeven} XAF | Overhead: ${overheadRate}%`,
+    codbMonthly, codbAnnual, costPerHead, overheadRate, headcount, revenueTarget,
+    breakeven: seuil.breakEvenRevenue,
+    breakeven_units: seuil.breakEvenUnits,
+    breakeven_period: "MONTH",
+    breakeven_status: seuil.status,
+    breakeven_issues: seuil.issues,
+    summary: `CODB: ${codbMonthly} XAF/mois (${codbAnnual} XAF/an) | ${seuilSummary} | Overhead: ${overheadRate}%`,
   };
 }
 

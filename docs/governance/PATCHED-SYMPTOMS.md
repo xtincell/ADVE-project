@@ -28,6 +28,67 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 570 — cinq écrivains acceptaient une entité d’une autre marque (2026-11-11)
+
+Symptôme : la garde de marque portait sur l’identifiant de tête, pas sur l’entité liée. `campaignManager.createFromValidatedAction` créait une campagne de la marque gardée à partir de l’action d’une autre marque (titre, description, budget copiés, statut de l’action étrangère modifié) ; `consulting.linkRecommendation` rattachait une recommandation à l’hypothèse d’une autre marque ; `pillar.applyGloryOutput` écrivait dans un pilier le résultat d’outil d’une autre marque ; `bureauEtudes.compareWaves` lisait l’échantillon des vagues d’une autre étude ; `campaignTracker.reportFieldProgress` (opérateur) écrivait un rapport terrain sur l’opération d’une autre équipe. Patch (v6.27.570) : l’entité liée doit appartenir à la marque, à l’étude ou à la campagne gardée, sinon le même 404 qu’un id inconnu, avant toute écriture. Croisé en convertissant les lectures `OrThrow` des routeurs (IN1), même commit `fix(trpc)`.
+
+Hypothèse de cause racine : un identifiant secondaire de l’entrée est lu sans garde parce que la garde ADR-0175/ADR-0166 ne voit que l’identifiant de tête, et le verrou `entity-id-idor-proactive` ne contrôle que la présence d’une garde dans la procédure, pas qu’elle couvre chaque identifiant. Dette liée : aucune nouvelle ; le cliquet `router-entity-not-found` impose désormais la lecture sans exception, pas l’appartenance (revue).
+
+### 560 — `/status` affichait « Opérationnel » sans mesure ; la force /200 annoncée sans être affichée (2026-11-11)
+
+Symptôme : `/status` remplaçait chaque lecture échouée par 0 (`.catch(() => 0)`) et posait `successRate = 100` quand il n'y avait ni succès ni échec : base injoignable ou journée sans activité donnaient « Opérationnel 100 % ». Un moyen de paiement à clés posées était « ✓ actif », même refusé par le prestataire (CinetPay, 513). Sur le résultat du diagnostic, la phrase « voici la force qu'elle révèle — le score complet /200 » était posée par la page même quand `ForceSection` ne rendait rien. Patch : `derivePublicStatus` (`src/lib/public-status.ts`), « Non mesuré » avec sa raison, « configuré » ; phrase déplacée dans `ForceSection`. Tests `public-status` et `intake-force-bridge`, rouges puis verts.
+
+Hypothèse de cause racine : une valeur de repli optimiste choisie pour ne jamais casser le rendu (zéro, 100 %, phrase fixe) se lit comme un fait. Même famille que les compteurs inventés purgés en juillet : l'absence de mesure doit rester un état visible. Recette F16 : [RECEPTION-PROMESSES-PUBLIQUES.md](RECEPTION-PROMESSES-PUBLIQUES.md).
+
+### 558 — la console des clés MCP n’offrait pas toutes les portées serveur (2026-11-11)
+
+Symptôme : `/console/anubis/api-billing` tenait sa liste de serveurs en dur, sans `council`, `oracle` ni `ingest` (ADR-0146) ; une clé limitée à l’un de ces serveurs ne pouvait pas y être émise. Le routeur `mcpBilling.createKey` acceptait n’importe quelle chaîne : une clé limitée à un serveur inconnu de l’authentification était créée, puis n’appelait rien. Patch (v6.27.558) : liste unique `MCP_SERVER_NAMES` / `MCP_KEY_SERVER_SCOPES` dans le module feuille `mcp-scope-kind`, reprise par `loadAllServers`, la console et la validation `z.enum` du routeur. Verrou `mcp-key-server-scopes.test.ts` : chaque serveur demandé par une route MCP ou d’ingestion doit être une portée émettable. Croisé en recevant F13 (clé limitée à un serveur), commit `fix(mcp)` dédié.
+
+Hypothèse de cause racine : la console et le dispatch MCP ont été écrits séparément et la liste a été recopiée ; l’ajout de `council`/`oracle` (ADR-0182) et d’`ingest` (ADR-0146) n’a touché que le serveur. Aucune garde ne comparait les portées émises aux noms que l’authentification honore. Dette liée : aucune.
+
+### 557 — `ingestion.getSource` distinguait une source étrangère d’un id inconnu (2026-11-11)
+
+Symptôme : appelé sans dossier, le lecteur `getSource` refusait en 403 dans les deux cas, mais avec deux messages : « Ce document n’est plus accessible dans ce dossier. » pour un id inconnu, « Accès refusé à cette marque » pour la source d’un autre locataire. Le message suffisait à savoir que la source existait. Patch (v6.27.557) : même 403 et même message dans les deux cas ; le contrat 403 du lecteur, retrait d’un partage compris, est conservé. Croisé en corrigeant IN1 (écrivains de source en 500), commit `fix(ingestion)` dédié.
+
+Hypothèse de cause racine : les gardes keyées par id lisent l’entité puis appellent `assertStrategyRead`, dont le refus `FORBIDDEN` porte son propre message ; « inconnu » et « refusé » suivent donc deux chemins de réponse. Le patron commun (lecture sans exception, une seule réponse pour inconnu et refusé) n’existait que dans `assertSourceAccess`. **Cause traitée dans les routeurs en 6.27.570** : patron `src/server/trpc/entity-access.ts` et cliquet `router-entity-not-found` ; restes (brand-node, services) dans RESIDUAL-DEBT § 570.
+
+### 556 — dépendances : 63 alertes npm accumulées, dont 9 critiques (2026-11-11)
+
+Symptôme : `npm audit` sur `main` 6.27.552 relevait 63 alertes (9 critical, 21 high, 27 moderate, 6 low), dont 39 sur l’arbre de production. Le registre en notait 50 le 6 octobre et 51 le 20 octobre. Patch : montées mineures ou correctives des directes (`next` 16.4.6, Auth.js, SDK MCP, Prisma 7.10.1, Puppeteer, SDK IA v6, zod, xmldom), `sharp` 0.35.5 exigé par `next` 16.4, transitives mises à jour dans leurs plages, et un override `exceljs` → `uuid` ^11.1.1. Résultat : 15 moderate de l’outillage de développement, 0 en production. Commit `fix(deps)` de la branche `claude/alertes-dependances`.
+
+Hypothèse de cause racine : les PR Dependabot hebdomadaires (limite de cinq, groupes par framework) ne touchent ni les transitives verrouillées ni les versions épinglées en exact (`sharp`, `@xmldom/xmldom`), et aucune relecture périodique de `npm audit` n’est planifiée. Les alertes s’accumulent donc entre deux lots manuels. Dette liée : RESIDUAL-DEBT, « Alertes npm préexistantes au build Docker » (moderate restantes, majeures et réception de 556).
+
+### CI PostgreSQL — assertion de `source-uses` périmée hors CI (2026-11-10)
+
+`source-uses.postgres.test.ts` attendait un seul `markAllSectionsStale` par écriture atomique. Depuis 519, `markPillarsStale` invalide aussi l’Oracle dans la transaction, une fois par pilier écrit : le test comptait trois appels et échouait. Personne ne l’a vu, car le fichier ne tournait dans aucun job. Patch (v6.27.555) : le test distingue deux invalidations en transaction et une seule après le commit. Cause racine : fichiers PostgreSQL hors CI, fermée par leur branchement et le verrou `ci-postgres-recovery.test.ts`. Dette liée : aucune.
+
+### 554 — cinq défauts isolés du plan Shinkiro 4.11 (2026-11-10)
+
+Chaque défaut a été reproduit par un test rouge avant correction, puis vert.
+
+- **Compte supprimé recréé depuis un jeton signé (4.11.f)** — `resolve-session-user.ts`
+  recréait la ligne `User` depuis les claims (rôle et équipe compris) ou la rattachait
+  à un autre compte par email ; le callback `jwt` de `src/lib/auth/config.ts` réémettait
+  le jeton sans relire le compte. La session d’un compte supprimé est révoquée et aucune
+  recréation n’est possible. Hypothèse de cause racine : le jeton signé était traité
+  comme une source d’identité, alors que seule la ligne persistée l’est ; la même
+  hypothèse couvre le rôle rétrogradé, encore ouvert dans RESIDUAL-DEBT.
+- **Seuil CODB fonction de l’objectif de CA (4.11.b)** — `calculators.ts` calculait
+  codbAnnual² / CA cible. Le seuil est délégué au calcul canonique et reste nul sans
+  prix ni coût variable unitaires. Hypothèse : calculateurs CALC écrits avant le
+  contrat financier canonique, sans entrées déclarées ni statut d’insuffisance.
+- **Questions de suivi aveugles au relais OAuth (4.11.c)** — `question-bank.ts` lisait
+  trois clés d’environnement au lieu du signal du Gateway. Hypothèse : préflights
+  locaux antérieurs au relais, qui dupliquent la sélection des fournisseurs.
+- **Oracle « complet » sans section rédigée (4.11.e)** — la pastille de matière disait
+  « complète » sur des sections à produire, l’en-tête comptait « à jour » une rédaction
+  vide et l’instantané MCP n’exposait que le statut. Hypothèse : deux mesures (matière
+  des piliers, résultat de rédaction) partageaient le même vocabulaire et le statut
+  `COMPLETE` était lu comme une preuve de contenu.
+- **Préréglage Lighthouse invalide (4.11.g)** — `.lighthouserc.json` passait
+  `preset: "mobile"`, refusé par Lighthouse (run 42250705338) ; l’étape non bloquante
+  laissait le job vert. Hypothèse : erreur de collecte masquée par `continue-on-error`.
+
 ### Playbook d’engagement — canal public et calendrier de référence (2026-11-06)
 
 Une production réelle attribuait à deux profils un domaine fabriqué à partir du nom de marque et du pays. Le calendrier était composé depuis une cadence type malgré la présence de légendes documentées. Son enregistrement pouvait aussi devenir le dernier planning sélectionné par le Studio.
@@ -1003,7 +1064,8 @@ via chemin existant ; ADVE, MVP, Oracle et sept chantiers entiers non reçus.
 
 I→S/Oracle restent des constats ouverts : 28 retenues historiques hors I courant,
 aucun choix des 52 actions I reçu ; titre Oracle local 27/35 « complètes » avec
-zéro rédigée non corrigé dans 519. Conservation sans réactivation et reprise par
+zéro rédigée non corrigé dans 519 (corrigé depuis : synthèse en 538, grille et
+instantané en 554). Conservation sans réactivation et reprise par
 chemins existants planifiées dans [la même dette Core/Oracle](RESIDUAL-DEBT.md).
 
 **518 livrée — rattachement Client manuel dans le portefeuille** : extension de
@@ -1902,3 +1964,5 @@ Lignes dérivées purgées :
   Réception finale à suivre dans RESIDUAL-DEBT, sans clôture du cycle métier.
 
 - 2026-11-04 · PR1136 : une confirmation humaine du règlement commercial ne donnait pas accès au rapport client ; raccord aux droits et à la préparation existants, reçu humain distinct du prestataire. La clôture du rapport exige maintenant le document prêt et son ACK exact. Cause : collecte, droit et réception restaient traités comme étapes indépendantes sans leur liaison canonique. ADR0240.
+- 2026-11-11 · 6.27.561 : le mur public `/argos` affichait « Aucun dossier publié » quand la lecture échouait, et un lien de source non http(s) saisi dans un dossier du journal était rendu tel quel. Le mur dit désormais que les dossiers ne peuvent pas être affichés ; les liens sont filtrés à http(s) sans identifiants à la lecture (le journal n'est pas réécrit). Cause : lecteur public sans état d'erreur et projection publique faisant confiance au JSON `sources` du journal (schéma manuel `z.string()`).
+- 2026-11-11 · 6.27.563 : une tâche de campagne acceptait le rattachement d'un visuel d'une autre marque ; sa suppression lisait le visuel hors verrou (un rattachement simultané pouvait être perdu, ou refusé par une erreur Prisma non typée) ; une tâche avec reprises échouait sur la clé étrangère brute. Visuel de la même marque exigé (FORBIDDEN), suppression sous le verrou de ligne des éditions, refus CONFLICT explicites. Cause : écrivain de tâche resté hors transaction après la garde de périmètre ADR-0202. Dette : RESIDUAL-DEBT § Reprises de campagne.

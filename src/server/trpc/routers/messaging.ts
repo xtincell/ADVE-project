@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { accessibleStrategyIds, assertRawStrategyScope } from "../middleware/strategy-scope";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
@@ -32,7 +33,8 @@ async function assertConversationAccess(
   if (opCtx.role === "ADMIN") return;
   if (convo.strategyId && (await canAccessStrategy(convo.strategyId, opCtx))) return;
 
-  throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette conversation" });
+  // IN1 : une conversation hors d'atteinte reçoit la réponse d'une conversation inconnue.
+  throw new TRPCError({ code: "NOT_FOUND", message: "Conversation introuvable" });
 }
 
 export const messagingRouter = createTRPCRouter({
@@ -83,7 +85,7 @@ export const messagingRouter = createTRPCRouter({
     .input(z.object({ conversationId: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertConversationAccess(ctx.session.user.id, input.conversationId);
-      const conversation = await ctx.db.conversation.findUniqueOrThrow({
+      const conversation = found(await ctx.db.conversation.findUnique({
         where: { id: input.conversationId },
         include: {
           messages: {
@@ -91,7 +93,7 @@ export const messagingRouter = createTRPCRouter({
             take: 50,
           },
         },
-      });
+      }), "Conversation introuvable");
       return conversation;
     }),
 

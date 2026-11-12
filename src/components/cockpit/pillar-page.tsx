@@ -34,6 +34,7 @@ import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
 import { useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
 import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
+import { CatalogueHistoryPanel } from "@/components/cockpit/catalogue-history-panel";
 import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
 import { Badge } from "@/components/primitives/badge";
 import { Button } from "@/components/primitives/button";
@@ -1355,6 +1356,9 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
           ))}
         </div>
       )}
+
+      {/* ── Historique du catalogue produit (ADR-0205, amendement 568) — lecture seule ── */}
+      {config.pillarKey === "v" && strategyId ? <CatalogueHistoryPanel strategyId={strategyId} /> : null}
     </div>
   );
 }

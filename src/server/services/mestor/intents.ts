@@ -674,13 +674,15 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       /** Source agnostique de la remontée (n'importe quelle marque, n'importe quel canal). */
-      sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL";
+      sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL" | "COLLECTOR";
       /** Étiquette libre lisible (ex. "quizz.spawt.online"). */
       sourceLabel?: string | null;
       /** Immutable producer receipt: all three fields together, or legacy unknown. */
       observationId?: string;
       sourceVersion?: string;
       observedAt?: string;
+      /** Empreinte SHA-256 déclarée par le producteur (reçu DataCollector vérifié avant émission). */
+      sourceDigest?: string;
       /** Cible AARRR : requis pour écrire une CampaignAARRMetric. */
       campaignId?: string | null;
       /** Cible KPI d'activité de mission (garde de portée sur strategyId). */
@@ -696,7 +698,32 @@ export type Intent =
         target?: number | null;
         /** MissionActivity.id à mettre à jour (kpiActual = value). */
         kpiActivityId?: string | null;
+        /** Provenance de la cellule (source, objet observé, unité, date, note). */
+        source?: string; subject?: string; unit?: string; observedAt?: string; note?: string;
       }>;
+      /** Mesures déclarées sans valeur : conservées comme telles, jamais routées ni lues comme 0. */
+      unobserved?: Array<{
+        metric: string; state: "NOT_PUBLISHED" | "FAILED" | "NOT_REQUESTED"; errorCode?: string;
+        source?: string; subject?: string; unit?: string; observedAt?: string; note?: string;
+      }>;
+    }
+  // ── ADR-0244 — bilan de campagne arrêté dans La Barre (LB4) ──────────
+  // Émis par la route `/la-barre/bilan` après relecture de la version dans la
+  // base enregistrée de La Barre et recalcul de son empreinte. Écrit une
+  // édition PROPOSED dans les sources de la marque, jamais un pilier.
+  | {
+      kind: "INGEST_BARRE_CAMPAIGN_REVIEW";
+      strategyId: string;
+      /** Personne connectée qui transmet (session relue, pas l'acteur déclaré par La Barre). */
+      operatorId: string;
+      /** Instance La Barre raccordée (`barreBinding().instance`). */
+      instance: string;
+      /** ETag de la base La Barre relue, quand l'hôte le fournit. */
+      sourceRevision: string | null;
+      /** Version figée telle que La Barre l'a enregistrée ; re-validée par le handler. */
+      review: import("@/domain/barre-campaign-review").BarreCampaignReview;
+      /** Marques du bilan sans dossier de marque lisible par cette personne. */
+      unlinkedBrands: string[];
     }
   // ── ADR-0134 — mesure communautaire réelle (chaîne community→devotion→cult) ──
   // Émis par le cron social-sync quotidien (emitIntentTyped, caller
@@ -942,6 +969,8 @@ export type Intent =
       strategyId: string; // pivot
       operatorId: string;
       deliverableId: string;
+      /** Version lue (updatedAt ISO). Requise pour remplacer contenu, visuel ou délégation. */
+      expectedUpdatedAt?: string | null;
       patches: {
         status?: string;
         dueDate?: string | null;
@@ -987,6 +1016,8 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       ticketId: string;
+      /** Version lue (updatedAt ISO). Requise pour remplacer besoin, impact ou responsable. */
+      expectedUpdatedAt?: string | null;
       patches: {
         status?: "PENDING" | "IN_PROGRESS" | "RESOLVED" | "REJECTED" | "ESCALATED";
         assignedToUserId?: string | null;
@@ -1487,6 +1518,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // ADR-0146 — ingestion métrique externe : écrit CampaignAARRMetric /
     // MissionActivity.kpiActual / Signal, jamais un pilier ADVE.
     case "INGEST_EXTERNAL_METRIC":
+    // ADR-0244 — bilan La Barre : une édition documentaire PROPOSED, jamais un pilier.
+    case "INGEST_BARRE_CAMPAIGN_REVIEW":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +

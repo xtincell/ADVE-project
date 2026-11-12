@@ -1,12 +1,19 @@
-/** Shared identity acquisition for existing JSON collections. No fuzzy or positional matching. */
+/**
+ * Shared identity acquisition for existing JSON collections. No fuzzy or positional matching.
+ */
 export interface IdentifiedEntry { id?: unknown; [key: string]: unknown }
 
 const identity = (entry: IdentifiedEntry): string | undefined =>
   typeof entry.id === "string" && entry.id.trim() ? entry.id : undefined;
 
+/**
+ * `reserved` : identifiants qu'aucune allocation ne doit produire (ceux d'entrées
+ * retirées de l'historique). Une identité reçue explicitement n'est pas touchée :
+ * son refus éventuel appartient à l'écrivain qui connaît cet historique.
+ */
 export function acquireEntityIds<T extends IdentifiedEntry>(
   entries: readonly T[], previous: readonly IdentifiedEntry[], labelField: string,
-  allocate: (entry: T, attempt: number) => string,
+  allocate: (entry: T, attempt: number) => string, reserved: Iterable<string> = [],
 ): T[] {
   const claimed = new Set(entries.flatMap(entry => identity(entry) ? [identity(entry)!] : []));
   const recovered = entries.map(entry => {
@@ -20,7 +27,7 @@ export function acquireEntityIds<T extends IdentifiedEntry>(
     return { ...entry, id: oldId };
   });
   // A retired identity never becomes the identity of a new homonym.
-  const used = new Set([...previous, ...recovered].flatMap(entry => identity(entry) ? [identity(entry)!] : []));
+  const used = new Set([...reserved, ...[...previous, ...recovered].flatMap(entry => identity(entry) ? [identity(entry)!] : [])]);
   return recovered.map(entry => {
     if (identity(entry)) return entry;
     let attempt = 0, id: string;

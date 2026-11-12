@@ -16,7 +16,7 @@ export default function DpaPage() {
   return (
     <LegalShell
       title="Accord de traitement des données (DPA)"
-      updated="16 octobre 2026"
+      updated="11 novembre 2026"
       intro={
         <>
           Le présent accord encadre les traitements opérés par UPgraders / La Fusée SARL pour le compte de ses
@@ -91,8 +91,8 @@ export default function DpaPage() {
       <LegalSection title="5. Sécurité et chiffrement">
         <ul>
           <li><strong>En transit</strong> : TLS 1.2+ sur toutes les surfaces (web, API, webhooks).</li>
-          <li><strong>Au repos</strong> : chiffrement AES-256 des bases et sauvegardes (infrastructure Supabase/PostgreSQL managée).</li>
-          <li><strong>Secrets</strong> : les clés de paiement et secrets système vivent en variables d&apos;environnement, jamais en base ; les credentials de connecteurs externes sont stockés chiffrés dans un coffre applicatif ; les clés API émises ne sont conservées qu&apos;en empreinte SHA-256.</li>
+          <li><strong>Au repos</strong> : chiffrement AES-256 des bases et sauvegardes (base PostgreSQL auto-hébergée sur le serveur de production ; chiffrement du disque et des sauvegardes à attester). Les documents originaux, médias archivés et jetons de connexion sont en outre chiffrés par l&apos;application (AES-256-GCM).</li>
+          <li><strong>Secrets</strong> : les clés de paiement et secrets système vivent en variables d&apos;environnement, jamais en base ; les credentials de connecteurs externes sont conservés dans un coffre applicatif en base, jamais renvoyés au client — leur chiffrement applicatif n&apos;est pas encore en place ; les clés API émises ne sont conservées qu&apos;en empreinte SHA-256.</li>
           <li><strong>Authentification</strong> : mots de passe hachés (bcrypt, 12 rounds), double authentification TOTP disponible et exigible pour les administrateurs.</li>
           <li><strong>Cloisonnement</strong> : contrôle d&apos;accès par rôle et par espace client à chaque requête.</li>
         </ul>
@@ -101,10 +101,10 @@ export default function DpaPage() {
       <LegalSection title="6. Traçabilité immuable et droit à l'effacement — coexistence">
         <p>
           Le journal de gouvernance de la plateforme est chaîné par empreintes (hash) pour garantir
-          l&apos;infalsifiabilité de l&apos;historique. <strong>Il ne contient jamais de données personnelles en
-          clair</strong> : les PII vivent hors-chaîne, dans des magasins effaçables. L&apos;effacement d&apos;une
-          personne purge ses données ; la chaîne conserve la seule preuve d&apos;existence (empreinte), vide de
-          contenu. L&apos;immuabilité de la trace et le droit à l&apos;effacement coexistent ainsi sans exception.
+          l&apos;infalsifiabilité de l&apos;historique. Il conserve les données transmises avec chaque opération,
+          qui peuvent inclure des données personnelles (par exemple un nom affiché ou un numéro de paiement).
+          L&apos;effacement d&apos;une personne purge aujourd&apos;hui ses fiches d&apos;identité et ses identifiants
+          rapprochés ; il ne réécrit pas encore le journal, dont l&apos;effacement ciblé reste à outiller.
         </p>
       </LegalSection>
 
