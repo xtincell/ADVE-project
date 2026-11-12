@@ -468,6 +468,43 @@ export function getFieldZod(pillarKey: string, path: string): unknown | null {
 }
 
 /**
+ * Clés d'objet que le schéma strict déclare à `path` (objet, ou élément d'un tableau
+ * d'objets ; `path` vide = racine du pilier). Les armes objet d'une union sont
+ * réunies. `null` quand le schéma n'y décrit aucun objet : on ne conclut alors rien.
+ * Lecture pure — sert à repérer, sans rien renommer, des clés stockées que le
+ * schéma ne connaît pas (inventaire des formes ADVE legacy).
+ */
+export function declaredObjectKeys(pillarKey: string, path: string): string[] | null {
+  const upper = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+  const zod = path === "" ? PILLAR_SCHEMAS[upper] : getFieldZod(pillarKey, path);
+  if (!zod) return null;
+  const keys = new Set<string>();
+  let found = false;
+  const visit = (node: unknown, depth: number): void => {
+    let cur: any = node;
+    for (let i = 0; cur && i < 16; i++) {
+      const ctor = cur.constructor?.name ?? "";
+      const def = cur._def ?? {};
+      if (ctor === "ZodOptional" || ctor === "ZodNullable" || ctor === "ZodDefault") cur = def.innerType ?? def.schema;
+      else if (ctor === "ZodEffects" || ctor === "ZodTransform") cur = def.schema ?? def.innerType;
+      else if (ctor === "ZodPipe") cur = def.in ?? def.out;
+      else break;
+    }
+    const ctor = cur?.constructor?.name ?? "";
+    if (ctor === "ZodUnion" && depth < 4) {
+      for (const option of (cur._def?.options ?? []) as unknown[]) visit(option, depth + 1);
+    } else if (ctor === "ZodArray" && depth < 4) {
+      visit(cur._def?.element ?? cur._def?.type ?? cur._def?.innerType, depth + 1);
+    } else if (ctor === "ZodObject") {
+      found = true;
+      for (const key of Object.keys((cur.shape ?? {}) as Record<string, unknown>)) keys.add(key);
+    }
+  };
+  visit(zod, 0);
+  return found ? [...keys].sort() : null;
+}
+
+/**
  * Construit un exemple JSON pour un path précis d'un pillar.
  */
 export function buildExampleForPath(pillarKey: string, path: string): unknown {

@@ -2,7 +2,7 @@
  * Manifest — pillar-maturity.
  *
  * APOGEE classification (cf. SERVICE-MAP.md): MESTOR governance,
- * mission contribution = CHAIN_VIA:pillar-gateway. Exposes 7 capabilities mirroring the public surface of `index.ts`.
+ * mission contribution = CHAIN_VIA:pillar-gateway. Exposes 8 capabilities mirroring the public surface of `index.ts`.
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
@@ -76,6 +76,18 @@ export const manifest = defineManifest({
       inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
       outputSchema: z.unknown(),
       sideEffects: ["DB_READ", "DB_WRITE"],
+      qualityTier: "B",
+      missionContribution: "CHAIN_VIA:pillar-gateway",
+      missionStep: 1,
+    },
+    {
+      // RESIDUAL-DEBT « Formats ADVE legacy », étape 1 : inventaire des chemins A/D/V/E
+      // refusés par le schéma strict, dans une transaction PostgreSQL READ ONLY.
+      name: "readAdveStrictShapeInventory",
+      inputSchema: z.object({ strategyIds: z.array(z.string()).optional() }).passthrough(),
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      idempotent: true,
       qualityTier: "B",
       missionContribution: "CHAIN_VIA:pillar-gateway",
       missionStep: 1,

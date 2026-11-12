@@ -1,3 +1,14 @@
+## v6.27.583 — fix(adve): inventaire en lecture seule des formes refusées par le schéma strict (2026-11-12)
+
+**Point 4.11.k du programme Shinkiro, première étape de la dette « Formats ADVE legacy » : savoir exactement quels chemins A/D/V/E le schéma strict refuse, avant toute normalisation.**
+
+- Nouvel outil `npm run audit:adve-shapes` (`scripts/inventory-adve-strict-shapes.ts`, logique dans `pillar-maturity/strict-shape-inventory.ts`). Pour chaque marque et chaque pilier A/D/V/E, il liste chaque chemin refusé : classe (forme, type, énumération, longueur, absent), type attendu et trouvé, extrait court masqué, origine du champ, exigence de maturité qui le compte présent, version du pilier, dernière écriture conservée qui y a mis la valeur (intention, reçus documentaires), source et édition du document. Sortie JSON stable et résumé en français ; `--canons` lit les canons du dépôt sans base.
+- Lecture seule : une seule transaction PostgreSQL `READ ONLY` en `REPEATABLE READ`, état relu dans la base et rapporté. Aucune écriture, aucune normalisation, aucun appel de modèle. Le contenu est validé tel qu'il est stocké : le normaliseur du gate (enum, nombre, identifiant lisible vers UUID) n'est pas appliqué, ses coercions pouvant changer le sens.
+- Une clé hors schéma à côté d'un champ canonique absent (`valeurs[0].valeur` au lieu de `value`) est signalée, jamais rapprochée d'un champ : la correspondance reste une décision humaine.
+- Canons du dépôt (SPAWT, Motion19, UPgraders, La Fusée), en mémoire : 16 piliers sur 16 portent des chemins refusés, 623 en tout, aucune corruption de forme. 363 valeurs présentes refusées, dont 346 comptées présentes par la maturité ; 243 champs absents à côté de clés hors schéma ; 17 absents simples. Les A/D/V/E d'UPgraders et D/V/E de La Fusée sont « complets à 100 % » avec 7 à 46 chemins refusés chacun. Les mêmes 623 chemins sont relus en base sur un PostgreSQL jetable peuplé par les seeds du dépôt, en lecture seule confirmée ; la production n'a pas été lue.
+- Réparé en passant : le classificateur du gate rangeait un enum absent parmi les « valeurs hors énumération » (65 cas sur les canons) ; il le range désormais parmi les champs manquants. Le gate ne bloque toujours que les corruptions de forme.
+- Aucun modèle, migration, Intent, route, page ou ADR. Les étapes suivantes (normalisation sémantique revue par un humain, admission par les rails existants, puis cascade) restent ouvertes.
+
 ## v6.27.582 — fix(argos): projection vers le studio avec sa version courante (2026-11-12)
 
 **Point F14 du programme Shinkiro : un second envoi d'un dossier déjà présent dans la bibliothèque Argos n'est plus refusé puis annoncé comme une panne.**

@@ -649,6 +649,38 @@ par la cascade gouvernée, puis recevoir les huit piliers et les 35 sections
 attendues dans leurs lecteurs, avec conservation des données voisines et contrôle
 de fraîcheur. Les accords, contrats et mesures absents ne sont jamais inférés
 comme faits ; les postulats permis restent qualifiés dans ADVE.
+
+**Étape 1 faite en 583 (4.11.k), localement — l’inventaire, en lecture seule.**
+`npm run audit:adve-shapes` (`scripts/inventory-adve-strict-shapes.ts`, logique
+`src/server/services/pillar-maturity/strict-shape-inventory.ts`) liste, pour chaque
+marque et chaque pilier A/D/V/E, chaque chemin refusé par `validatePillarContent`
+sur le contenu TEL QU’IL EST STOCKÉ (le normaliseur du gate n’est pas appliqué) :
+classe, type attendu/trouvé, extrait masqué, situation (valeur présente refusée ;
+champ absent à côté de clés hors schéma ; absent simple), origine (`fieldStatusFor`),
+exigence de maturité qui le compte présent, `currentVersion`, dernière écriture
+conservée (`PillarVersion`, intention, reçus du point de contrôle) et source avec
+son édition (`documentEdition`, empreinte du reçu comparée au document actuel).
+Lecture dans une seule transaction `READ ONLY` en `REPEATABLE READ`, relue et
+rapportée ; aucune écriture, normalisation, correspondance de clés ou appel de modèle.
+Reçu : 20 tests unitaires et 3 PostgreSQL (dont refus réel d’une écriture dans la
+même forme de transaction), contre-épreuves rouges (contenu normalisé, `READ ONLY`
+retiré). Canons du dépôt en mémoire (`--canons`) : 623 chemins refusés sur 16/16
+piliers, aucune forme corrompue ; 363 valeurs présentes refusées dont 346 comptées
+présentes, 243 champs absents à côté de clés hors schéma, 17 absents. Mêmes 623
+chemins relus en base sur un PostgreSQL jetable peuplé par les seeds du dépôt
+(plus 7 pour la démonstration CIMENCAM), instantané `READ ONLY` confirmé ; UPgraders
+A/D/V/E et La Fusée D/V/E y sont VALIDATED et complets à 100 % malgré 7 à 46
+chemins refusés chacun. Pas encore lancé sur la production.
+**Lancer en production** (opérateur, accès lecture à la base) :
+`DATABASE_URL=<lecture prod> npm run audit:adve-shapes -- --json <fichier hors dépôt>`
+(`--strategie <id>` répétable, `--piliers a,v`, `--sans-extraits`). Le JSON contient
+des extraits courts de données de marque : il reste hors checkout avec les autres
+preuves privées. Une transaction refusée ou un instantané non `READ ONLY` invalide
+le reçu.
+**Étapes suivantes, inchangées et soumises à revue humaine** : à partir de cet
+inventaire, proposer par forme incompatible une normalisation sémantique (aucune
+correspondance n’est déduite des clés voisines), l’admettre par les rails existants
+avec version et source attendues, puis cascade et réception comme décrit ci-dessus.
 **Responsables** : Core/Mestor et admission documentaire existants, avec Notoria
 et les lecteurs Oracle pour la réception. **Effort** : lot borné par forme
 incompatible, puis une recette de cascade et des consommateurs. **Déclencheur** :

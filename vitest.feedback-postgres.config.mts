@@ -7,7 +7,8 @@ export default defineConfig({
       "tests/integration/calendar-production.postgres.test.ts", "tests/integration/calendar-publication.postgres.test.ts", "tests/integration/pillar-completion-cache.postgres.test.ts", "tests/integration/production-mix.postgres.test.ts", "tests/integration/production-sources.postgres.test.ts", "tests/integration/source-uses.postgres.test.ts", "tests/integration/source-writer-not-found.postgres.test.ts", "tests/integration/router-entity-not-found.postgres.test.ts", "tests/integration/upstream-resume.postgres.test.ts",
       "tests/integration/account-lifecycle.postgres.test.ts",
       "tests/integration/barre-campaign-review.postgres.test.ts",
-      "tests/integration/mcp-server-scoped-key.postgres.test.ts"],
+      "tests/integration/mcp-server-scoped-key.postgres.test.ts",
+      "tests/integration/adve-strict-shape-inventory.postgres.test.ts"],
     // social-publication-receipt runs alone on an empty dedicated database:
     // vitest.social-receipt-postgres.config.mts.
     // Files share one owned database and some assertions count whole tables.

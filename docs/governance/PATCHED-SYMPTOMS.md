@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 4.11.k — un enum absent classé « hors énumération » par le gate (2026-11-12)
+
+Symptôme : `classifyConformanceError` (`src/lib/types/pillar-conformance.ts`) rangeait tout code `invalid_value` en ENUM. Zod 4 émet aussi ce code pour un enum ABSENT (`valeurs[0].value` manquant à côté de `valeur`) : le champ manquant passait pour une valeur à traduire. Sur les canons du dépôt, 65 chemins étaient ainsi mal classés. Patch (v6.27.583) : `invalid_value` avec une valeur absente devient MISSING, comme `invalid_type` et `invalid_union` le faisaient déjà ; le gate ne bloque toujours que SHAPE, son comportement ne change pas. Croisé en écrivant l’inventaire des formes ADVE ; commit `fix(adve)` dédié, test rouge puis vert (`canon-conformance.test.ts`, repris par `pillar-maturity-strict-shape-inventory.test.ts`).
+
+Hypothèse de cause racine : la classification se fait par code Zod et suppose qu’un code désigne une seule situation ; en Zod 4, plusieurs codes servent aussi au champ absent. Dette liée : RESIDUAL-DEBT « Formats ADVE legacy » (l’inventaire lit cette classification).
+
 ### 4.11.l — comparateur structurel sur grand Buffer, deuxième occurrence (2026-11-12)
 
 Symptôme : `tests/integration/asset-original.postgres.test.ts` comparait par `toEqual` les 12 582 949 octets servis par la route d’original et le chiffré de 4 Mio d’un fragment rejoué. En local, ce test mettait 81,1 s avec un tas de 8 Gio, dont 78,8 s et 55,5 s de GC pour la seule comparaison. Avec le tas par défaut de 2 Gio, le worker s’arrêtait, tas épuisé. Patch : longueur puis `Buffer.equals`, plus une contre-épreuve à un octet modifié. Le cas passe en 2,1 s et le fichier 17/17 en 5,1 s ; le code produit, les invariants et les plafonds sont inchangés. Mesures et profil par étape : RESIDUAL-DEBT, section « Performance — marge faible sur grand document ».
