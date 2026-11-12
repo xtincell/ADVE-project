@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.580",
+  "version": "6.27.581",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -134,7 +134,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "10.1.0",
-    "recharts": "^3.8.1",
+    "recharts": "^3.10.1",
     "remark-gfm": "4.0.1",
     "sharp": "0.35.5",
     "superjson": "^2.2.2",
@@ -145,8 +145,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@testing-library/dom": "^10.4.2",
