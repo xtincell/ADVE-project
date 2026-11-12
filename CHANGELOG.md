@@ -6,6 +6,28 @@
 - `check-slos.ts` sortait en 1 quand `DATABASE_URL` manquait, ce qui comptait comme un dépassement ; il sort désormais en 2.
 - Un job distinct ferme, avec un commentaire, les 216 anciennes issues « SLO breach detected — <run> », toutes vides ; il reprend là où il s'est arrêté et ne fait plus rien une fois la liste épuisée.
 - La base de production reste injoignable depuis GitHub Actions : le contrôle restera rouge, sans issue, tant que cet accès n'est pas ouvert.
+## v6.27.579 — fix(canons): points de contact au bon contrat, deux nombres retirés au modèle (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #696 (V6 canons, V7 anti-fabrication), encore juste, est remise à jour sur main et livrée.**
+
+- Les canons de démonstration SPAWT et Motion19 décrivent leurs points de contact dans la forme du contrat (nature, canal, rôle, étape AARRR). Leur score Engagement devient juste ; le niveau de dévotion reste à déclarer par l'équipe. L'application SPAWT pointe vers le canal `APP`, non plus `WEBSITE`.
+- Deux nombres ne passent plus par le modèle : le taux de rotation interne du personnel (`turnoverRate`) attend une saisie humaine, et le total d'actions du catalogue (`totalActions`) est calculé. Un verrou échoue si l'un des deux sort du contrat ou si `totalActions` n'est plus marqué « calcul ».
+- Un score issu de l'intake (/100) se distingue désormais d'un score canon (/200).
+## v6.27.578 — fix(playbook): canaux et calendrier repris des pièces de référence (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #1152, préparée au temps de la 553 et jamais fusionnée, est remise à jour et livrée.**
+
+- Le Playbook d'engagement s'appuie sur les pièces de référence de la marque : liens publics, profils sociaux et calendrier proviennent des canaux et des diffusions documentés, plus d'un domaine déduit du pays ni de CTA de prélancement.
+- Le calendrier distingue les sujets proposés des occurrences déjà programmées, dont il conserve le texte intégral, le canal, la date et la source.
+- Une édition du Playbook ne peut plus devenir le planning opérationnel du Studio ; l'édition produite reste soumise à la relecture de l'équipe et rien n'est publié.
+- `playbook-editorial.postgres.test.ts` entre dans la suite PostgreSQL de la CI. Conflit avec 6.27.574 résolu dans `executeTool` : la preuve éditoriale et les entrées obligatoires coexistent.
+## v6.27.577 — fix(crm): une marque non évaluée n'est plus affichée à zéro (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #1150, encore juste, est remise à jour et livrée. Le CRM distinguait mal une marque jamais évaluée d'une marque notée zéro.**
+
+- La fiche client, la liste des clients et le tableau de bord de l'agence affichent « Non évalué » au lieu d'un 0/200 et d'un palier LATENT inventés. Un vrai zéro calculé reste affiché et compte dans la moyenne, qui ne retient que les marques évaluées.
+- Tri : le tableau partagé inversait tout son résultat en ordre décroissant, si bien qu'un client « Non évalué » passait devant tous les scores mesurés. Le sens s'applique désormais à la comparaison, et les valeurs absentes restent en bas dans les deux sens. Test `client-score-sort.test.ts` rouge en ordre décroissant avant, vert après.
+- PostgreSQL : `agency-score-presence.postgres.test.ts` ajouté à la suite de CI.
 
 ## v6.27.576 — fix(ventes): une transaction sérialisée attend avant d'être rejouée (2026-11-12)
 

@@ -122,7 +122,8 @@ describe("composeSocialCopy", () => {
     const profiles = out.profiles as Array<Record<string, unknown>>;
     expect(profiles.length).toBe(5);
     const ig = profiles.find((p) => p.platform === "Instagram")!;
-    expect(ig.handle).toBe("@spawt.ci");
+    expect(ig.handle).toBeNull(); // No recorded social profile; naming proposals live separately.
+    expect(ig.link).toBeNull();
     expect(typeof ig.bio).toBe("string");
     expect(out.voice).toContain("Complice");
   });

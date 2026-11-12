@@ -148,7 +148,7 @@ export function LaunchCalendarPanel() {
           setChosenEdition(e.target.value===data.activeCalendarId ? null : {strategyId,id:e.target.value});setProjectDates(false);
         }}>
           {data.editions.map(item=><option key={item.id} value={item.id}>
-            {item.id===data.activeCalendarId?"Planning actif":"Édition précédente"} · {item.label??new Date(item.createdAt).toLocaleDateString(LOCALE)}
+            {item.id===data.activeCalendarId?"Planning actif":item.playbook?"Lecture du Playbook":item.documentary?"Édition documentaire":"Édition précédente"} · {item.label??new Date(item.createdAt).toLocaleDateString(LOCALE)}
           </option>)}
         </select>
       </label>}

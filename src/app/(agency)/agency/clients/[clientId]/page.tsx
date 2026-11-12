@@ -10,7 +10,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ScoreBadge } from "@/components/shared/score-badge";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Building, Layers, TrendingUp, ExternalLink } from "lucide-react";
-import { PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
+import { formatBrandComposite, meanBrandComposite, readCompositeFromVector } from "@/domain/brand-scores";
+import { classifyBrand } from "@/lib/types/advertis-vector";
 
 const CLASSIFICATION_MAP: Record<string, string> = {
   LATENT: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
@@ -43,13 +44,7 @@ export default function AgencyClientDetailPage() {
 
   const references = OrganizationSources.safeParse(client.organizationSourceRefs);
   const brands = client.strategies ?? [];
-  const brandScores = brands.map((s) => {
-    const v = s.advertis_vector as Record<string, number> | null;
-    return v ? PILLAR_KEYS.reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
-  });
-  const avgScore = brandScores.length > 0
-    ? (brandScores.reduce((a, b) => a + b, 0) / brandScores.length).toFixed(0)
-    : "0";
+  const avgScore = meanBrandComposite(brands.map(s => s.advertis_vector));
 
   return (
     <div className="space-y-6">
@@ -77,7 +72,7 @@ export default function AgencyClientDetailPage() {
       {/* Client info */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Marques" value={brands.length} icon={Layers} />
-        <StatCard title="Score ADVE moyen" value={client.status === "REFERENCE" && !brands.length ? "Sans marque évaluée" : `${avgScore}/200`} icon={TrendingUp} />
+        <StatCard title="Score ADVE moyen" value={formatBrandComposite(avgScore)} icon={TrendingUp} />
         <StatCard title="Secteur" value={client.sector ?? "-"} icon={Building} />
         <StatCard title="Statut" value={client.status === "REFERENCE" ? "Référence" : client.status} icon={Building} />
       </div>
@@ -117,9 +112,8 @@ export default function AgencyClientDetailPage() {
         ) : (
           <div className="space-y-3">
             {brands.map((brand) => {
-              const v = brand.advertis_vector as Record<string, number> | null;
-              const composite = v ? PILLAR_KEYS.reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
-              const classification = classifyBrand(composite);
+              const composite = readCompositeFromVector(brand.advertis_vector);
+              const classification = composite === null ? null : classifyBrand(composite);
               return (
                 <div
                   key={brand.id}
@@ -127,14 +121,14 @@ export default function AgencyClientDetailPage() {
                   className="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3 transition-colors hover:border-zinc-700"
                 >
                   <div className="flex items-center gap-3">
-                    <ScoreBadge score={composite} />
+                    {composite === null ? <span className="text-xs text-zinc-400">Non évaluée</span> : <ScoreBadge score={composite} />}
                     <div>
                       <p className="text-sm font-medium text-white">{brand.name}</p>
                       <p className="text-xs text-zinc-500">{brand.pillars?.length ?? 0} piliers</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <StatusBadge status={classification} variantMap={CLASSIFICATION_MAP} />
+                    {classification && <StatusBadge status={classification} variantMap={CLASSIFICATION_MAP} />}
                     <StatusBadge status={brand.status ?? "DRAFT"} />
                     <ExternalLink className="h-3.5 w-3.5 text-zinc-500" />
                   </div>
