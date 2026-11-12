@@ -38,6 +38,19 @@ export const BarreCampaignReviewRequestSchema = z.object({
 }).strict();
 export type BarreCampaignReviewRequest = z.infer<typeof BarreCampaignReviewRequestSchema>;
 
+const Count = z.number().int().min(0).max(1_000_000);
+/**
+ * Compte des reprises au moment de l'arrêt (la-barre#27) : facturables au
+ * client, à la charge de l'agence, non qualifiées, et écarts écartés à part.
+ * Additif : absent des versions arrêtées avant ; aucun montant.
+ */
+const BarreReviewReprisesSchema = z.object({
+  projets: Count, facturables: Count, chargeAgence: Count, nonQualifiees: Count, ecartes: Count,
+  parOrigine: z.record(Ident, z.object({
+    facturable: z.boolean().nullable(), n: z.number().int().min(1).max(1_000_000),
+  }).strict()),
+}).strict();
+
 /** La version figée, champ pour champ. Aucune transformation : l'empreinte
  * se calcule sur ce que La Barre a écrit, pas sur une forme nettoyée. */
 export const BarreCampaignReviewSchema = z.object({
@@ -53,6 +66,8 @@ export const BarreCampaignReviewSchema = z.object({
   marques: z.array(z.object({ id: Ident, nom: NullableText(300) }).strict()).max(50),
   contenu: Filled(60_000),
   note: Filled(4_000).nullable(),
+  /** Compte des reprises (la-barre#27), scellé dans l'empreinte ; absent avant. */
+  reprises: BarreReviewReprisesSchema.optional(),
   precedente: z.string().regex(HEX).nullable(),
   decision: Ident,
   qui: Ident,
