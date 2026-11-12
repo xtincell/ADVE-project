@@ -50,6 +50,8 @@ const SCAN_DIRS = [
 const EXTRA_FILES = [
   join(ROOT, "src/app/leaderboard/page.tsx"),
   join(ROOT, "src/lib/i18n/pages/leaderboard.ts"),
+  // 4.11.d — écran d'attente et rapport du diagnostic, lus par le prospect.
+  join(ROOT, "src/lib/i18n/pages/intake-result.ts"),
   join(ROOT, "src/app/api/intake/[token]/pdf/route.ts"),
   join(ROOT, "src/app/la-barre/[[...path]]/route.ts"),
   join(ROOT, "src/app/la-barre/partage/[token]/[[...path]]/route.ts"),

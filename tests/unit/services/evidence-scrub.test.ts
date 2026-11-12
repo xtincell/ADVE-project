@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { scrubUnfoundedEvidence } from "@/server/services/quick-intake/evidence-scrub";
+import { scrubUnfoundedEvidence, scrubUnsourcedStatistics } from "@/server/services/quick-intake/evidence-scrub";
 
 const SOURCE = `{"v":{"offre":"Forfaits voix/data, fibre, Orange Money. Depuis 1948, 2 boutiques."}}`;
 
@@ -127,5 +127,54 @@ describe("scrubUnfoundedEvidence — récits opérationnels (prose fabriquée)",
       PAILLOTE_SOURCE,
     );
     expect(content.personas).toBeDefined();
+  });
+});
+
+/**
+ * 4.11.d — le rapport généré affichait « 80 % » sur la première impression,
+ * chiffre qu'aucune réponse ni mesure ne portait. Une statistique de
+ * population sans appui dans le dossier est retirée phrase par phrase.
+ */
+describe("scrubUnsourcedStatistics", () => {
+  const SOURCE = `{"e":{"e_loyalty":"30-50%","e_channels":"Visites à l'atelier et téléphone"},"v":{"offre":"Ressemelage, 12 000 FCFA"}}`;
+
+  it("retire la phrase portant une statistique de population absente du dossier", () => {
+    const { value, dropped } = scrubUnsourcedStatistics(
+      { preview: "80 % des clients jugent une marque sur sa première impression. Votre vitrine est à soigner." },
+      SOURCE,
+    );
+    expect(value.preview).toBe("Votre vitrine est à soigner.");
+    expect(dropped).toEqual(["80 % des clients jugent une marque sur sa première impression."]);
+  });
+
+  it("couvre les multiplicateurs et ratios, en français et en anglais", () => {
+    const { value } = scrubUnsourcedStatistics(
+      [
+        "Le bouche-à-oreille convertit dix fois plus que la publicité. Il reste à le mesurer chez vous.",
+        "8 sur 10 acheteurs comparent avant d'acheter. Votre offre est claire.",
+        "98% of brands fail on Distinction. Your promise needs proof.",
+      ],
+      SOURCE,
+    );
+    expect(value).toEqual(["Il reste à le mesurer chez vous.", "Votre offre est claire.", "Your promise needs proof."]);
+  });
+
+  it("conserve un chiffre que le dossier porte réellement", () => {
+    const text = "Entre 30 et 50 % des clients reviennent, selon votre réponse.";
+    const { value, dropped } = scrubUnsourcedStatistics({ full: text }, `{"e":{"e_loyalty":"30 et 50 % des clients reviennent"}}`);
+    expect(value.full).toBe(text);
+    expect(dropped).toHaveLength(0);
+  });
+
+  it("laisse intacts les chiffres qui ne sont pas des statistiques de population", () => {
+    const text = "Complétude structurelle 4/25 sur cette fondation.\n• Couverture : 9 % du poids total des dimensions.";
+    const { value, dropped } = scrubUnsourcedStatistics({ full: text, priority: "P1", score: 80 }, SOURCE);
+    expect(value).toEqual({ full: text, priority: "P1", score: 80 });
+    expect(dropped).toHaveLength(0);
+  });
+
+  it("préserve les sauts de ligne et retire une puce devenue vide", () => {
+    const { value } = scrubUnsourcedStatistics("• 80 % des consommateurs décident en sept secondes.\n• Rassembler des témoignages datés.", SOURCE);
+    expect(value).toBe("• Rassembler des témoignages datés.");
   });
 });

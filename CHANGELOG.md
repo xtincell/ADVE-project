@@ -8,6 +8,26 @@
 - Écrans : l'atelier Production et le calendrier affichent les manques et bloquent le lancement ; un aperçu rouvert les recalcule. Les messages du compositeur parlent la langue du client et entrent dans le test de vocabulaire du cockpit.
 - 11 tests nouveaux, rouges puis verts ; suite unitaire complète 5 890 verte, PostgreSQL ciblé 15/15. Même Intent, même passerelle, aucun modèle, service ou Intent nouveau.
 - Restent ouverts (RESIDUAL-DEBT) : entrées des outils amont non déclarées ; épinglage des versions de DA et de texte, révision indépendante et autonomie par étape non commencés.
+## v6.27.573 — fix(lint): la garde de couches ESLint refonctionne (2026-11-12)
+
+**Constat du lot 556 : la règle de couches `boundaries/dependencies` était inerte. Sans résolveur d'imports, ESLint ne reconnaissait ni les fichiers `.ts` ni l'alias `@/`, et laissait passer n'importe quel import entre couches. Elle refonctionne, en erreur.**
+
+- Cause : aucun `import/resolver` n'était configuré. Le résolveur `node` par défaut ignore `.ts`, `.tsx` et l'alias `@/*` : aucun import n'était résolu, et la règle sautait chaque dépendance sans rien dire.
+- Correctif : un résolveur local sans dépendance (`eslint-plugin-lafusee/import-resolver.js`) lit les alias de `tsconfig.json`, les chemins relatifs, les `index.*` et les spécificateurs `.js` écrits pour un `.ts`. Le modèle des couches passe dans `eslint-plugin-lafusee/boundaries-layering.js`, mêmes dix politiques en syntaxe v7, sans avertissement de dépréciation.
+- Sondes : domain → lib, lib → governance, services → trpc, components → services, app → services et app → governance, en alias et en relatif, ne levaient rien ; toutes sont désormais signalées, imports de type et dynamiques compris.
+- Les 374 imports qui enfreignaient déjà les couches (149 couples fichier → couche, 146 fichiers) sont listés un à un avec leur motif dans `eslint-plugin-lafusee/boundaries-allowlist.js` : gestionnaires de routes Next qui appellent un service (73), contrats de type déclarés trop haut (37), pages serveur (14), gouvernance qui appelle un service (8), schémas partagés vers l'UI (7), et quelques cas isolés. Une violation corrigée au passage : `classification-coherence.ts` lit `BrandTier` dans le domaine.
+- Verrou `tests/unit/governance/boundaries-layering.test.ts` (24 cas) : les sondes contre la configuration réelle, les imports permis, le résolveur ; la liste ne peut que diminuer, chaque entrée ne couvre qu'un fichier et une couche. Retirer le résolveur casse 13 cas sur 24.
+- Restent ouverts (RESIDUAL-DEBT) : résorber les 149 entrées ; les routes HTTP et les composants Neteru demandent une décision de modèle ; `src/server/mcp/**`, `src/proxy.ts` et `src/instrumentation.ts` n'appartiennent à aucune couche.
+## v6.27.572 — fix(intake): la restitution ne présente plus de statistiques sans source (2026-11-12)
+
+**Point 4.11.d du programme Shinkiro. L'écran d'attente et le rapport du diagnostic affirmaient des chiffres que rien ne sourçait (« 98 % des marques échouent sur la Distinction », « 3 % du public », « dix fois plus »). Ils sont reformulés sans chiffre, et un verrou empêche leur retour.**
+
+- Écran d'attente, en français, anglais et chinois : les quatre faits chiffrés sont reformulés sans chiffre ; le nombre de paliers annoncé passe de sept à six, comme dans le code. Le badge des recommandations ne montre plus le nom du modèle (« Analyse assistée »).
+- Questionnaire : « garantie à 100 % des clients » et « 2 posts/semaine plutôt que 10 » deviennent des conseils sans chiffre.
+- Plan proposé sans IA : la collecte de témoignages n'est plus vendue comme « la preuve la moins chère qui existe ». La dernière étape part des canaux déclarés par l'entreprise, ou de l'empreinte publique si elle a été mesurée, ou demande au dirigeant de choisir son indicateur. Un atelier qui vit de visites et du téléphone ne reçoit plus le conseil de mesurer une présence en ligne qu'on n'a pas mesurée.
+- Rapport généré : la consigne commune interdit les statistiques générales absentes des données. Une garde déterministe, `scrubUnsourcedStatistics`, retire avant enregistrement, dans `complete()` comme dans `regenerateAnalysis()`, toute phrase avançant une part de marques, de clients ou de consommateurs dont les nombres ne figurent pas au dossier. Aucun appel de modèle ajouté.
+- Verrou `tests/unit/governance/intake-unsourced-figures.test.ts` sur les textes de l'intake : rouge avec 10 occurrences avant correction, vert après. Sept tests de composition et de garde, rouges d'abord.
+- Restent ouverts (RESIDUAL-DEBT) : la garde ne vise que les statistiques de population ; les paragraphes de piliers V3 n'y passent pas ; la classification à faible couverture et le rapport de la recette B ne sont pas reçus.
 
 ## v6.27.571 — fix(démarrage): l'image 570 ne démarrait pas, le script de démarrage ne dépend plus de tRPC (2026-11-11)
 
