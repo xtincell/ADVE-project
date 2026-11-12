@@ -1,3 +1,12 @@
+## v6.27.576 — fix(ventes): une transaction sérialisée attend avant d'être rejouée (2026-11-12)
+
+**Le test PostgreSQL des encaissements concurrents échouait par intermittence en CI (P2034, « could not serialize access »). `serialSalesTransaction` rejouait aussitôt une transaction annulée par PostgreSQL : deux transactions concurrentes se heurtaient de nouveau aux quatre essais et la seconde échouait.**
+
+- Cause : aucune attente entre deux essais. Les transactions concurrentes relancées au même instant reproduisent le même conflit de lecture/écriture.
+- Correctif (`src/server/services/crm-engine/transaction.ts`) : attente croissante avant chaque rejeu, 20, 40 puis 80 ms, plus un décalage aléatoire de 0 à 25 ms qui sépare les transactions. Mêmes erreurs rejouables, même limite de quatre tentatives ; une erreur qui n'est pas un retour en arrière confirmé n'est toujours jamais rejouée.
+- Tests : `tests/unit/services/crm-engine-serial-transaction.test.ts`, trois cas. « attend avant de rejouer » était rouge avant le correctif (rejeu immédiat), vert après ; limite de tentatives et refus de rejouer une autre erreur verts avant et après.
+- Constat sur la PR #1190 (production), dont le diff ne touche pas les ventes : `sales-payments.postgres.test.ts` « allocates one external receipt per destination and currency under concurrent competing deals » rouge une fois. Aucun test assoupli.
+
 ## v6.27.573 — fix(lint): la garde de couches ESLint refonctionne (2026-11-12)
 
 **Constat du lot 556 : la règle de couches `boundaries/dependencies` était inerte. Sans résolveur d'imports, ESLint ne reconnaissait ni les fichiers `.ts` ni l'alias `@/`, et laissait passer n'importe quel import entre couches. Elle refonctionne, en erreur.**
