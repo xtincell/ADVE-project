@@ -1007,6 +1007,13 @@ export async function complete(token: string) {
       });
     }
 
+    // 4.11.d — une statistique de population (« 80 % des clients… ») absente
+    // des réponses, du texte déposé, des faits déclarés et de la collecte
+    // publique est retirée du texte généré AVANT toute persistance (rapport
+    // et paragraphes de piliers). Phrase retirée, jamais remplacée.
+    narrativeReport = await scrubNarrativeStatistics(narrativeReport,
+      `${JSON.stringify(responses ?? {})} ${intake.rawText ?? ""} ${JSON.stringify(canonicalContext)} ${JSON.stringify(webFootprint ?? {})}`);
+
     // Persist the premium ADVE paragraphs into each pillar under
     // `content.narrativeFull/Preview` so they survive the intake → strategy
     // conversion. V3 has already done this upstream via `narrateAdvePillars`
@@ -1518,6 +1525,9 @@ export async function regenerateAnalysis(
       recoSummaries: [],
       seshatGrounding: undefined,
     });
+    // 4.11.d — même garde qu'au complete() : statistique non sourcée retirée.
+    narrativeReport = await scrubNarrativeStatistics(narrativeReport,
+      `${JSON.stringify(responses ?? {})} ${intake.rawText ?? ""} ${JSON.stringify(canonicalContext)} ${JSON.stringify(webFootprint ?? {})}`);
   } catch (err) {
     console.warn("[quick-intake.regen] narrative regeneration failed (non-blocking):", err instanceof Error ? err.message : err);
   }
@@ -1842,6 +1852,21 @@ function buildBusinessContext(
   }
 
   return ctx;
+}
+
+/**
+ * Garde déterministe du texte généré (plan 4.11.d) : retire les statistiques
+ * de population sans appui dans le dossier, et le trace. Le rapport absent
+ * reste absent (le composer déterministe prend alors le relais).
+ */
+async function scrubNarrativeStatistics<T>(report: T | null, sourceText: string): Promise<T | null> {
+  if (!report) return report;
+  const { scrubUnsourcedStatistics } = await import("./evidence-scrub");
+  const { value, dropped } = scrubUnsourcedStatistics(report, sourceText);
+  if (dropped.length > 0) {
+    console.warn(`[quick-intake] rapport — ${dropped.length} statistique(s) non sourcée(s) retirée(s) : ${dropped.join(" | ").slice(0, 400)}`);
+  }
+  return value;
 }
 
 /**

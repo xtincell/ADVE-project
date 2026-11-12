@@ -16,7 +16,8 @@
  * Cf. docs/governance/adr/0037-output-first-deliverable-composition.md
  */
 
-export { composeDeliverable } from "./composer";
+export { composeDeliverable, getProductionPreviewState } from "./composer";
+export { TARGET_INPUT_CONTRACT, planTargetInputs } from "./target-inputs";
 export { resolveRequirements, extractUpstreamKinds, describeDag } from "./resolver";
 export { matchVault, extractToGenerate, extractToReuse } from "./vault-matcher";
 export {
@@ -39,4 +40,5 @@ export {
   ResolverCycleDetectedError,
   TargetNotForgeableError,
   MissingPreconditionPillarError,
+  MissingProductionInputsError,
 } from "./types";

@@ -760,7 +760,7 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
         });
         return wrap({
           ...base,
-          status: result.status === "MISSING_PRECONDITIONS" ? "VETOED" : "OK",
+          status: result.status === "MISSING_PRECONDITIONS" || result.status === "MISSING_INPUTS" ? "VETOED" : "OK",
           summary: result.summary,
           output: {
             status: result.status,
@@ -771,6 +771,7 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
             ...(result.previewIntentId ? {previewIntentId: result.previewIntentId} : {}),
             ...(result.sourceManifest ? {sourceManifest: result.sourceManifest} : {}),
             ...(result.materialBlock ? {materialBlock: result.materialBlock} : {}),
+            ...(result.missingInputs?.length ? {missingInputs: result.missingInputs} : {}),
             ...(result.materialStatus ? {materialStatus: result.materialStatus} : {}),
             ...(result.generativeTaskId !== undefined ? {generativeTaskId: result.generativeTaskId} : {}),
             ...(result.briefOutputId ? {briefOutputId: result.briefOutputId} : {}),

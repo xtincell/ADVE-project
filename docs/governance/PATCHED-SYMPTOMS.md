@@ -28,6 +28,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 4.11.d — restitution intake : nom de modèle et nombre de paliers faux (2026-11-12)
+
+Symptôme : en traitant les chiffres non sourcés, deux défauts voisins rendus au prospect. Le badge de la recommandation affichait le nom du modèle (`intakeResult.reco.badge`, FR/EN/ZH) ; l’écran d’attente annonçait « 7 paliers » alors que `BRAND_TIERS` en compte six. Badge reformulé « Analyse assistée », compte corrigé à 6.
+
+Hypothèse de cause racine : `src/lib/i18n/pages/intake-result.ts` était hors du périmètre de `cockpit-vocabulary` et aucun verrou ne relie un compte écrit en toutes lettres à son registre. Fichier ajouté au verrou de vocabulaire ; les noms de modèles ne figurent pas encore dans ses motifs interdits.
+
+Dette liée : RESIDUAL-DEBT, résidus de la restitution commerciale (plan 4.11.d).
+
 ### 570 — cinq écrivains acceptaient une entité d’une autre marque (2026-11-11)
 
 Symptôme : la garde de marque portait sur l’identifiant de tête, pas sur l’entité liée. `campaignManager.createFromValidatedAction` créait une campagne de la marque gardée à partir de l’action d’une autre marque (titre, description, budget copiés, statut de l’action étrangère modifié) ; `consulting.linkRecommendation` rattachait une recommandation à l’hypothèse d’une autre marque ; `pillar.applyGloryOutput` écrivait dans un pilier le résultat d’outil d’une autre marque ; `bureauEtudes.compareWaves` lisait l’échantillon des vagues d’une autre étude ; `campaignTracker.reportFieldProgress` (opérateur) écrivait un rapport terrain sur l’opération d’une autre équipe. Patch (v6.27.570) : l’entité liée doit appartenir à la marque, à l’étude ou à la campagne gardée, sinon le même 404 qu’un id inconnu, avant toute écriture. Croisé en convertissant les lectures `OrThrow` des routeurs (IN1), même commit `fix(trpc)`.
