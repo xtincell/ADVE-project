@@ -8,6 +8,12 @@ function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+export function isOperationalCalendar(row: {toolSlug: string; output: unknown; execution?: { sequenceKey: string } | null}) {
+  const role = object(row.output).calendarRole;
+  return row.toolSlug === ACTIVE_CALENDAR_TOOL && row.execution?.sequenceKey !== "PLAYBOOK-E"
+    && role !== "PLAYBOOK_PROPOSAL" && role !== "EXTERNAL_SCHEDULE_SNAPSHOT";
+}
+
 /** match only stored, documented copy, never a projection or generated fallback */
 export function exactEditorialPostKey(value: unknown) {
   const row = object(value);

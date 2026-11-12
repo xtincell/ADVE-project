@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 82 modules (src/domain, cœur métier pur)
+## Domain — 83 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
@@ -91,6 +91,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **cult-index-tier** — Domain — Cult Index tier (échelle de maturité culturelle de la marque).
 - **datacollector-receipt** — DataCollector receipt, schema `datacollector/observation-receipt` v1 (DC3 Shinkiro).
 - **devotion-ladder** — Domain — Devotion Ladder canonique (rungs du parcours superfan).
+- **editorial-source**
 - **entity-ids** — Shared identity acquisition for existing JSON collections. No fuzzy or positional matching.
 - **external-metric** — ADR-0146 ingress contract for external metrics and observations, shared by HTTP and governed admission.
 - **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.

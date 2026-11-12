@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonTable } from "@/components/shared/loading-skeleton";
 import { Building, Building2, Plus, TrendingUp } from "lucide-react";
-import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
+import { formatBrandComposite, meanBrandComposite } from "@/domain/brand-scores";
 
 export default function AgencyClientsPage() {
   const router = useRouter();
@@ -30,14 +30,7 @@ export default function AgencyClientsPage() {
 
   const tableData = filtered.map((c) => {
     const brandCount = c._count?.strategies ?? 0;
-    let avgScore = 0;
-    if (c.strategies.length > 0) {
-      const total = c.strategies.reduce((sum, s) => {
-        const v = s.advertis_vector as Record<string, number> | null;
-        return sum + (v ? PILLAR_KEYS.reduce((acc, k) => acc + (v[k] ?? 0), 0) : 0);
-      }, 0);
-      avgScore = total / c.strategies.length;
-    }
+    const avgScore = meanBrandComposite(c.strategies.map(s => s.advertis_vector));
     return {
       id: c.id,
       name: c.name,
@@ -50,7 +43,7 @@ export default function AgencyClientsPage() {
     };
   });
 
-  const scoreRows = tableData.filter(c => c.status !== "REFERENCE" || c.brandCount > 0);
+  const portfolioMean = meanBrandComposite(filtered.flatMap(c => c.strategies.map(s => s.advertis_vector)));
   const columns = [
     {
       key: "name",
@@ -82,7 +75,7 @@ export default function AgencyClientsPage() {
       header: "Score ADVE moyen",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-white">{item.status === "REFERENCE" && !item.brandCount ? "Sans marque évaluée" : `${item.avgScore.toFixed(0)}/200`}</span>
+        <span className="text-sm text-white">{formatBrandComposite(item.avgScore)}</span>
       ),
     },
     {
@@ -139,7 +132,7 @@ export default function AgencyClientsPage() {
           value={allClients.reduce((sum, c) => sum + (c._count?.strategies ?? 0), 0)}
           icon={Building2}
         />
-        <StatCard title="Score ADVE moyen" value={`${scoreRows.length > 0 ? (scoreRows.reduce((s, c) => s + c.avgScore, 0) / scoreRows.length).toFixed(0) : "—"}/200`} icon={TrendingUp} />
+        <StatCard title="Score ADVE moyen" value={formatBrandComposite(portfolioMean)} icon={TrendingUp} />
       </div>
 
       <SearchFilter
