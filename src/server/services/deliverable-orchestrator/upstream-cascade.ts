@@ -18,6 +18,7 @@ import { depositInBrandVault } from "@/server/services/artemis/tools/sequence-ex
 import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { assertUsablePin, readPinSourceText } from "./production-sources";
 import { briefAssetFingerprint } from "./vault-matcher";
+import type { PreparedPrerequisite } from "./target-inputs";
 import type {
   BriefRequirement,
   DeliverableComposition,
@@ -373,13 +374,13 @@ async function resume(
  * An active document is a terminal input. Its historical prerequisites are not regenerated. */
 export async function prepareUpstreamBriefs(
   input: PrepareInput,
-): Promise<{ text: string; steps: UpstreamStep[] }> {
+): Promise<{ text: string; steps: UpstreamStep[]; prerequisites: PreparedPrerequisite[] }> {
   const target = input.composition.briefDag.find((n) => n.depth === 0);
   if (!target || target.kind !== input.composition.targetKind)
     throw new Error("Le plan ne contient pas le livrable cible.");
   if (!input.dispatchIntentId || !input.previewIntentId)
     throw new Error("L’aperçu et la production doivent être identifiés.");
-  if (!target.requires.length) return { text: "", steps: [] };
+  if (!target.requires.length) return { text: "", steps: [], prerequisites: [] };
   // The legacy Intent calls this operatorId but sends the authenticated user's ID.
   const actor = await getOperatorContext(input.operatorId);
   if (!(await canAccessStrategy(input.strategyId, actor)))
@@ -530,5 +531,13 @@ export async function prepareUpstreamBriefs(
     }
   const text = joinContext([...prepared.values()].map((p) => p.text));
   joinContext([input.sourceText, text]);
-  return { text, steps: [...prepared.values()].map((p) => p.step) };
+  return {
+    text,
+    steps: [...prepared.values()].map((p) => p.step),
+    // Exact versions handed to the target, so its required fields can cite them.
+    prerequisites: [...prepared.values()].map((p) => ({
+      kind: p.step.kind,
+      versions: p.receipts.map(({ id, version }) => ({ id, version })),
+    })),
+  };
 }
