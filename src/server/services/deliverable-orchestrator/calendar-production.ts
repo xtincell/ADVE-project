@@ -11,6 +11,7 @@ import { calendarBriefSource } from "@/domain/calendar-brief-source";
 import { productionPins, type ProductionPin } from "@/domain/production-pin";
 import { productionArtwork, type ProductionArtwork } from "@/domain/production-artwork";
 import { isUsableGeneration } from "@/domain/generation-result";
+import { describeProductionPrecondition, missingProductionInputs, summarizeMissingProductionInputs } from "@/domain/production-inputs";
 
 import { ACTIVE_CALENDAR_TOOL, HISTORICAL_CALENDAR_TOOL, CALENDAR_TOOLS, calendarPosts, linkUniqueSourcePost } from "@/domain/calendar-editions";
 
@@ -245,7 +246,10 @@ export async function produceCalendarBrief(v:import("zod").z.infer<typeof import
   const o=record(preview.output),previewIntentId=string(o.previewIntentId);
   if(preview.status!=="OK"||!previewIntentId)return emptyReceipt(preview.status,preview.summary);
   const requirements=Array.isArray(o.missingPreconditions)?o.missingPreconditions.map(String):[];
-  const block=string(o.materialBlock)??(requirements.length?"Préparation de la marque requise : "+requirements.join(", "):null);
+  const inputs=missingProductionInputs.safeParse(o.missingInputs ?? []);
+  // Dette 4.11.a — a required input still missing stops the line before any call.
+  const block=string(o.materialBlock)??(requirements.length?"Préparation de la marque requise : "+requirements.map(describeProductionPrecondition).join(" · "):null)
+    ??(!inputs.success?"Le contrôle des entrées de production est illisible ; préparez un nouvel aperçu.":inputs.data.length?summarizeMissingProductionInputs(inputs.data):null);
   if(block)return {...emptyReceipt("BLOCKED",block),previewIntentId};
   const dispatched=await emitIntent({...input,previewOnly:false,previewIntentId},{caller:"planning.assign-option",operatorId});
   return (await existing()) ?? {...emptyReceipt(dispatched.status,dispatched.summary),previewIntentId};
