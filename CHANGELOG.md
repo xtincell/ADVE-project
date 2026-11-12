@@ -1,3 +1,12 @@
+## v6.27.580 — fix(ci): le contrôle SLO n'ouvre plus une issue par exécution (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #873, encore juste, est remise à jour et livrée. Son acceptation ferme les points 1.2 et 1.3 du plan d'achèvement.**
+
+- Le contrôle planifié lit le code de sortie de `check-slos.ts` : 0, SLO tenus, l'issue ouverte est refermée ; 1, dépassement mesuré, une seule issue « SLO breach — rolling 7d », complétée à chaque passage ; tout autre code, mesure impossible, le job échoue sans ouvrir d'issue.
+- `check-slos.ts` sortait en 1 quand `DATABASE_URL` manquait, ce qui comptait comme un dépassement ; il sort désormais en 2.
+- Un job distinct ferme, avec un commentaire, les 216 anciennes issues « SLO breach detected — <run> », toutes vides ; il reprend là où il s'est arrêté et ne fait plus rien une fois la liste épuisée.
+- La base de production reste injoignable depuis GitHub Actions : le contrôle restera rouge, sans issue, tant que cet accès n'est pas ouvert.
+
 ## v6.27.576 — fix(ventes): une transaction sérialisée attend avant d'être rejouée (2026-11-12)
 
 **Le test PostgreSQL des encaissements concurrents échouait par intermittence en CI (P2034, « could not serialize access »). `serialSalesTransaction` rejouait aussitôt une transaction annulée par PostgreSQL : deux transactions concurrentes se heurtaient de nouveau aux quatre essais et la seconde échouait.**
