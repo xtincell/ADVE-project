@@ -4,6 +4,7 @@
  * Calls through the existing LLM Gateway for framework execution
  */
 
+import { EDITORIAL_REFERENCE_RULE, type EditorialEvidence } from "./tools/editorial-references";
 import { isUsableGeneration } from "@/domain/generation-result";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { callLLM } from "@/server/services/llm-gateway";
@@ -65,7 +66,8 @@ export function topologicalSort(slugs: string[]): string[] {
 export async function executeFramework(
   frameworkSlug: string,
   strategyId: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  editorial?: EditorialEvidence,
 ): Promise<{ resultId: string; output: Record<string, unknown> | null; score: number | null }> {
   const fw = getFramework(frameworkSlug);
   if (!fw) throw new Error(`Framework inconnu: ${frameworkSlug}`);
@@ -146,9 +148,11 @@ ${wrapUntrusted("VALEURS STRUCTURÉES QUALIFIÉES", formatPreciseFields(precise)
 
 ${wrapUntrusted("ORIENTATION STRATÉGIE — résumé, ne pas citer comme preuve", strategyLines.join("\n"), { max: 4000 })}`;
 
-  const userPrompt = `${fw.promptTemplate}
+  let userPrompt = `${fw.promptTemplate}
 
 ${wrapUntrusted("DONNÉES FOURNIES", JSON.stringify(input, null, 2))}`;
+
+  if (editorial?.brief) userPrompt += "\n\n" + EDITORIAL_REFERENCE_RULE + "\n" + editorial.brief;
 
   const startTime = Date.now();
   let output: Record<string, unknown>;
@@ -175,6 +179,7 @@ ${wrapUntrusted("DONNÉES FOURNIES", JSON.stringify(input, null, 2))}`;
       const durationMs = Date.now() - startTime;
       output = {
         ...(structured.data as Record<string, unknown>),
+        ...(editorial?.citations.length ? { editorialSources: editorial.citations } : {}),
         _meta: { attempts: structured.attempts, schemaEnforced: true, model: structured.model, provider: structured.provider },
       };
 

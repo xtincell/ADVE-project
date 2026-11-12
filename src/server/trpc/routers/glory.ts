@@ -11,7 +11,8 @@ import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy, deriveDatedPosts, brandVoiceFromPillarD } from "@/lib/types/launch-calendar";
 import { estimateSequenceCost } from "@/server/services/artemis/tools/sequence-cost";
-import { ACTIVE_CALENDAR_TOOL, HISTORICAL_CALENDAR_TOOL, CALENDAR_TOOLS } from "@/domain/calendar-editions";
+import { readActiveCalendar } from "@/server/services/deliverable-orchestrator/active-calendar";
+import { HISTORICAL_CALENDAR_TOOL, CALENDAR_TOOLS, isOperationalCalendar } from "@/domain/calendar-editions";
 /* lafusee:governed-active */
 
 export const gloryRouter = createTRPCRouter({
@@ -481,11 +482,11 @@ export const gloryRouter = createTRPCRouter({
           },
         },
         orderBy: { createdAt: "desc" },
-        select: { id:true, toolSlug: true, output: true, createdAt: true },
+        select: { id:true, toolSlug: true, output: true, createdAt: true, execution: { select: {sequenceKey:true} } },
       });
       const pick = (slug: string) => rows.find((r) => r.toolSlug === slug);
       const timelineRow = pick("launch-timeline-planner");
-      const activeCalendar = pick(ACTIVE_CALENDAR_TOOL);
+      const activeCalendar = rows.find(isOperationalCalendar);
       const editions = rows.filter(row=>CALENDAR_TOOLS.includes(row.toolSlug));
       const calendarRow = input.editionId ? editions.find(row=>row.id===input.editionId) : activeCalendar;
       if(input.editionId && !calendarRow)throw new TRPCError({code:"NOT_FOUND",message:"Cette édition n’est pas disponible pour cette marque."});
@@ -515,7 +516,7 @@ export const gloryRouter = createTRPCRouter({
         timeline,
         calendar,
         activeCalendarId:activeCalendar?.id??null,
-        editions:editions.map(row=>({id:row.id,documentary:row.toolSlug===HISTORICAL_CALENDAR_TOOL,createdAt:row.createdAt.toISOString(),
+        editions:editions.map(row=>({id:row.id,documentary:row.toolSlug===HISTORICAL_CALENDAR_TOOL,playbook:row.execution?.sequenceKey==="PLAYBOOK-E",createdAt:row.createdAt.toISOString(),
           label:row.output && typeof row.output==="object" && !Array.isArray(row.output) && typeof row.output.editionLabel==="string" ? row.output.editionLabel : null})),
         naming: parseSocialNaming(namingRow?.output ?? null),
         social: parseSocialCopy(socialRow?.output ?? null),
@@ -552,11 +553,7 @@ export const gloryRouter = createTRPCRouter({
         throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
       }
 
-      const calRow = await ctx.db.gloryOutput.findFirst({
-        where: { strategyId: input.strategyId, toolSlug: "content-calendar-strategist" },
-        orderBy: { createdAt: "desc" },
-        select: { output: true },
-      });
+      const calRow = await readActiveCalendar(input.strategyId, ctx.db);
       const calendar = parseContentCalendar(calRow?.output ?? null);
       if (!calendar) {
         return { armed: 0, skippedPast: 0, skippedUnsupported: 0, skippedNeedsVisual: 0, alreadyArmed: 0, byPlatform: {} as Record<string, number>, reason: "NO_CALENDAR" as const };

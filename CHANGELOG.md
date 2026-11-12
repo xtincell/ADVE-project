@@ -1,3 +1,11 @@
+## v6.27.578 — fix(playbook): canaux et calendrier repris des pièces de référence (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #1152, préparée au temps de la 553 et jamais fusionnée, est remise à jour et livrée.**
+
+- Le Playbook d'engagement s'appuie sur les pièces de référence de la marque : liens publics, profils sociaux et calendrier proviennent des canaux et des diffusions documentés, plus d'un domaine déduit du pays ni de CTA de prélancement.
+- Le calendrier distingue les sujets proposés des occurrences déjà programmées, dont il conserve le texte intégral, le canal, la date et la source.
+- Une édition du Playbook ne peut plus devenir le planning opérationnel du Studio ; l'édition produite reste soumise à la relecture de l'équipe et rien n'est publié.
+- `playbook-editorial.postgres.test.ts` entre dans la suite PostgreSQL de la CI. Conflit avec 6.27.574 résolu dans `executeTool` : la preuve éditoriale et les entrées obligatoires coexistent.
 ## v6.27.577 — fix(crm): une marque non évaluée n'est plus affichée à zéro (2026-11-12)
 
 **Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #1150, encore juste, est remise à jour et livrée. Le CRM distinguait mal une marque jamais évaluée d'une marque notée zéro.**
