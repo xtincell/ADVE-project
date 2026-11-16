@@ -204,7 +204,7 @@ describe.sequential("IN7 — rétrogradation d'un compte", () => {
   it("relit l'appartenance à l'équipe à chaque appel quand elle est retirée en base", async () => {
     // Aucune procédure ne modifie User.operatorId : la ligne est changée directement,
     // pour éprouver seulement la relecture par une session déjà ouverte.
-    const team = await operator(), staff = await account("USER", team.id);
+    const team = await operator(), staff = await account("OPERATOR", team.id);
     const teamBrand = await brand((await account("FOUNDER")).id, team.id);
     const before = (await signIn(staff.email))!;
     ok(await trpc(before, "argos.list"));

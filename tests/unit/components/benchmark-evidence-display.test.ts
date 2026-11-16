@@ -3,18 +3,20 @@ import { createElement } from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+type PillarMeans = Record<string, { average: number | null; coverage: { observedCount: number; missingCount: number; totalCount: number } }>;
 const state = vi.hoisted(() => ({
   own: { composite: 120 as number | null, advertis_vector: {} as Record<string, unknown> },
-  benchmark: { avgComposite: 80 as number | null, count: 4, coverage: { observedCount: 3, missingCount: 1, totalCount: 4 }, benchmarks: [] as Record<string, unknown>[] },
+  benchmark: { avgComposite: 80 as number | null, count: 4, coverage: { observedCount: 3, missingCount: 1, totalCount: 4 }, benchmarks: [] as Record<string, unknown>[], pillarBenchmarks: undefined as PillarMeans | undefined },
   ranking: [] as { strategyId: string; name: string; composite: number | null }[],
   benchmarkError: null as Error | null, rankingError: null as Error | null,
-  benchmarkLoading: false, rankingLoading: false, internal: true, radar: vi.fn(),
+  benchmarkLoading: false, rankingLoading: false, internal: true, role: "ADMIN", authError: false,
+  radar: vi.fn(), benchmarkRequest: vi.fn(), rankingRequest: vi.fn(), patternsRequest: vi.fn(), searchRequest: vi.fn(),
 }));
 vi.mock("@/components/cockpit/strategy-context", () => ({ useCurrentStrategyId: () => "my-brand" }));
 vi.mock("@/components/shared/advertis-radar", () => ({ AdvertisRadar: (props: unknown) => { state.radar(props); return null; } }));
 vi.mock("@/components/shared/brand-comparables-panel", () => ({ BrandComparablesPanel: () => null }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: {
-  auth: { me: { useQuery: () => ({ data: { canOperate: state.internal }, isLoading: false }) } },
+  auth: { me: { useQuery: () => ({ data: { canOperate: state.internal, role: state.role }, isLoading: false, isError: state.authError }) } },
   strategy: {
     getWithScore: { useQuery: () => ({ data: state.own, isLoading: false, error: null }) },
     list: { useQuery: () => ({ data: [] }) },
@@ -28,10 +30,10 @@ vi.mock("@/lib/trpc/client", () => ({ trpc: {
   },
   useUtils: () => ({ marketStudy: { list: { invalidate: vi.fn() } } }),
   knowledgeGraph: {
-    getBenchmarks: { useQuery: () => ({ data: state.benchmark, isLoading: state.benchmarkLoading, error: state.benchmarkError }) },
-    getFrameworkRanking: { useQuery: () => ({ data: state.ranking, isLoading: state.rankingLoading, error: state.rankingError }) },
-    getBriefPatterns: { useQuery: () => ({ data: [], isLoading: false }) },
-    query: { useQuery: () => ({ data: [], isLoading: false }) },
+    getBenchmarks: { useQuery: (input: unknown, options: unknown) => { state.benchmarkRequest(input, options); return { data: state.benchmark, isLoading: state.benchmarkLoading, error: state.benchmarkError }; } },
+    getFrameworkRanking: { useQuery: (input: unknown, options: unknown) => { state.rankingRequest(input, options); return { data: state.ranking, isLoading: state.rankingLoading, error: state.rankingError }; } },
+    getBriefPatterns: { useQuery: (input: unknown, options: unknown) => { state.patternsRequest(input, options); return { data: [], isLoading: false }; } },
+    query: { useQuery: (input: unknown, options: unknown) => { state.searchRequest(input, options); return { data: [], isLoading: false }; } },
   },
 } }));
 import BenchmarksPage from "@/app/(cockpit)/cockpit/insights/benchmarks/page";
@@ -43,7 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.own = { composite: 120, advertis_vector: { a: 22, d: 4, v: 21, e: 6, r: 24, t: 3, i: 10, s: 9 } };
   state.benchmark = { avgComposite: 80, count: 4, coverage: { observedCount: 3, missingCount: 1, totalCount: 4 },
-    benchmarks: [{ sector: "A", avgComposite: 40 }, { sector: "B", avgComposite: 80 }, { sector: "C", avgComposite: 120 }] };
+    benchmarks: [{ sector: "A", avgComposite: 40 }, { sector: "B", avgComposite: 80 }, { sector: "C", avgComposite: 120 }], pillarBenchmarks: undefined };
   state.ranking = [
     { strategyId: "top", name: "Top", composite: 180 },
     { strategyId: "peer", name: "Peer", composite: 120 },
@@ -53,10 +55,13 @@ beforeEach(() => {
   ];
   state.benchmarkError = null; state.rankingError = null;
   state.benchmarkLoading = false; state.rankingLoading = false; state.internal = true;
+  state.role = "ADMIN"; state.authError = false;
 });
 afterEach(cleanup);
 const countFor = (label: string) => within(screen.getByRole("region", { name: "Répartition des marques classées" }))
   .getByText(label).closest("li")!.textContent;
+const pillarCells = (key: string) => within(screen.getByRole("row", { name: new RegExp(`^${key} —`) }))
+  .getAllByRole("cell").map(cell => cell.textContent);
 
 describe("benchmark displays only received measurements", () => {
   it("keeps one actual brand radar and a qualified global composite comparison", () => {
@@ -67,12 +72,44 @@ describe("benchmark displays only received measurements", () => {
     expect(screen.getByText("Moyenne des marques observées")).toBeDefined();
     expect(screen.getByText("3/4 marques avec un score")).toBeDefined();
     expect(screen.getByText(/Écart de votre score composite à la moyenne reçue : \+40.0 points/)).toBeDefined();
-    expect(screen.getByText(/Comparaison par pilier indisponible/)).toBeDefined();
+    expect(screen.getAllByText("Non disponible")).toHaveLength(8);
+    expect(screen.getByText(/tous secteurs, pays et échelles de marché confondus/)).toBeDefined();
     expect(screen.queryByText("Moyenne secteur")).toBeNull();
     expect(screen.queryByText("Top performer")).toBeNull();
     expect(screen.queryByText("Forces differenciatrices")).toBeNull();
     expect(screen.queryByText(/Investissez dans/)).toBeNull();
     expect(screen.queryByText(/simulees|simulées|vs période préc/)).toBeNull();
+  });
+  it("shows independent observed means with their own coverage, preserving zero and missing axes", () => {
+    state.benchmark.pillarBenchmarks = {
+      a: { average: 0, coverage: { observedCount: 1, missingCount: 3, totalCount: 4 } },
+      d: { average: 12.5, coverage: { observedCount: 2, missingCount: 2, totalCount: 4 } },
+      v: { average: null, coverage: { observedCount: 0, missingCount: 4, totalCount: 4 } },
+    };
+    render(createElement(BenchmarksPage));
+    expect(pillarCells("A")).toEqual(["22.0", "0.0", "1/4"]);
+    expect(pillarCells("D")).toEqual(["4.0", "12.5", "2/4"]);
+    expect(pillarCells("V")).toEqual(["21.0", "Non disponible", "0/4"]);
+    expect(pillarCells("E")).toEqual(["6.0", "Non disponible", "—"]);
+    expect(state.radar).toHaveBeenCalledOnce();
+    expect(state.radar.mock.calls[0]![0].comparisonScores).toBeUndefined();
+  });
+  it.each([false, true])("renders all eight fully covered received axes without manufacturing a comparison radar (all zeroes: %s)", allZeroes => {
+    state.benchmark.pillarBenchmarks = Object.fromEntries(["a", "d", "v", "e", "r", "t", "i", "s"].map((key, i) => [key, {
+      average: allZeroes ? 0 : i + 1, coverage: { observedCount: 4, missingCount: 0, totalCount: 4 },
+    }]));
+    render(createElement(BenchmarksPage));
+    for (const [i, key] of ["A", "D", "V", "E", "R", "T", "I", "S"].entries()) {
+      expect(pillarCells(key).slice(1)).toEqual([(allZeroes ? 0 : i + 1).toFixed(1), "4/4"]);
+    }
+    expect(state.radar).toHaveBeenCalledOnce();
+    expect(state.radar.mock.calls[0]![0].comparisonScores).toBeUndefined();
+  });
+  it("hides stale axis means after the aggregate request fails", () => {
+    state.benchmark.pillarBenchmarks = { a: { average: 12.5, coverage: { observedCount: 3, missingCount: 1, totalCount: 4 } } };
+    state.benchmarkError = new Error("fixture");
+    render(createElement(BenchmarksPage));
+    expect(pillarCells("A")).toEqual(["22.0", "Non disponible", "—"]);
   });
   it("shares rank between equal scores and counts the real classification population", () => {
     render(createElement(BenchmarksPage));
@@ -86,7 +123,7 @@ describe("benchmark displays only received measurements", () => {
     expect(countFor("Icône")).toBe("Icône0");
   });
   it("keeps missing axes missing and an explicitly received zero as zero", () => {
-    state.own = { composite: null, advertis_vector: { a: 0, d: null, v: "7", e: -1, r: Number.NaN } };
+    state.own = { composite: null, advertis_vector: { a: 0, d: null, v: "7", e: -1, r: Number.NaN, t: 26 } };
     state.benchmark.avgComposite = null;
     state.ranking = [{ strategyId: "my-brand", name: "Mine", composite: null }];
     render(createElement(BenchmarksPage));
@@ -126,6 +163,46 @@ describe("benchmark displays only received measurements", () => {
     expect(screen.getByText("Le benchmark sectoriel — en construction")).toBeDefined();
     expect(screen.queryByText("Votre score")).toBeNull();
     expect(state.radar).not.toHaveBeenCalled();
+  });
+  it.each(["CLIENT_RETAINER", "CREATOR", "FREELANCE", "BRAND_MANAGER"])("keeps a linked %s outside the internal preview and disables both global requests", role => {
+    state.role = role; state.internal = true;
+    render(createElement(BenchmarksPage));
+    expect(screen.getByText("Le benchmark sectoriel — en construction")).toBeDefined();
+    expect(screen.queryByText(/Aperçu interne/)).toBeNull();
+    expect(state.radar).not.toHaveBeenCalled();
+    expect(state.benchmarkRequest).toHaveBeenCalledWith({}, { enabled: false });
+    expect(state.rankingRequest).toHaveBeenCalledWith({}, { enabled: false });
+  });
+  it("does not reuse an internal preview after authentication fails", () => {
+    state.authError = true;
+    render(createElement(BenchmarksPage));
+    expect(screen.queryByText(/Aperçu interne/)).toBeNull();
+    expect(state.benchmarkRequest).toHaveBeenCalledWith({}, { enabled: false });
+  });
+  it("shows an access state in agency knowledge without requesting or displaying global data for linked clients", () => {
+    state.role = "CLIENT_RETAINER"; state.internal = true;
+    render(createElement(AgencyKnowledgePage));
+    expect(screen.getByText("Accès réservé à l’équipe opératrice")).toBeDefined();
+    expect(screen.queryByText("Marques observées")).toBeNull();
+    expect(screen.queryByText("Knowledge Graph vide")).toBeNull();
+    expect(state.benchmarkRequest).toHaveBeenCalledWith({}, { enabled: false });
+    expect(state.patternsRequest).toHaveBeenCalledWith({}, { enabled: false });
+    expect(state.searchRequest).toHaveBeenCalledWith(expect.anything(), { enabled: false });
+  });
+  it("does not request administrator-only patterns for an operator", () => {
+    state.role = "OPERATOR";
+    render(createElement(AgencyKnowledgePage));
+    expect(state.benchmarkRequest).toHaveBeenCalledWith({}, { enabled: true });
+    expect(state.patternsRequest).toHaveBeenCalledWith({}, { enabled: false });
+    expect(screen.getByText("Les patterns de briefs sont réservés aux administrateurs.")).toBeDefined();
+    expect(within(screen.getByText("Patterns brief").parentElement!).getByText("—")).toBeDefined();
+  });
+  it("keeps an unavailable agency aggregate distinct from an empty population", () => {
+    state.benchmarkError = new Error("fixture");
+    render(createElement(AgencyKnowledgePage));
+    expect(screen.getByText("Les repères des marques sont indisponibles. Réessayez plus tard.")).toBeDefined();
+    expect(within(screen.getByText("Marques observées").parentElement!).getByText("—")).toBeDefined();
+    expect(screen.queryByText("Knowledge Graph vide")).toBeNull();
   });
   it("labels the agency count as brands rather than the number of sector benchmarks", () => {
     render(createElement(AgencyKnowledgePage));

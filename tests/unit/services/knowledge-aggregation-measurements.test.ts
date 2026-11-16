@@ -235,15 +235,63 @@ describe("Knowledge aggregation preserves missing measurements", () => {
       { id: "ci1", advertis_vector: { composite: 200 } },
       { id: "ci2", advertis_vector: { composite: 100 } },
     ];
-    mocks.strategies.mockImplementation(async ({ where }) => where.advertis_vector ? strategies.filter(s => s.advertis_vector !== null) : strategies);
+    const canonical = strategies.map(s => ({ ...s, client: { sector: "Alimentation" }, countryCode: s.id.startsWith("cm") ? "CM" : "CI", marketScale: "NATION" }));
+    mocks.strategies.mockImplementation(async ({ where }) => where.advertis_vector ? canonical.filter(s => s.advertis_vector !== null) : canonical);
     mocks.intake.mockImplementation(async ({ where }) => ({ sector: "food", country: where.convertedToId.startsWith("cm") ? "CM" : "CI" }));
     await aggregateSectorBenchmarks();
     const writes = mocks.upsert.mock.calls.map(([input]) => input.create);
     expect(writes).toHaveLength(2);
-    expect(writes[0]).toMatchObject({ id: "agg-benchmark-food-CM", sampleSize: 2,
+    expect(mocks.intake).not.toHaveBeenCalled();
+    expect(writes[0]).toMatchObject({ id: "agg-benchmark-food-CM-NATION", countryCode: "CM", sampleSize: 2,
       data: { avgComposite: 50, topQuartile: 100, coverage: { observedCount: 2, missingCount: 1, totalCount: 3 } } });
-    expect(writes[1]).toMatchObject({ id: "agg-benchmark-food-CI", sampleSize: 2,
+    expect(writes[1]).toMatchObject({ id: "agg-benchmark-food-CI-NATION", countryCode: "CI", sampleSize: 2,
       data: { avgComposite: 150, topQuartile: 200, coverage: { observedCount: 2, missingCount: 0, totalCount: 2 } } });
+  });
+
+  it("separates canonical scales, preserves valid zeroes, and rejects invalid composite scores", async () => {
+    const row = (marketScale: string, composite: unknown) => ({ client: { sector: "FOOD" }, countryCode: "CM", marketScale, advertis_vector: { composite } });
+    mocks.strategies.mockResolvedValue([
+      row("NATION", 0), row("NATION", 100), row("NATION", 201), row("NATION", NaN), row("NATION", Infinity),
+      row("VILLE", 180), row("VILLE", 200),
+    ]);
+    mocks.intake.mockResolvedValue({ sector: "TECH", country: "FR" });
+    await aggregateSectorBenchmarks();
+    const writes = mocks.upsert.mock.calls.map(([input]) => input.create);
+    expect(writes).toHaveLength(2);
+    expect(writes[0]).toMatchObject({ sector: "food", market: "CM", countryCode: "CM", data: {
+      metricsVersion: 2, avgComposite: 50, coverage: { observedCount: 2, missingCount: 3, totalCount: 5 },
+      cohort: { sector: "food", countryCode: "CM", marketScale: "NATION", qualified: true },
+    } });
+    expect(writes[1]).toMatchObject({ data: { avgComposite: 190, cohort: { marketScale: "VILLE" } } });
+    expect(mocks.intake).not.toHaveBeenCalled();
+    mocks.entries.mockResolvedValue(writes);
+    const rows = await getSectorBenchmarks("food");
+    expect(rows[0]).toMatchObject({ avgComposite: 50, basis: "AGGREGATED", cohort: { marketScale: "NATION" } });
+  });
+
+  it.each([
+    { client: { sector: null }, countryCode: "CM", marketScale: "NATION" },
+    { client: { sector: "unrecognized-xyz" }, countryCode: "CM", marketScale: "NATION" },
+    { client: { sector: "FOOD" }, countryCode: null, marketScale: "NATION" },
+    { client: { sector: "FOOD" }, countryCode: "CM", marketScale: null },
+  ])("qualifies incomplete canonical coordinates without inventing a benchmark: %j", async (coordinates) => {
+    mocks.strategies.mockResolvedValue([0, 100].map(composite => ({ ...coordinates, advertis_vector: { composite } })));
+    mocks.intake.mockResolvedValue({ sector: "FOOD", country: "CM" });
+    await aggregateSectorBenchmarks();
+    const stored = mocks.upsert.mock.calls[0]![0].create;
+    expect(stored).toMatchObject({ sampleSize: 2, successScore: null, data: {
+      avgComposite: null, topQuartile: null, cohort: { qualified: false },
+      coverage: { observedCount: 2, missingCount: 0, totalCount: 2 },
+    } });
+    mocks.entries.mockResolvedValue([stored]);
+    expect((await getSectorBenchmarks("food"))[0]).toMatchObject({ avgComposite: null, basis: "UNQUALIFIED_COHORT" });
+  });
+
+  it("does not certify a version-one intake cohort even when its score coverage was valid", async () => {
+    mocks.entries.mockResolvedValue([{ id: "agg-benchmark-food-CM", sector: "food", market: "CM", sampleSize: 2,
+      data: { metricsVersion: 1, avgComposite: 100, topQuartile: 150, coverage: { observedCount: 2, missingCount: 0, totalCount: 2 } },
+    }]);
+    expect((await getSectorBenchmarks("food"))[0]).toMatchObject({ avgComposite: null, topQuartile: null, basis: "UNVERIFIED_AGGREGATE" });
   });
 
   it("does not manufacture sector benchmarks from absent or insufficient composites", async () => {
@@ -261,7 +309,7 @@ describe("Knowledge aggregation preserves missing measurements", () => {
   });
 
   it("expires sector aggregates when no active population remains", async () => {
-    mocks.strategies.mockResolvedValue([{ id: "a", advertis_vector: { composite: 40 } }, { id: "b", advertis_vector: { composite: 60 } }]);
+    mocks.strategies.mockResolvedValue([40, 60].map(composite => ({ client: { sector: "FOOD" }, countryCode: "CM", marketScale: "NATION", advertis_vector: { composite } })));
     await aggregateSectorBenchmarks();
     let stored = mocks.upsert.mock.calls[0]![0].create;
     mocks.entries.mockImplementation(async () => [stored]);

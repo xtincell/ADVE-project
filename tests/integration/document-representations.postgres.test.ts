@@ -3,6 +3,7 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { assertOwnedPostgresTarget } from "../support/owned-postgres-target";
 vi.mock("@/server/services/oracle-section", () => ({ markAllSectionsStale: vi.fn(async () => ({})) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { db } from "@/lib/db";
@@ -13,9 +14,7 @@ import { sourceFingerprint, loadBrandSources, listBrandSourceSummaries, setSourc
 
 let brand: string, consumer: string, unrelated: string, actor: string, operatorId: string, mediaRoot: string;
 beforeAll(async () => {
-  const url = new URL(process.env.DATABASE_URL!);
-  expect(["127.0.0.1", "localhost"]).toContain(url.hostname);
-  expect(url.pathname).toBe("/shinkiro_verify");
+  assertOwnedPostgresTarget();
   mediaRoot = await mkdtemp(join(tmpdir(), "documents504-"));
   vi.stubEnv("CREATIVE_MEDIA_ARCHIVE_DIR", mediaRoot);
   vi.stubEnv("CREATIVE_MEDIA_ENCRYPTION_KEY", randomBytes(32).toString("hex"));
@@ -27,7 +26,24 @@ beforeAll(async () => {
   consumer = (await db.strategy.create({ data: { name: "Formats consumer fixture", userId: actor, operatorId } })).id;
   unrelated = (await db.strategy.create({ data: { name: "Unrelated fixture", userId: actor } })).id;
 });
-afterAll(async () => { await db.$disconnect(); vi.unstubAllEnvs(); if (mediaRoot) await rm(mediaRoot, { recursive: true, force: true }); });
+afterAll(async () => {
+  try {
+    if (operatorId) await db.$transaction(async tx => {
+      const brands = [brand, consumer, unrelated].filter(Boolean);
+      const sources = await tx.brandDataSource.findMany({ where: { strategyId: { in: brands } }, select: { id: true } });
+      const sourceIds = sources.map(source => source.id);
+      await tx.fileUpload.deleteMany({ where: { sourceId: { in: sourceIds } } });
+      await tx.brandSourceUse.deleteMany({ where: { OR: [{ sourceId: { in: sourceIds } }, { strategyId: { in: brands } }] } });
+      await tx.brandDataSource.deleteMany({ where: { id: { in: sourceIds } } });
+      await tx.strategy.deleteMany({ where: { id: { in: brands } } });
+      if (actor) await tx.user.deleteMany({ where: { id: actor } });
+      await tx.operator.deleteMany({ where: { id: operatorId } });
+    });
+  } finally {
+    try { await db.$disconnect(); }
+    finally { vi.unstubAllEnvs(); if (mediaRoot) await rm(mediaRoot, { recursive: true, force: true }); }
+  }
+});
 const get = (id: string) => db.brandDataSource.findUniqueOrThrow({ where: { id } });
 async function file(name: string, type = "TXT", text = "Piste documentaire de recette ; aucune vente ni décision réelle.") {
   return retainSourceFile(brand, { name, type, content: Buffer.from(text).toString("base64") }, actor);

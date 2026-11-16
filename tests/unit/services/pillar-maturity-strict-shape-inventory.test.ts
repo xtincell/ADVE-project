@@ -260,7 +260,7 @@ describe("aucune écriture", () => {
       if (!reads.has(method)) return () => { calls.push(`WRITE ${name}.${method}`); throw new Error(`écriture interdite ${name}.${method}`); };
       return async (args: any) => {
         calls.push(`${name}.${method}`);
-        if (name === "pillar") return [{ id: "p1", strategyId: "s1", key: "a", content: { archetype: "Créateur", valeurs: LEGACY_VALUES },
+        if (name === "pillar") return [{ id: "p1", strategyId: "s1", key: "a", content: { archetype: "Créateur", valeurs: LEGACY_VALUES, a_mission: "Mission synthétique" },
           fieldCertainty: null, currentVersion: 2, validationStatus: "DRAFT", sources: null }];
         if (name === "strategy") return [{ id: "s1", name: "Marque synthétique", status: "ACTIVE" }];
         if (name === "pillarVersion") return [{ id: "pv1", pillarId: "p1", version: 1, content: { archetype: "Sage" },
@@ -281,13 +281,14 @@ describe("aucune écriture", () => {
     } });
     let txOptions: any;
     const client = { $transaction: async (fn: (t: unknown) => unknown, opts: unknown) => { txOptions = opts; return fn(tx); } };
-    const inv = await readAdveStrictShapeInventory({ strategyIds: ["s1"] }, client as never);
+    const inv = await readAdveStrictShapeInventory({ strategyIds: ["s1"], includeStructuralProposals: true }, client as never);
     expect(calls[0]).toBe("EXEC SET TRANSACTION READ ONLY");
     expect(calls.filter(c => c.startsWith("WRITE"))).toEqual([]);
     expect(calls.filter(c => c.startsWith("EXEC"))).toEqual(["EXEC SET TRANSACTION READ ONLY"]);
     expect(txOptions.isolationLevel).toBe(Prisma.TransactionIsolationLevel.RepeatableRead);
     expect(inv.snapshot).toEqual({ readOnly: true, isolation: "REPEATABLE READ" });
     expect(inv.strategyFilter).toEqual(["s1"]);
+    expect(inv.entries[0]!.structuralReview?.candidates[0]?.qualification).toBe("EXACT_REKEY_PROPOSAL");
     expect(inv.entries[0]!.findings.find(f => f.path === "archetype")!.lastRetainedChange)
       .toMatchObject({ status: "CHANGED", fromVersion: 1, producedVersion: 2 });
   });

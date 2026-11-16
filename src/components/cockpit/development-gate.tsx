@@ -31,7 +31,8 @@ export function DevelopmentGate({
   children: React.ReactNode;
 }) {
   const me = trpc.auth.me.useQuery();
-  const isInternal = me.data?.canOperate === true;
+  const isInternal = !me.isError && me.data?.canOperate === true
+    && (me.data.role === "ADMIN" || me.data.role === "OPERATOR");
 
   if (me.isLoading) {
     return <div className="h-40 animate-[shimmer_2s_linear_infinite] rounded-lg bg-surface-overlay" />;

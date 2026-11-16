@@ -10,14 +10,18 @@ import { Network, BookOpen, BarChart3, Search } from "lucide-react";
 
 export default function AgencyKnowledgePage() {
   const [queryText, setQueryText] = useState("");
-  const { data: benchmarks, isLoading: loadingBenchmarks } = trpc.knowledgeGraph.getBenchmarks.useQuery({});
-  const { data: patterns, isLoading: loadingPatterns } = trpc.knowledgeGraph.getBriefPatterns.useQuery({});
-  const { data: searchResults, isLoading: searching } = trpc.knowledgeGraph.query.useQuery(
+  const me = trpc.auth.me.useQuery();
+  const canReadGlobal = !me.isError && !me.isLoading && me.data?.canOperate === true
+    && (me.data.role === "ADMIN" || me.data.role === "OPERATOR");
+  const canReadPatterns = canReadGlobal && me.data?.role === "ADMIN";
+  const { data: benchmarks, isLoading: loadingBenchmarks, error: benchmarkError } = trpc.knowledgeGraph.getBenchmarks.useQuery({}, { enabled: canReadGlobal });
+  const { data: patterns, isLoading: loadingPatterns, error: patternError } = trpc.knowledgeGraph.getBriefPatterns.useQuery({}, { enabled: canReadPatterns });
+  const { data: searchResults, isLoading: searching, error: searchError } = trpc.knowledgeGraph.query.useQuery(
     { queryText, limit: 20 },
-    { enabled: queryText.length >= 2 },
+    { enabled: canReadGlobal && queryText.length >= 2 },
   );
 
-  const isLoading = loadingBenchmarks && loadingPatterns;
+  const isLoading = me.isLoading || (canReadGlobal && loadingBenchmarks && (!canReadPatterns || loadingPatterns));
 
   if (isLoading) {
     return (
@@ -28,30 +32,42 @@ export default function AgencyKnowledgePage() {
     );
   }
 
-  const benchmarkData = benchmarks;
-  const benchmarkRows: Array<Record<string, unknown>> = Array.isArray(benchmarks?.benchmarks)
-    ? benchmarks.benchmarks : [];
-  const patternData = patterns as Array<Record<string, unknown>> | null;
+  if (!canReadGlobal) return <div className="space-y-6">
+    <PageHeader title="Knowledge Graph" breadcrumbs={[{ label: "Agence", href: "/agency" }, { label: "Knowledge Graph" }]} />
+    {me.isError ? <p role="alert" className="text-sm text-error">Impossible de vérifier vos droits. Réessayez plus tard.</p>
+      : <EmptyState icon={Network} title="Accès réservé à l’équipe opératrice"
+        description="Cette vue réunit des connaissances sur plusieurs marques. Votre équipe peut vous accompagner sur les repères de votre marque." />}
+  </div>;
+
+  const benchmarkData = benchmarkError ? undefined : benchmarks;
+  const benchmarkRows: Array<Record<string, unknown>> = Array.isArray(benchmarkData?.benchmarks)
+    ? benchmarkData.benchmarks : [];
+  const patternData = canReadPatterns && !patternError ? patterns as Array<Record<string, unknown>> | undefined : undefined;
+  const visibleSearchResults = searchError ? undefined : searchResults;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Knowledge Graph"
-        description="Connaissances accumulees sur vos secteurs et marches"
+        description="Connaissances disponibles parmi les marques observées"
         breadcrumbs={[{ label: "Agence", href: "/agency" }, { label: "Knowledge Graph" }]}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Marques observées" value={benchmarkData?.count ?? 0} icon={BarChart3} />
+        <StatCard title="Marques observées" value={benchmarkData?.count ?? "—"} icon={BarChart3} />
         <StatCard title="Score composite moyen" value={benchmarkData?.avgComposite != null ? `${benchmarkData.avgComposite.toFixed(0)}/200` : "-"} icon={Network} />
-        <StatCard title="Patterns brief" value={patternData?.length ?? 0} icon={BookOpen} />
+        <StatCard title="Patterns brief" value={patternData?.length ?? "—"} icon={BookOpen} />
       </div>
+      {benchmarkError && <p role="alert" className="text-sm text-error">Les repères des marques sont indisponibles. Réessayez plus tard.</p>}
+      {!canReadPatterns && <p className="text-sm text-foreground-secondary">Les patterns de briefs sont réservés aux administrateurs.</p>}
+      {canReadPatterns && patternError && <p role="alert" className="text-sm text-error">Les patterns de briefs sont indisponibles. Réessayez plus tard.</p>}
 
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
         <input
           type="text"
+          aria-label="Rechercher dans les connaissances"
           placeholder="Rechercher dans le knowledge graph..."
           value={queryText}
           onChange={(e) => setQueryText(e.target.value)}
@@ -63,9 +79,10 @@ export default function AgencyKnowledgePage() {
       {queryText.length >= 2 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-zinc-400">
-            Resultats {searching ? "(recherche...)" : `(${(searchResults as unknown[])?.length ?? 0})`}
+            Resultats {searching ? "(recherche...)" : searchError ? "indisponibles" : `(${visibleSearchResults?.length ?? "—"})`}
           </h3>
-          {(searchResults as Array<Record<string, unknown>> | undefined)?.map((result) => (
+          {searchError && <p role="alert" className="text-sm text-error">La recherche est indisponible. Réessayez plus tard.</p>}
+          {(visibleSearchResults as Array<Record<string, unknown>> | undefined)?.map((result) => (
             <div key={String(result.id)} className="rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3">
               <p className="text-sm font-medium text-white">{String(result.name ?? result.title ?? "-")}</p>
               <p className="text-xs text-zinc-500">{String(result.type ?? "-")} — {String(result.status ?? "-")}</p>
@@ -106,7 +123,7 @@ export default function AgencyKnowledgePage() {
         </div>
       )}
 
-      {!benchmarkData?.count && !benchmarkRows.length && !patternData?.length && queryText.length < 2 && (
+      {benchmarkData?.count === 0 && !benchmarkRows.length && patternData?.length === 0 && queryText.length < 2 && (
         <EmptyState icon={Network} title="Knowledge Graph vide" description="Les donnees sectorielles s'accumuleront avec l'utilisation." />
       )}
     </div>

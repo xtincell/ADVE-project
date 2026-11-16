@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 589 — autorité, cohortes et références effectivement admissibles (2026-11-16)
+
+Symptômes reproduits : un simple rattachement commercial ouvrait des dossiers voisins et des lectures internes ; trois voisins dont un seul score valide suffisaient à publier une médiane ; le secteur et les axes des benchmarks n'étaient pas respectés ; les filtres Prisma sur des champs JSON/texte nullables perdaient des références recevables ou conservaient un agrégat expiré. Correction dans 6.27.589 : garde de portefeuille distincte du rattachement, rôle interne explicite sur les lectures globales, données Client filtrées et gestion séparée, trois scores admissibles, observations par axe et cohorte canonique, prédicats nullables explicites. Les contre-épreuves rouges puis vertes, les appels HTTP sous rôles réels et les deux recettes PostgreSQL des références sont conservés hors dépôt.
+
+Hypothèse de cause racine : une association, une cardinalité brute ou une négation SQL étaient prises pour une preuve d'autorité ou de qualité. Les gardes et mesures réutilisent désormais leur contrat canonique. Les quatre suites historiques nettoient leurs seuls identifiants créés ; deux passes retrouvent les comptes et identifiants initiaux des 237 tables. Aucun nettoyage de données de production ni nouvelle autorité métier.
+
 ### 588 — journal public vide dans une image sans Git (2026-11-16)
 
 Symptôme reçu en production : `/changelog` répondait 200 avec « Aucune entrée disponible ». Le loader disposait d’un fallback JSON, mais aucun build ne le produisait, tandis que `.git` est exclu de l’image. Correction dans 6.27.588 : `scripts/sync-changelog.mjs` produit le contrat JSON existant immédiatement après le checkout, avant Docker ; le fichier généré reste ignoré par Git. La profondeur du checkout est conservée, et le texte désigne les dernières évolutions disponibles. Le smoke vérifie le SHA du checkout dans le JSON et le HTML de l’image exacte avant son push. Réception locale : cinq tests sur des dépôts Git temporaires, dont un checkout superficiel, puis rendu sans Git et refus des snapshots/pages absents ou périmés ; trois nouveaux cas rouges sur les sources précédentes, cinq verts après correction. La réception de l’image relève du workflow, pas de cette preuve locale.

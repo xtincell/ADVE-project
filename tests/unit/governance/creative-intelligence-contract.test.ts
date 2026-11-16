@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import { Prisma } from "@prisma/client";
+
+const knowledgeReads = vi.hoisted(() => {
+  vi.stubEnv("SESHAT_API_URL", "");
+  return vi.fn().mockResolvedValue([]);
+});
+vi.mock("@/lib/db", () => ({ db: { knowledgeEntry: { findMany: knowledgeReads } } }));
+afterAll(() => vi.unstubAllEnvs());
+
 import { competitorScope } from "@/server/services/seshat/creative-intelligence/competition";
+import { enrichBrief, queryReferences } from "@/server/services/seshat/references";
 import { INTENT_KINDS } from "@/server/governance/intent-kinds";
 import { INTENT_SLOS } from "@/server/governance/slos";
 import { manifest } from "@/server/services/creative-intelligence/manifest";
@@ -16,10 +26,26 @@ describe("creative evidence guardrails (HARD)", () => {
     expect(track).toContain("loadScopedCompetitors(strategyId)");
     expect(track).not.toContain("db.competitorSnapshot.findMany");
   });
-  it("keeps shared knowledge readers away from recipes and private provenance", () => {
-    const source = readFileSync("src/server/services/seshat/references.ts", "utf8");
-    expect(source).toContain("originStrategyId: null");
-    expect(source).toContain('equals: "creative-recipe-v1"');
+  it("keeps every shared reader away from recipes, expired evidence and private provenance while preserving absent SQL/JSON values", async () => {
+    knowledgeReads.mockClear();
+    await enrichBrief({ channel: "fixture-channel", sector: "fixture-sector", market: "fixture-market" });
+    await queryReferences({ topic: "fixture", sector: "fixture-sector", market: "fixture-market", pillarFocus: "a" });
+    // Exercise both brief reads and all three query fallback branches, without IO.
+    expect(knowledgeReads).toHaveBeenCalledTimes(5);
+    for (const [query] of knowledgeReads.mock.calls) {
+      expect(query.where.originStrategyId).toBeNull();
+      expect(query.where.sampleSize).toEqual({ gte: 3 });
+      expect(query.where.NOT).toEqual([{ data: { path: ["strategyId"], not: Prisma.DbNull } }]);
+      // Exact nested predicates: an extra permissive OR arm must fail this HARD guard.
+      // NOT(schema equals recipe) would exclude missing paths under PostgreSQL NULL semantics.
+      expect(query.where.AND).toEqual([
+        { OR: [{ sourceHash: null }, { sourceHash: { not: "aggregator-expired" } }] },
+        { OR: [{ data: { path: ["schema"], equals: Prisma.DbNull } }, { data: { path: ["schema"], not: "creative-recipe-v1" } }] },
+      ]);
+      const types = typeof query.where.entryType === "string" ? [query.where.entryType] : query.where.entryType.in;
+      expect(types.length).toBeGreaterThan(0);
+      for (const type of types) expect(["SECTOR_BENCHMARK", "BRIEF_PATTERN", "CAMPAIGN_TEMPLATE"]).toContain(type);
+    }
   });
   it("registers every mutation under the observation governor and budgets only assisted analysis", () => {
     for (const kind of manifest.acceptsIntents ?? []) {

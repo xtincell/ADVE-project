@@ -12,7 +12,7 @@ let localBrandId: string, foreignBrandId: string;
 let localMissionId: string, foreignMissionId: string, assignedMissionId: string, guildMissionId: string;
 function caller(userId: string) {
   return missionRouter.createCaller({ db, headers: undefined, session: {
-    user: { id: userId, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
+    user: { id: userId, role: userId === colleagueId ? "OPERATOR" : "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
   } });
 }
 function ownIds(rows: Array<{ id: string }>) {
@@ -32,7 +32,7 @@ beforeAll(async () => {
   for (const role of ["admin", "owner", "colleague", "collaborator", "outsider"]) {
     const user = await db.user.create({ data: {
       email: `mission-visibility-${role}-${randomUUID()}@example.invalid`,
-      role: role === "admin" ? "ADMIN" : "USER",
+      role: role === "admin" ? "ADMIN" : role === "colleague" ? "OPERATOR" : "USER",
       operatorId: ["owner", "colleague"].includes(role) ? operator.id : null,
     } });
     userIds.push(user.id);
@@ -82,7 +82,7 @@ describe.sequential("mission visibility through PostgreSQL", () => {
     expect(guild.find((row) => row.id === guildMissionId)?.briefData)
       .toEqual({ objective: "Keep the public need" });
   });
-  it("keeps owner, same-operator and active collaborator inside their brands", async () => {
+  it("keeps owner, same-operator staff and active collaborator inside their brands", async () => {
     for (const userId of [ownerId, colleagueId, collaboratorId]) {
       expect(ownIds(await caller(userId).list({ limit: 1000 }))).toEqual([localMissionId]);
       await expect(caller(userId).list({ strategyId: foreignBrandId }))

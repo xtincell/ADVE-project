@@ -98,6 +98,14 @@ const SALVAGE_MAP: Record<AdvePillar, Record<string, Mapping>> = {
   },
 };
 
+/** Read-only inspection of the existing contract; never executes a shaper. */
+export function salvageMappingContracts(pillar: string) {
+  return Object.entries(SALVAGE_MAP[pillar as AdvePillar] ?? {}).map(([sourceKey, mapping]) => ({
+    sourceKey, targetKey: mapping.field,
+    transformation: mapping.shape === asString ? "SCALAR" as const : "STRUCTURED" as const,
+  }));
+}
+
 /**
  * Re-clé les réponses brutes d'un pilier vers les champs de schéma quand une
  * correspondance déterministe existe. Les réponses SANS mapping sont

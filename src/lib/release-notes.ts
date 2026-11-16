@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.589", date: "2026-11-16", headline: "Des espaces mieux cloisonnés",
+    highlights: [
+      { emoji: "🔒", title: "Des accès limités aux bonnes marques", body: "Le portefeuille et les dossiers clients suivent vos droits sur les marques. Un rattachement à une agence ne remplace plus la propriété du dossier ou une autorisation de collaboration." },
+      { emoji: "📊", title: "Des repères suffisamment renseignés", body: "Les comparaisons entre marques restent masquées lorsque trop peu de scores valides sont disponibles. Une référence indisponible est distinguée d’un groupe vide." },
+    ],
+  },
+  {
     version: "6.27.588", date: "2026-11-16", headline: "Des accès et des résultats mieux qualifiés",
     highlights: [
       { emoji: "⚙️", title: "Configurer les emails et les paiements", body: "L’administrateur retrouve les paramètres d’email et de CinetPay dans Configuration, puis Intégrations. Il peut enregistrer un brouillon, compléter les accès plus tard et remplacer les secrets sans les afficher." },

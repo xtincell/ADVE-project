@@ -1,12 +1,26 @@
 import { type Page, expect } from "@playwright/test";
 
+export async function openLogin(page: Page) {
+  // This request starts in SessionProvider's effect, after React hydration.
+  // Native form submission before then only posts back to /login.
+  const hydrated = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/auth/session"
+    && response.request().method() === "GET" && response.ok());
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await hydrated;
+  const essentials = page.getByRole("button", { name: "Essentiels uniquement", exact: true });
+  if (await essentials.isVisible()) await essentials.click();
+}
+
 export async function login(page: Page, email: string, password: string) {
-  await page.goto("/login");
+  await openLogin(page);
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
   // Wait for redirect away from login
   await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 10000 });
+  const session = await page.request.get("/api/auth/session");
+  expect(session.ok()).toBe(true);
+  expect((await session.json()).user?.email).toBe(email);
 }
 
 export async function loginAsAdmin(page: Page) {
@@ -25,16 +39,16 @@ export async function expectNoConsoleErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
   return () => {
-    const real = errors.filter(
-      (e) => !e.includes("hydration") && !e.includes("ChunkLoadError")
-    );
-    expect(real).toHaveLength(0);
+    expect(errors).toHaveLength(0);
   };
 }
 
 export async function expectPageLoads(page: Page, url: string, textOnPage?: string) {
-  await page.goto(url);
-  await page.waitForLoadState("networkidle");
+  const response = await page.goto(url, { waitUntil: "domcontentloaded" });
+  expect(response?.status()).toBe(200);
+  expect(new URL(page.url()).pathname).not.toMatch(/^\/(login|unauthorized)(\/|$)/);
+  // Notifications keep an SSE connection open; networkidle never receives it.
+  await expect(page.locator("h1").first()).toBeVisible({ timeout: 15000 });
   // No crash = page rendered something
   const body = page.locator("body");
   await expect(body).toBeVisible();

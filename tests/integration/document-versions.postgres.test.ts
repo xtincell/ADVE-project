@@ -1,31 +1,42 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+import { assertOwnedPostgresTarget } from "../support/owned-postgres-target";
 vi.mock("@/server/services/oracle-section", () => ({ markAllSectionsStale: vi.fn(async () => ({})) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { db } from "@/lib/db";
 import { registerDocumentEdition, decideDocumentEdition, correctResourceDocumentFiling, labelDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
 import { documentEdition } from "@/domain/source-document";
 import { sourceFingerprint, loadBrandSources, assertCurrentSourceReceipts, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
-let brand: string, foreign: string, actor: string;
+let brand: string, foreign: string, actor: string, operatorId: string;
+const brands: string[] = [];
 const ids: string[] = [];
 beforeAll(async () => {
-  expect(process.env.DATABASE_URL).toContain("shinkiro_verify");
-  const url = new URL(process.env.DATABASE_URL!);
-  expect(["127.0.0.1", "localhost"]).toContain(url.hostname);
-  expect(url.pathname).toBe("/shinkiro_verify");
+  assertOwnedPostgresTarget();
   const key = randomUUID();
   const operator = await db.operator.create({ data: { name: "Document versions fixture", slug: `doc-versions-${key}`,
     status: "ACTIVE", licenseType: "TRIAL", licensedAt: new Date(), licenseExpiry: new Date(Date.now() + 86_400_000) } });
+  operatorId = operator.id;
   actor = (await db.user.create({ data: { email: `doc-versions-${key}@example.invalid`, operatorId: operator.id } })).id;
   const template = { userId: actor, operatorId: operator.id };
   const owner = await db.strategy.create({ data: { name: `Document lineage ${key}`, userId: actor, operatorId: template.operatorId } });
+  brands.push(owner.id);
   const other = await db.strategy.create({ data: { name: `Unrelated documents ${key}`, userId: actor } });
+  brands.push(other.id);
   brand = owner.id; foreign = other.id;
   for (const name of ["BMC précédent", "Nouvelle piste", "Troisième piste", "Piste concurrente"]) {
     const s = await db.brandDataSource.create({ data: { strategyId: brand, sourceType: "MANUAL_INPUT", fileName: name, rawContent: name + ": contenu synthétique, sans vente reçue.", processingStatus: "EXTRACTED" } }); ids.push(s.id);
   }
 });
-afterAll(async () => { await db.$disconnect(); });
+afterAll(async () => {
+  try {
+    if (operatorId) await db.$transaction(async tx => {
+      await tx.brandDataSource.deleteMany({ where: { strategyId: { in: brands } } });
+      await tx.strategy.deleteMany({ where: { id: { in: brands } } });
+      if (actor) await tx.user.deleteMany({ where: { id: actor } });
+      await tx.operator.deleteMany({ where: { id: operatorId } });
+    });
+  } finally { await db.$disconnect(); }
+});
 async function register(id: string, previous?: string, status: "REFERENCE" | "PROPOSED" = "PROPOSED") {
   const source = await db.brandDataSource.findUniqueOrThrow({ where: { id } });
   const old = previous ? await db.brandDataSource.findUniqueOrThrow({ where: { id: previous } }) : null;

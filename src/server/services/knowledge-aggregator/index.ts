@@ -22,7 +22,7 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import crypto from "crypto";
-import { measuredNumber, measurementRecord, measurementCoverage, readBriefMeasurements, readSectorMeasurements, signalMeasurement } from "./measurements";
+import { benchmarkCohort, measuredComposite, measuredNumber, measurementRecord, measurementCoverage, readBriefMeasurements, readSectorMeasurements, signalMeasurement, type BenchmarkCohort } from "./measurements";
 
 /**
  * Knowledge Aggregator (P5) — Batch service that aggregates KnowledgeEntry data.
@@ -59,32 +59,22 @@ export const runBatchAggregation = runAggregation;
 export { aggregateSectorBenchmarks, aggregateFrameworkRankings, aggregateCreatorPatterns, aggregateBriefPatterns };
 
 /**
- * P5.2: Cross-strategy aggregation of scores by sector × market.
+ * P5.2: Cross-strategy aggregation by canonical sector × country × market scale.
  */
 async function aggregateSectorBenchmarks(): Promise<number> {
   const strategies = await db.strategy.findMany({
     where: { status: "ACTIVE" },
-    select: { id: true, advertis_vector: true, operatorId: true },
+    select: { advertis_vector: true, client: { select: { sector: true } }, countryCode: true, marketScale: true },
   });
 
-  // Each market has its own population; a sector-wide mean is not a market mean.
-  const sectorMap = new Map<string, { sector: string; market: string; composites: number[]; count: number }>();
+  const sectorMap = new Map<string, { cohort: BenchmarkCohort; composites: number[]; count: number }>();
 
   for (const strategy of strategies) {
-    const composite = measuredNumber(measurementRecord(strategy.advertis_vector).composite);
-
-    // Find sector from related QuickIntake or KnowledgeEntry
-    const intake = await db.quickIntake.findFirst({
-      where: { convertedToId: strategy.id },
-      select: { sector: true, country: true },
-    });
-
-    const sector = intake?.sector ?? "UNKNOWN";
-    const market = intake?.country ?? "UNKNOWN";
-
-    const key = JSON.stringify([sector, market]);
+    const composite = measuredComposite(measurementRecord(strategy.advertis_vector).composite);
+    const cohort = benchmarkCohort(strategy.client?.sector, strategy.countryCode, strategy.marketScale);
+    const key = JSON.stringify([cohort.sector, cohort.countryCode, cohort.marketScale]);
     if (!sectorMap.has(key)) {
-      sectorMap.set(key, { sector, market, composites: [], count: 0 });
+      sectorMap.set(key, { cohort, composites: [], count: 0 });
     }
     const entry = sectorMap.get(key)!;
     if (composite !== null) entry.composites.push(composite);
@@ -92,12 +82,18 @@ async function aggregateSectorBenchmarks(): Promise<number> {
   }
 
   let count = 0;
-  for (const { sector, market, composites, count: totalCount } of sectorMap.values()) {
+  const currentIds: string[] = [];
+  for (const { cohort, composites, count: totalCount } of sectorMap.values()) {
+    const sector = cohort.sector ?? "UNKNOWN";
+    const market = cohort.countryCode ?? "UNKNOWN";
+    const id = `agg-benchmark-${sector}-${market}-${cohort.marketScale ?? "UNKNOWN"}`;
+    currentIds.push(id);
     const sorted = [...composites].sort((a, b) => a - b);
-    const avg = sorted.length >= 2 ? sorted.reduce((sum, value) => sum + value, 0) / sorted.length : null;
+    const avg = cohort.qualified && sorted.length >= 2 ? sorted.reduce((sum, value) => sum + value, 0) / sorted.length : null;
     const topQuartile = avg === null ? null : sorted[Math.floor(sorted.length * 0.75)] ?? null;
     const data = {
-      metricsVersion: 1,
+      metricsVersion: 2,
+      cohort,
       avgComposite: avg === null ? null : Math.round(avg),
       topQuartile: topQuartile === null ? null : Math.round(topQuartile),
       sampleSize: composites.length,
@@ -105,18 +101,22 @@ async function aggregateSectorBenchmarks(): Promise<number> {
       aggregatedAt: new Date().toISOString(),
     };
     await db.knowledgeEntry.upsert({
-      where: { id: `agg-benchmark-${sector}-${market}` },
+      where: { id },
       update: {
+        sector,
+        market,
+        countryCode: cohort.countryCode,
         data: data as Prisma.InputJsonValue,
         sampleSize: composites.length,
         successScore: avg === null ? null : avg / 200,
         sourceHash: "aggregator",
       },
       create: {
-        id: `agg-benchmark-${sector}-${market}`,
+        id,
         entryType: "SECTOR_BENCHMARK",
         sector,
         market,
+        countryCode: cohort.countryCode,
         data: data as Prisma.InputJsonValue,
         sampleSize: composites.length,
         successScore: avg === null ? null : avg / 200,
@@ -127,7 +127,7 @@ async function aggregateSectorBenchmarks(): Promise<number> {
   }
 
   await db.knowledgeEntry.updateMany({
-    where: { entryType: "SECTOR_BENCHMARK", sourceHash: "aggregator", id: { startsWith: "agg-benchmark-", notIn: [...sectorMap.values()].map(({ sector, market }) => `agg-benchmark-${sector}-${market}`) } },
+    where: { entryType: "SECTOR_BENCHMARK", sourceHash: "aggregator", id: { startsWith: "agg-benchmark-", notIn: currentIds } },
     data: { sampleSize: 0, successScore: null, sourceHash: "aggregator-expired" },
   });
 

@@ -45,6 +45,11 @@ interface OperatorContext {
   role: string;
 }
 
+/** A historical team link alone is not authority over that team's portfolio. */
+export function hasOperatorPortfolioAccess(ctx: Pick<OperatorContext, "role" | "operatorId">): ctx is Pick<OperatorContext, "role"> & { operatorId: string } {
+  return Boolean(ctx.operatorId) && ["OPERATOR", "AGENCY", "PARTNER"].includes(ctx.role);
+}
+
 /**
  * Build a where clause that enforces operator isolation
  * ADMIN users can see all data; others are scoped to their operator
@@ -69,7 +74,7 @@ export function scopeStrategies(ctx: OperatorContext): Prisma.StrategyWhereInput
     demoMode === "only_dummy" ? { isDummy: true } : {};
 
   if (ctx.role === "ADMIN") return demoClause;
-  if (ctx.operatorId) return {
+  if (hasOperatorPortfolioAccess(ctx)) return {
     ...demoClause,
     OR: [
       { client: { operatorId: ctx.operatorId } },
@@ -97,7 +102,9 @@ export function scopeStrategies(ctx: OperatorContext): Prisma.StrategyWhereInput
  */
 export function scopeClients(ctx: OperatorContext): Prisma.ClientWhereInput {
   if (ctx.role === "ADMIN") return {};
-  if (ctx.operatorId) return { operatorId: ctx.operatorId };
+  if (hasOperatorPortfolioAccess(ctx)) return {
+    OR: [{ operatorId: ctx.operatorId }, { strategies: { some: { userId: ctx.userId } } }],
+  };
   return { strategies: { some: { userId: ctx.userId } } };
 }
 
@@ -107,18 +114,22 @@ export function scopeClients(ctx: OperatorContext): Prisma.ClientWhereInput {
 export async function canAccessClient(
   clientId: string,
   ctx: OperatorContext,
+  access: "READ" | "MANAGE" = "READ",
 ): Promise<boolean> {
   if (ctx.role === "ADMIN") return true;
+  if (access === "MANAGE" && !hasOperatorPortfolioAccess(ctx)) return false;
 
   const client = await db.client.findUnique({
     where: { id: clientId },
-    select: { operatorId: true },
+    select: { operatorId: true, strategies: { where: { userId: ctx.userId }, select: { id: true }, take: 1 } },
   });
 
   if (!client) return false;
-  if (ctx.operatorId && client.operatorId === ctx.operatorId) return true;
+  if (hasOperatorPortfolioAccess(ctx) && client.operatorId === ctx.operatorId) return true;
 
-  return false;
+  // Owning a brand grants a redacted Client read, never Client management.
+  // A delegated brand grant does not extend to its Client or sister brands.
+  return access === "READ" && client.strategies.length > 0;
 }
 
 /**
@@ -149,7 +160,7 @@ export async function canAccessStrategy(
 
   const strategy = await client.strategy.findUnique({
     where: { id: strategyId },
-    select: { userId: true, operatorId: true },
+    select: { userId: true, operatorId: true, client: { select: { operatorId: true } } },
   });
 
   if (!strategy) return false;
@@ -157,8 +168,9 @@ export async function canAccessStrategy(
   // Owner can always access
   if (strategy.userId === ctx.userId) return true;
 
-  // Same operator can access
-  if (ctx.operatorId && strategy.operatorId === ctx.operatorId) return true;
+  // Portfolio staff only; keep direct reads aligned with the Client-chain list.
+  if (hasOperatorPortfolioAccess(ctx)
+    && (strategy.operatorId === ctx.operatorId || strategy.client?.operatorId === ctx.operatorId)) return true;
 
   // ADR-0129 — collaborateur délégué par marque (grant gouverné, révocable).
   // Scopé à UNE strategy — jamais opérateur-large.

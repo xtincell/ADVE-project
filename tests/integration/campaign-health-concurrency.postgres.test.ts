@@ -18,7 +18,7 @@ let owner: string, colleague: string, brand: string, foreignBrand: string, produ
 const day = 86_400_000;
 
 function session(userId = owner) {
-  return { user: { id: userId, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString() };
+  return { user: { id: userId, role: userId === colleague ? "OPERATOR" : "USER" }, expires: new Date(Date.now() + 60_000).toISOString() };
 }
 const tasks = (userId = owner) => campaignDeliverableRouter.createCaller({ db, headers: undefined, session: session(userId) });
 const tickets = (userId = owner) => campaignChangeRequestRouter.createCaller({ db, headers: undefined, session: session(userId) });
@@ -60,8 +60,8 @@ beforeAll(async () => {
     operators.push(op.id);
   }
   [team, foreignTeam, delegate, otherDelegate] = operators as [string, string, string, string];
-  for (const operatorId of [team, team, foreignTeam]) {
-    users.push((await db.user.create({ data: { email: `health-${randomUUID()}@example.invalid`, operatorId } })).id);
+  for (const [index, operatorId] of [team, team, foreignTeam].entries()) {
+    users.push((await db.user.create({ data: { email: `health-${randomUUID()}@example.invalid`, operatorId, role: index === 1 ? "OPERATOR" : "USER" } })).id);
   }
   [owner, colleague] = users as [string, string];
   for (const [operatorId, userId] of [[team, owner], [foreignTeam, users[2]!]] as const) {

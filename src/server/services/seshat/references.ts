@@ -462,8 +462,13 @@ const CROSS_BRAND_WHERE = {
   originStrategyId: null,
   NOT: [
     { data: { path: ["strategyId"], not: Prisma.DbNull } },
-    // Recipes have their own reviewed projection; generic aggregate readers must not publish candidates.
-    { data: { path: ["schema"], equals: "creative-recipe-v1" } },
+  ],
+  AND: [
+    // Expiration revokes evidence without deleting its historical payload.
+    { OR: [{ sourceHash: null }, { sourceHash: { not: "aggregator-expired" } }] },
+    // A missing JSON path is SQL NULL: NOT equals alone would discard legacy aggregates.
+    // Recipes still require their own reviewed projection.
+    { OR: [{ data: { path: ["schema"], equals: Prisma.DbNull } }, { data: { path: ["schema"], not: "creative-recipe-v1" } }] },
   ],
 } satisfies Prisma.KnowledgeEntryWhereInput;
 

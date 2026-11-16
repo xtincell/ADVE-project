@@ -4,6 +4,8 @@ import {
   scopeStrategies,
   scopeCampaigns,
   scopeMissions,
+  scopeClients,
+  hasOperatorPortfolioAccess,
   enforceOperatorIsolation,
 } from "@/server/services/operator-isolation";
 
@@ -59,11 +61,11 @@ describe("Operator Isolation", () => {
       expect(result).toEqual({});
     });
 
-    it("avec operatorId retourne le filtre operateur + les bras owner/collaborateur (aligné canAccessStrategy)", () => {
+    it("un rôle portefeuille avec operatorId conserve les bras owner/collaborateur (aligné canAccessStrategy)", () => {
       // Régression prod 2026-07-16 « les missions ne remontent pas » : un compte
       // rattaché à un opérateur perdait ses marques possédées EN PROPRE —
       // canAccessStrategy accordait l'accès (owner), scopeStrategies le filtrait.
-      const ctx = { operatorId: "op-42", userId: "user-1", role: "USER" };
+      const ctx = { operatorId: "op-42", userId: "user-1", role: "OPERATOR" };
 
       const result = scopeStrategies(ctx);
 
@@ -101,7 +103,7 @@ describe("Operator Isolation", () => {
     });
 
     it("avec operatorId delegue a scopeStrategies via strategy (bras owner/collab inclus)", () => {
-      const ctx = { operatorId: "op-42", userId: "user-1", role: "USER" };
+      const ctx = { operatorId: "op-42", userId: "user-1", role: "OPERATOR" };
 
       const result = scopeCampaigns(ctx);
 
@@ -143,7 +145,7 @@ describe("Operator Isolation", () => {
     });
 
     it("avec operatorId delegue a scopeStrategies via strategy (bras owner/collab inclus)", () => {
-      const ctx = { operatorId: "op-10", userId: "user-1", role: "USER" };
+      const ctx = { operatorId: "op-10", userId: "user-1", role: "OPERATOR" };
 
       const result = scopeMissions(ctx);
 
@@ -172,6 +174,24 @@ describe("Operator Isolation", () => {
           ],
         },
       });
+    });
+  });
+
+  describe("portfolio authority is distinct from a historical operator link", () => {
+    it.each(["USER", "CLIENT_RETAINER", "CLIENT_STATIC", "FREELANCE", "CREATOR", "BRAND_MANAGER", "FOUNDER", "UNKNOWN"])(
+      "does not expand %s brand/client scopes when an operator link exists", role => {
+        const ctx = { operatorId: "op-42", userId: "user-1", role };
+        expect(hasOperatorPortfolioAccess(ctx)).toBe(false);
+        expect(scopeStrategies(ctx)).toEqual(scopeStrategies({ ...ctx, operatorId: null }));
+        expect(scopeClients(ctx)).toEqual({ strategies: { some: { userId: "user-1" } } });
+      },
+    );
+    it.each(["OPERATOR", "AGENCY", "PARTNER"])("requires a team link for %s portfolio access", role => {
+      const ctx = { operatorId: "op-42", userId: "user-1", role };
+      expect(hasOperatorPortfolioAccess(ctx)).toBe(true);
+      expect(hasOperatorPortfolioAccess({ ...ctx, operatorId: null })).toBe(false);
+      expect(hasOperatorPortfolioAccess({ ...ctx, operatorId: "" })).toBe(false);
+      expect(scopeClients(ctx)).toEqual({ OR: [{ operatorId: "op-42" }, { strategies: { some: { userId: "user-1" } } }] });
     });
   });
 

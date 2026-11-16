@@ -11,6 +11,7 @@
  *   npm run audit:adve-shapes -- --canons             # canons du dépôt, en mémoire, sans base
  *   npm run audit:adve-shapes -- --strategie <id> --strategie <id2>
  *   npm run audit:adve-shapes -- --piliers a,v --sans-extraits
+ *   npm run audit:adve-shapes -- --propositions-structurelles --json <preuve-privee.json>
  *   npm run audit:adve-shapes -- --json inventaire.json   # JSON stable dans un fichier local
  *   npm run audit:adve-shapes -- --json -                 # JSON sur la sortie standard, résumé sur l'erreur
  *
@@ -30,7 +31,7 @@ import {
 function parseArgs(argv: string[]) {
   const strategyIds: string[] = [];
   let pillars: AdveInventoryPillar[] = [...ADVE_INVENTORY_PILLARS];
-  let canons = false, includeExcerpts = true;
+  let canons = false, includeExcerpts = true, includeStructuralProposals = false;
   let json: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -41,6 +42,7 @@ function parseArgs(argv: string[]) {
     };
     if (arg === "--canons") canons = true;
     else if (arg === "--sans-extraits") includeExcerpts = false;
+    else if (arg === "--propositions-structurelles") includeStructuralProposals = true;
     else if (arg === "--strategie") strategyIds.push(next());
     else if (arg === "--json") json = next();
     else if (arg === "--piliers") {
@@ -49,15 +51,15 @@ function parseArgs(argv: string[]) {
       if (unknown.length) throw new Error(`Piliers hors ADVE refusés : ${unknown.join(", ")} (attendus : a, d, v, e)`);
       pillars = asked as AdveInventoryPillar[];
     } else if (arg === "--aide" || arg === "--help") {
-      console.log("Options : --canons · --strategie <id> (répétable) · --piliers a,d,v,e · --sans-extraits · --json <fichier|->");
+      console.log("Options : --canons · --strategie <id> (répétable) · --piliers a,d,v,e · --sans-extraits · --propositions-structurelles (sans extraits, aucune écriture) · --json <fichier|->");
       process.exit(0);
     } else throw new Error(`Option inconnue : ${arg}`);
   }
   if (canons && strategyIds.length) throw new Error("--strategie ne s'applique pas aux canons du dépôt.");
-  return { strategyIds, pillars, canons, includeExcerpts, json };
+  return { strategyIds, pillars, canons, includeExcerpts: includeStructuralProposals ? false : includeExcerpts, includeStructuralProposals, json };
 }
 
-async function loadCanons(pillars: AdveInventoryPillar[], includeExcerpts: boolean): Promise<StrictShapeInventory> {
+async function loadCanons(pillars: AdveInventoryPillar[], includeExcerpts: boolean, includeStructuralProposals: boolean): Promise<StrictShapeInventory> {
   const [{ SPAWT_CANON_PILLARS }, { MOTION19_CANON_PILLARS, MOTION19_FIELD_CERTAINTY }, { UPGRADERS_CANON_PILLARS }, { LAFUSEE_CANON_PILLARS }] =
     await Promise.all([
       import("../src/server/services/canon/spawt-canon"),
@@ -71,17 +73,18 @@ async function loadCanons(pillars: AdveInventoryPillar[], includeExcerpts: boole
     { name: "motion19", pillars: MOTION19_CANON_PILLARS, fieldCertainty: MOTION19_FIELD_CERTAINTY },
     { name: "upgraders", pillars: UPGRADERS_CANON_PILLARS },
     { name: "lafusee", pillars: LAFUSEE_CANON_PILLARS },
-  ], { pillars, includeExcerpts });
+  ], { pillars, includeExcerpts, includeStructuralProposals });
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   let inventory: StrictShapeInventory;
   if (args.canons) {
-    inventory = await loadCanons(args.pillars, args.includeExcerpts);
+    inventory = await loadCanons(args.pillars, args.includeExcerpts, args.includeStructuralProposals);
   } else {
     if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL absent : désigner la base à lire, ou utiliser --canons.");
-    inventory = await readAdveStrictShapeInventory({ strategyIds: args.strategyIds, pillars: args.pillars, includeExcerpts: args.includeExcerpts });
+    inventory = await readAdveStrictShapeInventory({ strategyIds: args.strategyIds, pillars: args.pillars,
+      includeExcerpts: args.includeExcerpts, includeStructuralProposals: args.includeStructuralProposals });
     const { db } = await import("../src/lib/db");
     await db.$disconnect();
   }

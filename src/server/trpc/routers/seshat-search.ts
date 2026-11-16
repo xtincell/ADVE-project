@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, operatorProcedure } from "../init";
+import { createTRPCRouter, operatorProcedure, assertInternalStaff } from "../init";
 /* lafusee:governed-active — router read-only (3 queries de recherche sémantique opérateur) ; imports seshat/context-store = lectures, aucune mutation à gouverner */
 
 export const seshatSearchRouter = createTRPCRouter({
@@ -27,7 +27,8 @@ export const seshatSearchRouter = createTRPCRouter({
         topK: z.number().min(1).max(50).default(15),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
       const { searchByQuery } = await import(
         "@/server/services/seshat/context-store"
       );
@@ -57,7 +58,8 @@ export const seshatSearchRouter = createTRPCRouter({
         topK: z.number().min(1).max(30).default(10),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
       const { topKWithinStrategy } = await import(
         "@/server/services/seshat/context-store"
       );
@@ -80,7 +82,8 @@ export const seshatSearchRouter = createTRPCRouter({
         topK: z.number().min(1).max(20).default(10),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
       const { findSimilarAcrossStrategies } = await import(
         "@/server/services/seshat/context-store"
       );

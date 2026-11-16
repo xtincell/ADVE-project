@@ -6,7 +6,7 @@ import type { Context } from "@/server/trpc/context";
 vi.mock("next-auth", () => ({}));
 
 const h = vi.hoisted(() => ({
-  user: { id: "operator-a-user", email: "operator-a@example.test", role: "USER", operatorId: "operator-a" as string | null },
+  user: { id: "operator-a-user", email: "operator-a@example.test", role: "OPERATOR", operatorId: "operator-a" as string | null },
   db: {
     user: { findUnique: vi.fn() },
     strategy: { findUnique: vi.fn() },
@@ -43,7 +43,7 @@ const operations = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
-  h.user = { id: "operator-a-user", email: "operator-a@example.test", role: "USER", operatorId: "operator-a" };
+  h.user = { id: "operator-a-user", email: "operator-a@example.test", role: "OPERATOR", operatorId: "operator-a" };
   h.db.user.findUnique.mockImplementation(async () => h.user);
   h.db.strategy.findUnique.mockResolvedValue({ id: "brand-a", userId: "owner-a", operatorId: "operator-a" });
   h.db.strategyCollaborator.findUnique.mockResolvedValue(null);
@@ -55,6 +55,12 @@ beforeEach(() => {
 });
 
 describe("manual amendments preserve operator and document access", () => {
+  it.each(Object.keys(operations) as Array<keyof typeof operations>)("does not turn a historical USER team link into %s authority", async (operation) => {
+    h.user.role = "USER";
+    await expect(operations[operation]()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(h.db.pillar.findUnique).not.toHaveBeenCalled();
+    expect(h.preview).not.toHaveBeenCalled(); expect(h.emit).not.toHaveBeenCalled();
+  });
   it.each(Object.keys(operations) as Array<keyof typeof operations>)("refuses a foreign operator before %s reads, model work or intent emission", async (operation) => {
     h.user.operatorId = "operator-b";
     await expect(operations[operation]()).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -62,6 +68,7 @@ describe("manual amendments preserve operator and document access", () => {
     expect(h.preview).not.toHaveBeenCalled(); expect(h.emit).not.toHaveBeenCalled();
   });
   it.each(Object.keys(operations) as Array<keyof typeof operations>)("does not grant the operator-only %s route to a founder", async (operation) => {
+    h.user.role = "USER";
     h.user.operatorId = null;
     h.db.strategy.findUnique.mockResolvedValue({ userId: h.user.id, operatorId: null });
     await expect(operations[operation]()).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -81,14 +88,14 @@ describe("manual amendments preserve operator and document access", () => {
     expect(h.preview).not.toHaveBeenCalled(); expect(h.emit).not.toHaveBeenCalled();
   });
   it.each(["same-operator", "owner", "admin"])("preserves preview and explicit amendment for the authorized %s", async (role) => {
-    if (role === "owner") h.db.strategy.findUnique.mockResolvedValue({ userId: h.user.id, operatorId: "operator-b" });
+    if (role === "owner") { h.user.role = "USER"; h.db.strategy.findUnique.mockResolvedValue({ userId: h.user.id, operatorId: "operator-b" }); }
     if (role === "admin") { h.user.role = "ADMIN"; h.user.operatorId = null; }
     await expect(operations.preview()).resolves.toMatchObject({ source: "llm_rephrase" });
     await expect(operations.amend()).resolves.toMatchObject({ status: "OK" });
     expect(h.emit).toHaveBeenCalledOnce(); expect(h.preview).toHaveBeenCalledOnce();
   });
   it.each(["same-operator", "owner", "admin"])("preserves the existing authorized %s read", async (role) => {
-    if (role === "owner") h.db.strategy.findUnique.mockResolvedValue({ userId: h.user.id, operatorId: "operator-b" });
+    if (role === "owner") { h.user.role = "USER"; h.db.strategy.findUnique.mockResolvedValue({ userId: h.user.id, operatorId: "operator-b" }); }
     if (role === "admin") { h.user.role = "ADMIN"; h.user.operatorId = null; }
     expect((await operations.fields()).fields.find(f => f.field === "nomMarque")?.currentValue).toBe("Valeur privée");
   });

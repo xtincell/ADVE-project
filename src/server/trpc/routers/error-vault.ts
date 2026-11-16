@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure, assertInternalStaff } from "../init";
 import { db } from "@/lib/db";
 import {
   capture,
@@ -68,7 +68,8 @@ export const errorVaultRouter = createTRPCRouter({
         limit: z.number().int().min(1).max(200).default(50),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
       return db.errorEvent.findMany({
         where: {
           ...(input.source ? { source: input.source } : {}),
@@ -83,7 +84,8 @@ export const errorVaultRouter = createTRPCRouter({
 
   groupBySignature: operatorProcedure
     .input(z.object({ resolved: z.boolean().default(false), limit: z.number().default(100) }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
       // Cluster par signature — agrège sample + count
       const events = await db.errorEvent.findMany({
         where: { resolved: input.resolved },
@@ -131,9 +133,12 @@ export const errorVaultRouter = createTRPCRouter({
         .sort((a, b) => b.totalOccurrences - a.totalOccurrences);
     }),
 
-  stats: protectedProcedure
+  stats: operatorProcedure
     .input(z.object({ sinceHours: z.number().default(24) }).optional())
-    .query(async ({ input }) => getStats({ sinceHours: input?.sinceHours })),
+    .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
+      return getStats({ sinceHours: input?.sinceHours });
+    }),
 
   /**
    * Oracle-specific incident view (ADR-0022). Filters ErrorEvent by
@@ -149,7 +154,8 @@ export const errorVaultRouter = createTRPCRouter({
         sinceHours: z.number().int().min(1).max(720).default(168),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
       const since = new Date(Date.now() - input.sinceHours * 3600_000);
       const events = await db.errorEvent.findMany({
         where: {

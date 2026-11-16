@@ -9,21 +9,36 @@ import { db } from "@/lib/db";
 import { start, advance, complete } from "@/server/services/quick-intake";
 
 const tokens: string[] = [];
+const emails: string[] = [];
+const contactWrites: Promise<unknown>[] = [];
+const upsertContact = db.crmContact.upsert.bind(db.crmContact);
 const claim = { statement: "Les décisions doivent avoir des preuves", audience: "Public synthétique de recette",
   baselineZone: "RADICAL" as const, targetZone: "POPULAR" as const };
 beforeAll(() => {
   const url = new URL(process.env.DATABASE_URL!);
   expect(["localhost", "127.0.0.1"]).toContain(url.hostname);
   expect(url.pathname).toBe("/shinkiro_verify");
+  // start() deliberately does not await CRM. Track its real writes so cleanup
+  // cannot race a late contact insert; no persistence or result is replaced.
+  vi.spyOn(db.crmContact, "upsert").mockImplementation(args => {
+    const writing = upsertContact(args);
+    if (args.where.email && emails.includes(args.where.email)) contactWrites.push(Promise.resolve(writing));
+    return writing;
+  });
 });
 afterAll(async () => {
-  await db.quickIntake.deleteMany({ where: { shareToken: { in: tokens } } });
-  await db.$disconnect();
+  try {
+    await Promise.allSettled(contactWrites);
+    const contacts = await db.crmContact.findMany({ where: { email: { in: emails } }, select: { id: true } });
+    await db.crmContact.deleteMany({ where: { id: { in: contacts.map(contact => contact.id) } } });
+    await db.quickIntake.deleteMany({ where: { shareToken: { in: tokens } } });
+  } finally { vi.restoreAllMocks(); await db.$disconnect(); }
 });
 describe.sequential("Overton entry preserves the real intake progression", () => {
   it("persists the declared idea while business context and ADVE remain distinct steps", async () => {
+    const contactEmail = `overton-${randomUUID()}@shinkiro.invalid`; emails.push(contactEmail);
     const result = await start({ companyName: "Overton isolated fixture", contactName: "Synthetic",
-      contactEmail: `overton-${randomUUID()}@shinkiro.invalid`, overtonClaim: claim });
+      contactEmail, overtonClaim: claim });
     tokens.push(result.token);
     expect(result.currentPillar).toBe("biz"); expect(result.progress).toBe(0);
     const next = await advance({ token: result.token, responses: { biz: { biz_model: "SERVICES" } } });
@@ -38,8 +53,9 @@ describe.sequential("Overton entry preserves the real intake progression", () =>
     expect(saved.businessModel).toBe("SERVICES");
   });
   it("does not treat the idea alone as completed ADVE answers", async () => {
+    const contactEmail = `overton-${randomUUID()}@shinkiro.invalid`; emails.push(contactEmail);
     const result = await start({ companyName: "Overton no answers", contactName: "Synthetic",
-      contactEmail: `overton-${randomUUID()}@shinkiro.invalid`, overtonClaim: claim });
+      contactEmail, overtonClaim: claim });
     tokens.push(result.token);
     await expect(complete(result.token)).rejects.toThrow(/no phase has substantive answers/);
     expect((await db.quickIntake.findUniqueOrThrow({ where: { shareToken: result.token } })).convertedToId).toBeNull();

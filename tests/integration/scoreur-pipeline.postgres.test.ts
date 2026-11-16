@@ -306,10 +306,16 @@ describe("existing deterministic scorer as an owned publication pipeline", () =>
     expect(await db.aICostLog.count({ where: { strategyId: row.id } })).toBe(0);
   });
 
-  it("lists a peer-owned dossier under the same stored operator without a JWT membership field", async () => {
+  it("lists a peer-owned dossier for stored portfolio staff without a JWT membership field, but not for a linked USER", async () => {
     const f = await fixture(); await db.strategy.update({ where: { id: f.strategy.id }, data: { userId: admin } });
-    const api = strategyRouter.createCaller({ db, headers: undefined, session: { user: { id: actor, role: "USER" }, expires: new Date(Date.now() + 60000).toISOString() } });
-    const rows = await api.list({}); expect(rows.some(x => x.id === f.strategy.id)).toBe(true);
+    const staff = await db.user.create({ data: { email: `scoreur-staff-${randomUUID()}@example.invalid`, operatorId: operators[0], role: "OPERATOR" } });
+    users.push(staff.id);
+    try {
+      const linkedUser = strategyRouter.createCaller({ db, headers: undefined, session: { user: { id: actor, role: "USER" }, expires: new Date(Date.now() + 60000).toISOString() } });
+      expect((await linkedUser.list({})).some(x => x.id === f.strategy.id)).toBe(false);
+      const api = strategyRouter.createCaller({ db, headers: undefined, session: { user: { id: staff.id, role: "OPERATOR" }, expires: new Date(Date.now() + 60000).toISOString() } });
+      const rows = await api.list({}); expect(rows.some(x => x.id === f.strategy.id)).toBe(true);
+    } finally { await db.user.deleteMany({ where: { id: staff.id } }); }
   });
 
   it("publishes an existing dossier through manual input and exposes one brand after an exact replay", async () => {

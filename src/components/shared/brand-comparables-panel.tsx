@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function BrandComparablesPanel({ strategyId, topK = 6, className = "" }: Props) {
-  const { data, isLoading } = trpc.strategy.comparables.useQuery(
+  const { data, isLoading, error } = trpc.strategy.comparables.useQuery(
     { strategyId, topK },
     { staleTime: 60_000 },
   );
@@ -32,6 +32,20 @@ export function BrandComparablesPanel({ strategyId, topK = 6, className = "" }: 
           <h3 className="text-sm font-semibold">Marques voisines</h3>
         </div>
         <div className="text-xs text-foreground-muted">Chargement…</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`rounded-xl border border-border bg-card p-4 ${className}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Users className="h-4 w-4 text-foreground-muted" />
+          <h3 className="text-sm font-semibold">Marques voisines</h3>
+        </div>
+        <p role="alert" className="text-xs text-error">
+          Les repères de marques voisines sont indisponibles. Réessayez plus tard.
+        </p>
       </div>
     );
   }
@@ -66,7 +80,7 @@ export function BrandComparablesPanel({ strategyId, topK = 6, className = "" }: 
           </div>
         ) : (
           <div className="text-xs text-foreground-muted">
-            Groupe trop restreint pour un repère anonyme (moins de 3 pairs).
+            Moins de 3 scores valides disponibles : la médiane reste masquée pour préserver l’anonymat.
           </div>
         )}
         <div className="flex items-baseline justify-between gap-3 mt-1">

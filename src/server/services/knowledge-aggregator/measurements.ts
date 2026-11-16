@@ -1,6 +1,39 @@
+import { ADVE_COMPOSITE_MAX } from "@/domain/brand-scores";
+import { MarketScaleSchema, type MarketScale } from "@/domain/market-scale";
+import { PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain/pillars";
+import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
+
 /** Numeric measurements only: a missing, malformed or negative count is not zero. */
 export function measuredNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export function measuredComposite(value: unknown): number | null {
+  const score = measuredNumber(value);
+  return score !== null && score <= ADVE_COMPOSITE_MAX ? score : null;
+}
+
+/** The taxonomy's fallback AUTRE is not evidence of a declared sector. */
+export function benchmarkSector(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const sector = classifyCanonicalSector(value);
+  return sector.code === "AUTRE" && value.trim().toUpperCase() !== "AUTRE" ? null : sector.slug;
+}
+
+export type BenchmarkCohort = {
+  sector: string | null;
+  countryCode: string | null;
+  marketScale: MarketScale | null;
+  qualified: boolean;
+};
+
+/** Canonical strategy coordinates only; never fall back to an arbitrary intake. */
+export function benchmarkCohort(sectorValue: unknown, countryValue: unknown, scaleValue: unknown): BenchmarkCohort {
+  const sector = benchmarkSector(sectorValue);
+  const countryCode = typeof countryValue === "string" && /^[A-Z]{2}$/.test(countryValue) ? countryValue : null;
+  const scale = MarketScaleSchema.safeParse(scaleValue);
+  const marketScale = scale.success ? scale.data : null;
+  return { sector, countryCode, marketScale, qualified: sector !== null && countryCode !== null && marketScale !== null };
 }
 
 export function measurementRecord(value: unknown): Record<string, unknown> {
@@ -40,12 +73,22 @@ export function readMeasurementSources(value: unknown, coverage: MeasurementCove
 }
 
 export function compositeSummary(strategies: { advertis_vector: unknown }[]) {
-  const values = strategies.map(s => measuredNumber(measurementRecord(s.advertis_vector).composite)).filter((v): v is number => v !== null);
+  const vectors = strategies.map(s => measurementRecord(s.advertis_vector));
+  const values = vectors.map(v => measuredComposite(v.composite)).filter((v): v is number => v !== null);
+  const pillarBenchmarks = Object.fromEntries(PILLAR_STORAGE_KEYS.map(key => {
+    // AdvertisVectorSchema: each stored axis is a finite number in [0, 25].
+    const scores = vectors.map(v => measuredNumber(v[key])).filter((v): v is number => v !== null && v <= 25);
+    return [key, {
+      average: scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null,
+      coverage: measurementCoverage(scores.length, strategies.length),
+    }];
+  })) as Record<PillarStorageKey, { average: number | null; coverage: MeasurementCoverage }>;
   return {
     count: strategies.length,
     avgComposite: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null,
     coverage: measurementCoverage(values.length, strategies.length),
     benchmarks: {},
+    pillarBenchmarks,
   };
 }
 
@@ -80,25 +123,32 @@ export function readBriefMeasurements(data: Record<string, unknown>) {
 }
 
 export function readSectorMeasurements(data: Record<string, unknown>, aggregate: boolean) {
-  const coverage = data.metricsVersion === 1 ? readMeasurementCoverage(data.coverage) : null;
-  const verifiedAggregate = coverage !== null && coverage.observedCount >= 2;
+  const coverage = data.metricsVersion === 1 || data.metricsVersion === 2 ? readMeasurementCoverage(data.coverage) : null;
+  const rawCohort = measurementRecord(data.cohort);
+  const cohort = data.metricsVersion === 2 ? benchmarkCohort(rawCohort.sector, rawCohort.countryCode, rawCohort.marketScale) : null;
+  const verifiedAggregate = cohort?.qualified === true && coverage !== null && coverage.observedCount >= 2;
   return {
-    avgComposite: aggregate && !verifiedAggregate ? null : measuredNumber(data.avgComposite),
-    topQuartile: aggregate && !verifiedAggregate ? null : measuredNumber(data.topQuartile),
+    avgComposite: aggregate && !verifiedAggregate ? null : measuredComposite(data.avgComposite),
+    topQuartile: aggregate && !verifiedAggregate ? null : measuredComposite(data.topQuartile),
     coverage,
-    basis: verifiedAggregate ? "AGGREGATED" : aggregate ? "UNVERIFIED_AGGREGATE" : "DECLARED",
+    cohort,
+    basis: !aggregate ? "DECLARED" : !cohort ? "UNVERIFIED_AGGREGATE" : !cohort.qualified ? "UNQUALIFIED_COHORT" : verifiedAggregate ? "AGGREGATED" : "INSUFFICIENT_MEASUREMENTS",
   };
 }
 
 export function sectorBenchmarkExcerpt(value: unknown, aggregate: boolean): string {
   const data = measurementRecord(value);
   const projection = readSectorMeasurements(data, aggregate);
-  if (projection.basis === "UNVERIFIED_AGGREGATE" && !projection.coverage) {
-    return "Agrégat historique à recalculer ; couverture des mesures inconnue.";
+  if (projection.basis === "UNVERIFIED_AGGREGATE") {
+    return "Agrégat historique à recalculer ; cohorte canonique non établie.";
+  }
+  if (projection.basis === "UNQUALIFIED_COHORT") {
+    return "Repère indisponible : secteur, pays ou échelle de marché non renseigné.";
   }
   const coverage = projection.coverage;
   const label = projection.basis === "DECLARED" ? "Score moyen déclaré" : "Score moyen";
   return `${label}: ${projection.avgComposite ?? "non mesuré"}/200. Top quartile: ${projection.topQuartile ?? "non mesuré"}/200.`
+    + (projection.cohort ? ` Cohorte : ${projection.cohort.sector}, ${projection.cohort.countryCode}, ${projection.cohort.marketScale}.` : "")
     + (coverage ? ` ${coverage.observedCount}/${coverage.totalCount} scores renseignés.` : " Couverture des mesures inconnue.");
 }
 

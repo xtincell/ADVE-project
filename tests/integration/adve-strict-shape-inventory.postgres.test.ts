@@ -6,6 +6,8 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 
@@ -118,6 +120,39 @@ describe("inventaire des formes ADVE sur PostgreSQL", () => {
       await tx.$executeRaw`SET TRANSACTION READ ONLY`;
       await tx.pillar.update({ where: { id: f.pillar.id }, data: { validationStatus: "VALIDATED" } });
     }, { isolationLevel: "RepeatableRead" })).rejects.toThrow(/read-only transaction/);
+    expect(await snapshotRows(f.strategy.id)).toBe(before);
+  });
+
+  it("prépare les correspondances exactes sans modifier contenu, métadonnées, versions, sources ni émissions", async () => {
+    const f = await fixture();
+    await db.pillar.update({ where: { id: f.pillar.id }, data: {
+      content: { archetype: "Créateur", a_mission: "Mission synthétique conservée intégralement", a_noyau: "Identité reçue",
+        noyauIdentitaire: "Autre identité déjà retenue", a_values: "Un, deux, trois", _fieldProvenance: { a_mission: "HUMAN" } },
+      fieldCertainty: { "a.a_mission": "OFFICIAL" }, sources: [f.receipt, { sourceId: f.source.id, field: "a_mission" }],
+    } });
+    const before = await snapshotRows(f.strategy.id);
+    const inventory = await readAdveStrictShapeInventory({ strategyIds: [f.strategy.id], includeStructuralProposals: true, includeExcerpts: true });
+    expect(inventory.snapshot).toEqual({ readOnly: true, isolation: "REPEATABLE READ" });
+    const entry = inventory.entries.find(row => row.pillarKey === "a")!;
+    const review = entry.structuralReview!;
+    expect(review.currentVersion).toBe(2);
+    expect(review.simulatedRekeys).toBe(1);
+    expect(review.candidates.find(candidate => candidate.sourceKey === "a_noyau")?.qualification).toBe("TARGET_CONFLICT");
+    expect(review.candidates.find(candidate => candidate.sourceKey === "a_values")?.qualification).toBe("SPLITTING_OR_TRUNCATION_REVIEW");
+    const exact = review.candidates.find(candidate => candidate.sourceKey === "a_mission")!;
+    expect(exact).toMatchObject({ qualification: "EXACT_REKEY_PROPOSAL", provenance: "HUMAN", targetPresent: false,
+      lastRetainedChange: { status: "CHANGED", fromVersion: 1, producedVersion: 2, intentId: f.emission.id } });
+    expect(exact.sources).toContainEqual(expect.objectContaining({ sourceId: f.source.id, receiptHash: f.receipt.contentHash,
+      lookup: "FOUND", receiptMatchesCurrent: true, sameStrategy: true, attachedToPillar: true, citedByFindings: 0 }));
+    expect(exact.referencesToRemap).toEqual(["_fieldProvenance.a_mission", "fieldCertainty.a.a_mission", "sources[1].field"]);
+    expect(entry.findings.every(finding => finding.excerpt === null)).toBe(true);
+    expect(JSON.stringify(inventory)).not.toContain("Mission synthétique conservée intégralement");
+    expect(entry.validationStatus).toBe("DRAFT");
+    const cli = JSON.parse(execFileSync(process.execPath, ["--import", "tsx",
+      resolve(__dirname, "../../scripts/inventory-adve-strict-shapes.ts"),
+      "--strategie", f.strategy.id, "--propositions-structurelles", "--json", "-"],
+    { cwd: resolve(__dirname, "../.."), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+    expect(cli).toEqual(inventory);
     expect(await snapshotRows(f.strategy.id)).toBe(before);
   });
 

@@ -8,12 +8,13 @@ import { seedStrategy } from "@/server/services/strategy-bootstrap";
 import { ensureNodePlatform } from "@/server/services/brand-node/ensure-platform";
 import { clientRouter } from "@/server/trpc/routers/client";
 import { canAccessClient } from "@/server/services/operator-isolation";
+import { isOwnedPostgresTarget } from "../../support/owned-postgres-target";
 
 const target = new URL(process.env.DATABASE_URL ?? "postgresql://localhost/stub");
 const localFixture =
   /^postgresql:\/\/f550@localhost:55491\/fr550\?host=\/tmp\/fr550\.[A-Za-z0-9]+$/.test(target.href) &&
   process.env.FR550_DISPOSABLE === "1";
-const disposableVerify = ["localhost", "127.0.0.1"].includes(target.hostname) && target.pathname === "/shinkiro_verify";
+const disposableVerify = isOwnedPostgresTarget();
 describe.skipIf(!localFixture && !disposableVerify)(
   "native CRM + strategy bootstrap on a disposable PostgreSQL",
   () => {
@@ -24,6 +25,7 @@ describe.skipIf(!localFixture && !disposableVerify)(
       ng: string,
       actor: { id: string; operatorId: string; role: string },
       foreignParent: string;
+    const users: string[] = [];
     const proof = [
       {
         id: "source-a",
@@ -57,6 +59,7 @@ describe.skipIf(!localFixture && !disposableVerify)(
         operatorId: op,
         role: "OPERATOR",
       };
+      users.push(actor.id);
       const spec = {
         operatorId: op,
         data: {
@@ -100,7 +103,33 @@ describe.skipIf(!localFixture && !disposableVerify)(
         })
       ).id;
     });
-    afterAll(() => db.$disconnect());
+    afterAll(async () => {
+      try {
+        if (op) await db.$transaction(async tx => {
+          const operators = [op, other].filter(Boolean);
+          // IDs belong to the operators/accounts created by this invocation,
+          // including a committed bootstrap whose caller later failed.
+          const brands = (await tx.strategy.findMany({ where: { userId: { in: users } }, select: { id: true } })).map(row => row.id);
+          const clients = (await tx.client.findMany({ where: { operatorId: { in: operators } }, select: { id: true } })).map(row => row.id);
+          await tx.intentEmission.deleteMany({ where: { OR: [
+            { strategyId: { in: brands } },
+            ...clients.map(id => ({ payload: { path: ["clientId"], equals: id } })),
+          ] } });
+          await tx.auditLog.deleteMany({ where: { userId: { in: users } } });
+          await tx.brandNode.deleteMany({ where: { operatorId: { in: operators } } });
+          await tx.quickIntake.deleteMany({ where: { convertedToId: { in: brands } } });
+          await tx.brandDataSource.deleteMany({ where: { strategyId: { in: brands } } });
+          await tx.pillar.deleteMany({ where: { strategyId: { in: brands } } });
+          await tx.variableStoreConfig.deleteMany({ where: { strategyId: { in: brands } } });
+          await tx.brandOSConfig.deleteMany({ where: { strategyId: { in: brands } } });
+          await tx.strategy.deleteMany({ where: { id: { in: brands } } });
+          await tx.client.deleteMany({ where: { id: { in: clients.filter(id => id !== group) } } });
+          if (group) await tx.client.deleteMany({ where: { id: group } });
+          await tx.user.deleteMany({ where: { id: { in: users } } });
+          await tx.operator.deleteMany({ where: { id: { in: operators } } });
+        });
+      } finally { await db.$disconnect(); }
+    });
     it("keeps both siblings scoped and excludes the reference group from commercial totals", async () => {
       expect(
         await db.client.count({
@@ -214,6 +243,7 @@ describe.skipIf(!localFixture && !disposableVerify)(
       const founder = await db.user.create({
         data: { email: `${key}-founder@example.invalid`, role: "USER" },
       });
+      users.push(founder.id);
       const ctx = {
         db,
         session: {

@@ -17,7 +17,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
 import { emitIntent, type Intent } from "@/server/services/mestor/intents";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { readCompositeFromVector } from "@/domain/brand-scores";
+import { ADVE_COMPOSITE_MAX, readCompositeFromVector } from "@/domain/brand-scores";
 import {
   evaluatePalierTransition,
   tierTransitionKind,
@@ -757,10 +757,15 @@ export const strategyRouter = createTRPCRouter({
       });
       const composites = peerStrategies
         .map((s) => (s.advertis_vector as Record<string, number> | null)?.composite)
-        .filter((c): c is number => typeof c === "number")
+        .filter((c): c is number => typeof c === "number" && Number.isFinite(c) && c >= 0 && c <= ADVE_COMPOSITE_MAX)
         .sort((a, b) => a - b);
-      const medianComposite = composites.length
-        ? Math.round(composites[Math.floor(composites.length / 2)]!)
+      // Three indexed peers do not protect a single observed score. Apply the
+      // anonymity threshold again to the valid measurements actually returned.
+      const middle = Math.floor(composites.length / 2);
+      const medianComposite = composites.length >= K_ANON
+        ? Math.round(composites.length % 2 === 0
+          ? (composites[middle - 1]! + composites[middle]!) / 2
+          : composites[middle]!)
         : null;
 
       return { peerCount: ids.length, medianComposite, topSimilarity };

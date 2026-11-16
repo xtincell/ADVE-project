@@ -27,13 +27,20 @@ import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
-import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
+import { scopeClients, canAccessClient, scopeStrategies, hasOperatorPortfolioAccess } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { found } from "../entity-access";
 /* lafusee:governed-active */
 
 /** IN1 : un client inconnu reçoit 404 typé, jamais P2025 ni un message Prisma. */
 const CLIENT_NOT_FOUND = "Client introuvable.";
+
+/** The permission is specific to this Client, including for staff owning a brand elsewhere. */
+function clientReadView<T extends { operatorId: string }>(client: T, ctx: { role: string; operatorId: string | null }): T {
+  if (ctx.role === "ADMIN" || (hasOperatorPortfolioAccess(ctx) && client.operatorId === ctx.operatorId)) return client;
+  return { ...client, parentClient: null, parentClientId: null, organizationKey: null, organizationSourceRefs: null,
+    contactName: null, contactEmail: null, contactPhone: null, notes: null, billingInfo: null };
+}
 
 export const clientRouter = createTRPCRouter({
   create: governedProcedure({
@@ -53,6 +60,10 @@ export const clientRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+      if (ctx.session.user.role !== "ADMIN"
+        && !hasOperatorPortfolioAccess({ role: ctx.session.user.role ?? "USER", operatorId: userOperatorId })) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
+      }
       const operatorId = ctx.session.user.role === "ADMIN" && input.operatorId
         ? input.operatorId
         : userOperatorId;
@@ -98,7 +109,7 @@ export const clientRouter = createTRPCRouter({
         operatorId: userOperatorId,
         userId: ctx.session.user.id,
         role: ctx.session.user.role ?? "USER",
-      });
+      }, "MANAGE");
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
       const {id,expectedUpdatedAt,...data}=input;
@@ -111,24 +122,27 @@ export const clientRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
-      const hasAccess = await canAccessClient(input.id, {
+      const opCtx = {
         operatorId: userOperatorId,
         userId: ctx.session.user.id,
         role: ctx.session.user.role ?? "USER",
-      });
+      };
+      const hasAccess = await canAccessClient(input.id, opCtx);
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      return found(await ctx.db.client.findUnique({
+      const client = found(await ctx.db.client.findUnique({
         where: { id: input.id },
         include: {
           parentClient: { select: { id:true,name:true,organizationKind:true } },
           strategies: {
+            where: scopeStrategies(opCtx),
             include: { pillars: true },
             orderBy: { updatedAt: "desc" },
           },
           operator: { select: { id: true, name: true } },
         },
       }), CLIENT_NOT_FOUND);
+      return clientReadView(client, opCtx);
     }),
 
   list: protectedProcedure
@@ -142,7 +156,8 @@ export const clientRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const userRole = ctx.session.user.role ?? "USER";
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
-      const operatorScope = scopeClients({ operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole });
+      const opCtx = { operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole };
+      const operatorScope = scopeClients(opCtx);
 
       const where: Prisma.ClientWhereInput = {
         ...operatorScope,
@@ -151,8 +166,7 @@ export const clientRouter = createTRPCRouter({
         ...(input.search ? { name: { contains: input.search, mode: "insensitive" as const } } : {}),
       };
 
-      const isTeamMember = userRole === "ADMIN" || Boolean(userOperatorId);
-      const visibleStrategies = isTeamMember ? {} : {userId: ctx.session.user.id};
+      const visibleStrategies = scopeStrategies(opCtx);
       const items = await ctx.db.client.findMany({
         where,
         include: {
@@ -180,10 +194,7 @@ export const clientRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
-      return { items: isTeamMember ? items : items.map(client=>({
-        ...client, parentClientId:null,organizationKey:null,organizationSourceRefs:null,
-        contactName:null,contactEmail:null,contactPhone:null,notes:null,billingInfo:null,
-      })), nextCursor };
+      return { items: items.map(client => clientReadView(client, opCtx)), nextCursor };
     }),
 
   delete: governedProcedure({
@@ -205,7 +216,7 @@ export const clientRouter = createTRPCRouter({
         operatorId: userOperatorId,
         userId: ctx.session.user.id,
         role: ctx.session.user.role ?? "USER",
-      });
+      }, "MANAGE");
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
       const client=found(await ctx.db.client.findUnique({where:{id:input.id},select:{operatorId:true}}),CLIENT_NOT_FOUND);
@@ -231,7 +242,7 @@ export const clientRouter = createTRPCRouter({
         operatorId: userOperatorId,
         userId: ctx.session.user.id,
         role: ctx.session.user.role ?? "USER",
-      });
+      }, "MANAGE");
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
       const client = found(await ctx.db.client.findUnique({ where: { id: input.clientId } }), CLIENT_NOT_FOUND);
@@ -252,7 +263,7 @@ export const clientRouter = createTRPCRouter({
       to: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      if (!await canAccessClient(input.clientId,{operatorId:ctx.session.user.operatorId ?? null,role:ctx.session.user.role ?? "USER",userId:ctx.session.user.id})) throw new TRPCError({code:"FORBIDDEN"});
+      if (!await canAccessClient(input.clientId,{operatorId:ctx.session.user.operatorId ?? null,role:ctx.session.user.role ?? "USER",userId:ctx.session.user.id}, "MANAGE")) throw new TRPCError({code:"FORBIDDEN"});
       const { getClientPnL } = await import("@/server/services/financial-reconciliation");
       const from = input.from ? new Date(input.from) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
       const to = input.to ? new Date(input.to) : new Date();

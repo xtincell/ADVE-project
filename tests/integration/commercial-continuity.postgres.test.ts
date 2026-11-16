@@ -12,7 +12,8 @@ import { crmRouter } from "@/server/trpc/routers/crm";
 import { salesStateSchema, type SalesStep } from "@/server/services/crm-engine/commercial";
 
 let adminId: string, sellerId: string, deliveryId: string, otherId: string, brandId: string;
-const caller = (id: string, role: "ADMIN" | "USER" = "USER") => crmRouter.createCaller({
+type FixtureRole = "ADMIN" | "USER" | "OPERATOR";
+const caller = (id: string, role: FixtureRole = [sellerId, deliveryId, otherId].includes(id) ? "OPERATOR" : "USER") => crmRouter.createCaller({
   db, headers: undefined, session: { user: { id, role }, expires: new Date(Date.now() + 3600000).toISOString() },
 });
 let dealId: string;
@@ -21,13 +22,13 @@ const fixturePayments: string[] = [];
 beforeAll(async () => {
   const op = await db.operator.create({ data: { name: "Commercial fixture", slug: randomUUID(), status: "ACTIVE", licenseType: "OWNER", licensedAt: new Date(), licenseExpiry: new Date("2030-01-01") } });
   fixtureOperatorIds.push(op.id);
-  const createUser = async (name: string, operatorId?: string) => db.user.create({ data: { name, email: randomUUID() + "@example.invalid", operatorId } });
+  const createUser = async (name: string, operatorId?: string, role: FixtureRole = "USER") => db.user.create({ data: { name, email: randomUUID() + "@example.invalid", operatorId, role } });
   adminId = (await createUser("Mandant", op.id)).id;
-  sellerId = (await createUser("Commercial autonome", op.id)).id;
-  deliveryId = (await createUser("Livraison", op.id)).id;
+  sellerId = (await createUser("Commercial autonome", op.id, "OPERATOR")).id;
+  deliveryId = (await createUser("Livraison", op.id, "OPERATOR")).id;
   const other = await db.operator.create({ data: { name: "Autre", slug: randomUUID(), status: "ACTIVE", licenseType: "OWNER", licensedAt: new Date(), licenseExpiry: new Date("2030-01-01") } });
   fixtureOperatorIds.push(other.id);
-  otherId = (await createUser("Autre vendeur", other.id)).id;
+  otherId = (await createUser("Autre vendeur", other.id, "OPERATOR")).id;
   brandId = (await db.strategy.create({ data: { name: "Marque de recette", userId: adminId, operatorId: op.id } })).id;
   await db.pillar.create({ data: { strategyId: brandId, key: "v", content: { produitsCatalogue: [{ id: "gold", nom: "Gold" }] } } });
 });
@@ -35,6 +36,7 @@ afterAll(async () => {
   if (process.env.KEEP_COMMERCIAL_FIXTURES !== "1" && brandId) {
     const owned = await db.deal.findMany({ where: { sellerStrategyId: brandId }, select: { id: true } });
     const ids = owned.map(item => item.id);
+    await db.cRMNote.deleteMany({ where: { dealId: { in: ids } } });
     await db.cRMActivity.deleteMany({ where: { dealId: { in: ids } } });
     await db.funnelMapping.deleteMany({ where: { dealId: { in: ids } } });
     await db.deal.deleteMany({ where: { id: { in: ids } } });
@@ -54,7 +56,7 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
-async function step(userId: string, command: SalesStep["command"], role: "ADMIN" | "USER" = "USER", channel: SalesStep["channel"] = "EMAIL") {
+async function step(userId: string, command: SalesStep["command"], role: FixtureRole | undefined = undefined, channel: SalesStep["channel"] = "EMAIL") {
   const client = caller(userId, role);
   const row = await client.getDeal({ id: dealId });
   const salesStep: SalesStep = { requestId: randomUUID(), expectedRevision: row.revision, channel, command };
@@ -85,8 +87,8 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
     await expect(step(sellerId,{type:"HANDOVER",sellerId:deliveryId})).rejects.toThrow();
     await step(adminId,{type:"HANDOVER",sellerId:deliveryId},"USER");
     await step(adminId,{type:"HANDOVER",sellerId},"USER");
-    await step(sellerId, { type: "QUALIFY", role: "BUYER", need: "Faire découvrir le restaurant." }, "USER", "PHONE");
-    await step(sellerId, { type: "PROPOSE" }, "USER", "WHATSAPP");
+    await step(sellerId, { type: "QUALIFY", role: "BUYER", need: "Faire découvrir le restaurant." }, "OPERATOR", "PHONE");
+    await step(sellerId, { type: "PROPOSE" }, "OPERATOR", "WHATSAPP");
     await step(sellerId, { type: "OBJECTION", evidence: "Le client demande une garantie de réservations." });
     await step(sellerId, { type: "PROPOSE" });
     const accepted = await step(sellerId, { type: "ACCEPT", evidence: "Accord explicite du client fictif sur Gold mensuel." });

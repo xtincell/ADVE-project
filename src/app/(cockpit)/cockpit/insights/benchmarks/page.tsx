@@ -14,13 +14,16 @@ import { AlertTriangle, BarChart3, Info, Medal, Target } from "lucide-react";
 const CLASSIFICATION_LABELS: Record<BrandClassification, string> = {
   LATENT: "Latent", FRAGILE: "Fragile", ORDINAIRE: "Ordinaire", FORTE: "Forte", CULTE: "Culte", ICONE: "Icône",
 };
-const measured = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
+const measured = (value: unknown, maximum = 200): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= maximum;
 
 export default function BenchmarksPage() {
   const strategyId = useCurrentStrategyId();
+  const me = trpc.auth.me.useQuery();
+  const canReadGlobal = !me.isError && !me.isLoading && me.data?.canOperate === true
+    && (me.data.role === "ADMIN" || me.data.role === "OPERATOR");
   const strategyQuery = trpc.strategy.getWithScore.useQuery({ id: strategyId! }, { enabled: !!strategyId });
-  const benchmarkQuery = trpc.knowledgeGraph.getBenchmarks.useQuery({}, { enabled: !!strategyId });
-  const rankingQuery = trpc.knowledgeGraph.getFrameworkRanking.useQuery({}, { enabled: !!strategyId });
+  const benchmarkQuery = trpc.knowledgeGraph.getBenchmarks.useQuery({}, { enabled: !!strategyId && canReadGlobal });
+  const rankingQuery = trpc.knowledgeGraph.getFrameworkRanking.useQuery({}, { enabled: !!strategyId && canReadGlobal });
 
   if (!strategyId || strategyQuery.isLoading) return <SkeletonPage />;
   if (strategyQuery.error) return <div className="space-y-6">
@@ -34,12 +37,12 @@ export default function BenchmarksPage() {
   const strategy = strategyQuery.data;
   const vector = (strategy?.advertis_vector as Record<string, unknown> | null) ?? {};
   const scores: Partial<Record<PillarKey, number>> = {};
-  for (const key of PILLAR_KEYS) if (measured(vector[key])) scores[key] = vector[key];
+  for (const key of PILLAR_KEYS) if (measured(vector[key], 25)) scores[key] = vector[key];
   const hasFullVector = PILLAR_KEYS.every(key => scores[key] !== undefined);
   const composite = measured(strategy?.composite) ? strategy.composite : null;
   const classification = composite === null ? null : classifyBrand(composite);
 
-  // These endpoints currently cover all active strategies, without a sector filter.
+  // This request covers all active strategies, without selecting a sector.
   // A composite provides no evidence about the distribution of its eight pillars.
   const benchmark = benchmarkQuery.error ? undefined : benchmarkQuery.data;
   const average = measured(benchmark?.avgComposite) ? benchmark.avgComposite : null;
@@ -61,7 +64,7 @@ export default function BenchmarksPage() {
         <div className="flex items-start gap-3 rounded-lg border border-border bg-background/50 px-4 py-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
           <p className="text-sm leading-relaxed text-foreground-secondary">
-            Périmètre des repères : marques actives observées, tous secteurs confondus. Les comparaisons par secteur et par pilier restent indisponibles.
+            Périmètre des repères : marques actives observées, tous secteurs, pays et échelles de marché confondus. Chaque moyenne par pilier indique le nombre de scores renseignés.
           </p>
         </div>
 
@@ -85,22 +88,30 @@ export default function BenchmarksPage() {
           <h2 id="brand-radar-title" className="mb-4 font-semibold text-foreground">Profil de votre marque</h2>
           {hasFullVector ? <AdvertisRadar scores={scores} size={280} interactive={false} className="flex justify-center" />
             : <p className="text-sm text-foreground-secondary">Le radar sera disponible lorsque les huit piliers seront renseignés. Les valeurs déjà reçues figurent ci-dessous.</p>}
-          <p className="mt-4 text-sm text-foreground-secondary">Comparaison par pilier indisponible : aucun agrégat par pilier n’a été reçu.</p>
         </section>
 
         <section aria-labelledby="brand-pillar-scores-title" className="rounded-xl border border-border bg-background/80 p-6">
-          <h2 id="brand-pillar-scores-title" className="mb-4 font-semibold text-foreground">Vos scores par pilier</h2>
+          <h2 id="brand-pillar-scores-title" className="mb-2 font-semibold text-foreground">Scores par pilier</h2>
+          <p className="mb-4 text-sm text-foreground-secondary">Les moyennes utilisent les scores renseignés sur chaque pilier. Les valeurs absentes ou invalides sont exclues.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-border">
                 <th scope="col" className="pb-3 text-left font-medium text-foreground-secondary">Pilier</th>
                 <th scope="col" className="pb-3 text-right font-medium text-foreground-secondary">Votre score sur 25</th>
+                <th scope="col" className="pb-3 pl-4 text-right font-medium text-foreground-secondary">Moyenne observée sur 25</th>
+                <th scope="col" className="pb-3 pl-4 text-right font-medium text-foreground-secondary">Scores renseignés</th>
               </tr></thead>
               <tbody className="divide-y divide-border/50">
-                {PILLAR_KEYS.map(key => <tr key={key}>
-                  <th scope="row" className="py-3 text-left font-normal text-foreground-secondary">{key.toUpperCase()} — {PILLAR_NAMES[key]}</th>
-                  <td className="py-3 text-right font-semibold text-foreground">{scores[key] === undefined ? "Non renseigné" : scores[key].toFixed(1)}</td>
-                </tr>)}
+                {PILLAR_KEYS.map(key => {
+                  const axis = benchmark?.pillarBenchmarks?.[key];
+                  const mean = measured(axis?.average, 25) ? axis.average : null;
+                  return <tr key={key}>
+                    <th scope="row" className="py-3 text-left font-normal text-foreground-secondary">{key.toUpperCase()} — {PILLAR_NAMES[key]}</th>
+                    <td className="py-3 text-right font-semibold text-foreground">{scores[key] === undefined ? "Non renseigné" : scores[key].toFixed(1)}</td>
+                    <td className="py-3 pl-4 text-right text-foreground">{mean === null ? "Non disponible" : mean.toFixed(1)}</td>
+                    <td className="py-3 pl-4 text-right text-foreground-secondary">{axis?.coverage ? `${axis.coverage.observedCount}/${axis.coverage.totalCount}` : "—"}</td>
+                  </tr>;
+                })}
               </tbody>
             </table>
           </div>

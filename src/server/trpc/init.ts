@@ -96,6 +96,13 @@ export const operatorProcedure = protectedProcedure.use(async ({ ctx, next }) =>
   return next({ ctx });
 });
 
+/** Console-global private reads need staff authority in addition to operatorProcedure's team link. */
+export function assertInternalStaff(role: string | undefined) {
+  if (role !== "ADMIN" && role !== "OPERATOR") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé à l'équipe opératrice." });
+  }
+}
+
 // Chantier 6 — Tier guard for Creator routes (server-side enforcement)
 const TIER_ORDER: Record<string, number> = { APPRENTI: 0, COMPAGNON: 1, MAITRE: 2, ASSOCIE: 3 };
 

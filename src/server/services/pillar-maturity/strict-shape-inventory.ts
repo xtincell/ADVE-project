@@ -10,7 +10,7 @@
  * refusé, OÙ, avec quelle origine, quelle source et quelle écriture.
  *
  * Ce module ne fait que lire et rapporter :
- *  - aucune écriture, aucune normalisation, aucun renommage proposé, aucun appel de
+ *  - aucune écriture, aucune normalisation, aucun appel de
  *    modèle ; la lecture en base passe par une transaction PostgreSQL READ ONLY en
  *    REPEATABLE READ (un instantané cohérent, toute écriture refusée par la base) ;
  *  - validation par le validateur strict existant (`validatePillarContent`, via
@@ -23,10 +23,13 @@
  *    (`assessPillar`), écriture retrouvée dans les archives `PillarVersion`
  *    (contenu AVANT chaque écriture) et ses reçus documentaires (`readCheckpoint`).
  *
- * Une clé hors schéma à côté d'un champ canonique absent est SIGNALÉE, jamais
- * rapprochée d'un champ canonique : deviner une correspondance serait inventer.
+ * Par défaut, une clé hors schéma à côté d'un champ canonique absent est seulement
+ * signalée. Le mode structurel optionnel ne simule que les six correspondances
+ * scalaires déjà définies par salvage-responses, avec texte inchangé et cible
+ * admissible au schéma. Il n'approuve rien et laisse les références à revoir.
  */
 import { isDeepStrictEqual } from "node:util";
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -40,6 +43,7 @@ import type { PillarKey } from "@/lib/types/pillar-schemas";
 import { readSourceReceipts, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { readCheckpoint } from "@/server/services/pillar-versioning/checkpoint";
 import { assessPillar } from "./assessor";
+import { salvageMappingContracts } from "../quick-intake/salvage-responses";
 
 export const ADVE_INVENTORY_PILLARS = ADVE_STORAGE_KEYS;
 export type AdveInventoryPillar = (typeof ADVE_INVENTORY_PILLARS)[number];
@@ -133,6 +137,45 @@ export interface PillarShapeInventory {
   undeclaredTopKeys: string[];
   sources: InventorySourceDetail[];
   findings: StrictShapeFinding[];
+  /** Optional preparation only: no values, no write plan, no approval. */
+  structuralReview?: StructuralReview;
+}
+
+type StructuralQualification = "EXACT_REKEY_PROPOSAL" | "EQUIVALENT_TARGET" | "TARGET_CONFLICT"
+  | "SOURCE_NOT_TEXT" | "SOURCE_TOO_SHORT" | "TRIMMING_REQUIRED" | "TRUNCATION_REQUIRED"
+  | "TARGET_SCHEMA_REFUSED" | "SPLITTING_OR_TRUNCATION_REVIEW";
+export interface StructuralCandidate {
+  sourceKey: string;
+  targetKey: string;
+  qualification: StructuralQualification;
+  sourceType: string;
+  sourceLength: number | null;
+  /** Exact received text fingerprint; the text itself is never emitted. */
+  sourceHash: string | null;
+  targetPresent: boolean;
+  targetRelation: "ABSENT" | "EQUIVALENT" | "CONFLICT";
+  provenance: string | null;
+  lastRetainedChange: RetainedChange;
+  sources: InventorySourceDetail[];
+  referencesToRemap: string[];
+  targetRefusals: Array<{ path: string; kind: ConformanceClass; code: string | null }>;
+}
+interface StructuralAssessment {
+  strictAccepted: boolean;
+  refusedPaths: number;
+  byKind: Record<ConformanceClass, number>;
+  maturity: PillarShapeInventory["maturity"];
+}
+export interface StructuralReview {
+  format: "adve-structural-review-v1";
+  scope: "IN_MEMORY_STRUCTURE_ONLY";
+  currentVersion: number | null;
+  contentHash: string;
+  candidates: StructuralCandidate[];
+  reviewRequired: Array<{ path: string; reason: string }>;
+  simulatedRekeys: number;
+  before: StructuralAssessment;
+  after: StructuralAssessment;
 }
 
 export interface StrictShapeInventoryTotals {
@@ -198,6 +241,7 @@ export interface PillarInventoryInput {
   intentKinds?: ReadonlyMap<string, string>;
   sourceRows?: ReadonlyMap<string, SourceRow>;
   includeExcerpts?: boolean;
+  includeStructuralProposals?: boolean;
 }
 
 // ─── Lecture pure d'un pilier ────────────────────────────────────────────────
@@ -412,7 +456,7 @@ export function inventoryPillarContent(input: PillarInventoryInput): PillarShape
       expected: issue.expected ?? null,
       found: runtimeType(value),
       message: issue.message,
-      excerpt: input.includeExcerpts === false ? null : shortExcerpt(value),
+      excerpt: input.includeStructuralProposals || input.includeExcerpts === false ? null : shortExcerpt(value),
       undeclaredSiblingKeys,
       provenance: (issue.path ? status(pillarPath) : undefined) ?? null,
       countedPresentBy: satisfied.filter(r => issue.path === r || issue.path.startsWith(`${r}.`) || r.startsWith(`${issue.path}.`)),
@@ -439,11 +483,93 @@ export function inventoryPillarContent(input: PillarInventoryInput): PillarShape
     .sort((a, b) => a.sourceId.localeCompare(b.sourceId) || (a.hash ?? "").localeCompare(b.hash ?? ""))
     .map(r => describeSource(r.sourceId, r.hash, r.attached, r.cited, input.strategyId, input.sourceRows));
 
-  return {
+  const inventory: PillarShapeInventory = {
     ...base, contentState: "PRESENT",
     maturity: { stage: assessment.currentStage, completionPct: assessment.completionPct },
     undeclaredTopKeys, sources, findings,
   };
+  if (input.includeStructuralProposals) inventory.structuralReview = qualifyStructuralMappings(input, inventory);
+  return inventory;
+}
+
+/** Structural proposals only. Never invoke the normalizer, writer, gateway or global salvage. */
+function qualifyStructuralMappings(input: PillarInventoryInput, before: PillarShapeInventory): StructuralReview {
+  const content = input.content as Record<string, unknown>;
+  const projected = { ...content };
+  const contracts = salvageMappingContracts(input.pillarKey);
+  const status = fieldStatusFor(isRecord(input.fieldCertainty) ? input.fieldCertainty as Record<string, string> : null,
+    input.pillarKey, content._fieldProvenance);
+  const legacy = legacyFieldSources(input.sources);
+  const attachedReceipts = readSourceReceipts(input.sources);
+  const candidates: StructuralCandidate[] = [];
+  let simulatedRekeys = 0;
+  for (const contract of contracts) {
+    const { sourceKey, targetKey } = contract;
+    if (!Object.prototype.hasOwnProperty.call(content, sourceKey)) continue;
+    const value = content[sourceKey];
+    const targetPresent = Object.prototype.hasOwnProperty.call(content, targetKey);
+    const targetRelation = !targetPresent ? "ABSENT" : isDeepStrictEqual(content[targetKey], value) ? "EQUIVALENT" : "CONFLICT";
+    const change = lastRetainedChange(content, sourceKey, input.archives ?? [], input.intentKinds);
+    const refs = new Map<string, { sourceId: string; hash: string | null; attached: boolean }>();
+    if (change.status === "CHANGED") for (const receipt of change.sourceReceiptsUsed ?? [])
+      refs.set(`${receipt.sourceId}@${receipt.contentHash}`, { sourceId: receipt.sourceId, hash: receipt.contentHash,
+        attached: attachedReceipts.some(current => current.sourceId === receipt.sourceId && current.contentHash === receipt.contentHash) });
+    for (const receipt of legacy.filter(entry => entry.field && provenanceTopKey(entry.field, input.pillarKey) === sourceKey))
+      refs.set(`${receipt.sourceId}@`, { sourceId: receipt.sourceId, hash: null, attached: true });
+    const referencesToRemap: string[] = [];
+    for (const [name, metadata] of [["fieldCertainty", input.fieldCertainty], ["_fieldProvenance", content._fieldProvenance]] as const)
+      if (isRecord(metadata)) for (const path of Object.keys(metadata))
+        if (provenanceTopKey(path, input.pillarKey) === sourceKey) referencesToRemap.push(`${name}.${path}`);
+    if (Array.isArray(input.sources)) input.sources.forEach((entry: unknown, index: number) => {
+      if (isRecord(entry) && typeof entry.field === "string" && provenanceTopKey(entry.field, input.pillarKey) === sourceKey)
+        referencesToRemap.push(`sources[${index}].field`);
+    });
+    let qualification: StructuralQualification;
+    let targetRefusals: StructuralCandidate["targetRefusals"] = [];
+    if (contract.transformation !== "SCALAR") qualification = "SPLITTING_OR_TRUNCATION_REVIEW";
+    else if (typeof value !== "string") qualification = "SOURCE_NOT_TEXT";
+    else if (value.trim().length < 2) qualification = "SOURCE_TOO_SHORT";
+    else if (value.trim().length > 4000) qualification = "TRUNCATION_REQUIRED";
+    else if (value !== value.trim()) qualification = "TRIMMING_REQUIRED";
+    else if (targetPresent && !isDeepStrictEqual(content[targetKey], value)) qualification = "TARGET_CONFLICT";
+    else {
+      targetRefusals = classifyStoredPillarContent(input.pillarKey.toUpperCase() as PillarKey, { ...projected, [targetKey]: value })
+        .filter(issue => issue.path === targetKey || issue.path.startsWith(`${targetKey}.`))
+        .map(issue => ({ path: issue.path, kind: issue.kind, code: issue.code ?? null }));
+      qualification = targetRefusals.length ? "TARGET_SCHEMA_REFUSED" : targetPresent ? "EQUIVALENT_TARGET" : "EXACT_REKEY_PROPOSAL";
+      if (!targetRefusals.length) {
+        projected[targetKey] = value;
+        delete projected[sourceKey];
+        simulatedRekeys++;
+      }
+    }
+    candidates.push({ sourceKey, targetKey, qualification, sourceType: runtimeType(value),
+      sourceLength: typeof value === "string" ? value.length : null,
+      sourceHash: typeof value === "string" ? createHash("sha256").update(value).digest("hex") : null,
+      targetPresent, targetRelation, provenance: status(sourceKey) ?? null, lastRetainedChange: change,
+      sources: [...refs.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId) || (a.hash ?? "").localeCompare(b.hash ?? ""))
+        .map(ref => describeSource(ref.sourceId, ref.hash, ref.attached, 0, input.strategyId, input.sourceRows)),
+      referencesToRemap: referencesToRemap.sort(), targetRefusals });
+  }
+  const reviewRequired = before.findings.filter(finding => finding.situation === "PRESENT_REFUSED").map(finding => ({
+    path: finding.path,
+    reason: finding.kind === "ENUM" ? "TAXONOMY_REVIEW"
+      : finding.code === "invalid_format" && /uuid/i.test(finding.message) ? "REFERENCE_REMAP_REQUIRED"
+        : finding.expected === "number" ? "NUMERIC_UNIT_NOT_ESTABLISHED"
+          : finding.kind === "LENGTH" ? "LENGTH_REVIEW_NO_TRUNCATION" : "SHAPE_OR_TYPE_REVIEW",
+  }));
+  for (const key of before.undeclaredTopKeys) if (!contracts.some(contract => contract.sourceKey === key))
+    reviewRequired.push({ path: key, reason: "NO_EXACT_MAPPING" });
+  const assessment = (inventory: PillarShapeInventory): StructuralAssessment => ({
+    strictAccepted: inventory.findings.length === 0, refusedPaths: inventory.findings.length,
+    byKind: Object.fromEntries(["SHAPE", "TYPE", "ENUM", "LENGTH", "MISSING"].map(kind => [kind, inventory.findings.filter(issue => issue.kind === kind).length])) as Record<ConformanceClass, number>,
+    maturity: inventory.maturity,
+  });
+  const after = inventoryPillarContent({ ...input, content: projected, archives: [], includeStructuralProposals: false, includeExcerpts: false });
+  return { format: "adve-structural-review-v1", scope: "IN_MEMORY_STRUCTURE_ONLY", currentVersion: input.currentVersion ?? null,
+    contentHash: createHash("sha256").update(JSON.stringify(content)).digest("hex"), candidates,
+    reviewRequired: reviewRequired.sort((a, b) => comparePaths(a.path, b.path)), simulatedRekeys,
+    before: assessment(before), after: assessment(after) };
 }
 
 // ─── Assemblage, totaux, résumé ──────────────────────────────────────────────
@@ -496,7 +622,7 @@ export interface CanonInventorySource {
  */
 export function inventoryCanons(
   canons: readonly CanonInventorySource[],
-  options: { pillars?: readonly AdveInventoryPillar[]; includeExcerpts?: boolean } = {},
+  options: { pillars?: readonly AdveInventoryPillar[]; includeExcerpts?: boolean; includeStructuralProposals?: boolean } = {},
 ): StrictShapeInventory {
   const pillars = [...new Set(options.pillars?.length ? options.pillars : ADVE_INVENTORY_PILLARS)]
     .sort((a, b) => PILLAR_ORDER[a] - PILLAR_ORDER[b]);
@@ -505,6 +631,7 @@ export function inventoryCanons(
     .map(p => inventoryPillarContent({
       strategyId: `canon:${canon.name}`, strategyName: canon.name, pillarKey: p.key, content: p.content,
       fieldCertainty: canon.fieldCertainty?.[p.key], includeExcerpts: options.includeExcerpts,
+      includeStructuralProposals: options.includeStructuralProposals,
     })));
   return assembleInventory(entries, { mode: "CANONS", pillars, strategyFilter: null, snapshot: null });
 }
@@ -566,6 +693,13 @@ export function summarizeInventory(inventory: StrictShapeInventory): string {
         + `${s.receiptMatchesCurrent === null ? "" : s.receiptMatchesCurrent ? " · reçu = document actuel" : " · document modifié depuis le reçu"}${s.sameStrategy === false ? " · autre marque" : ""}` : s.lookup === "NOT_FOUND" ? "introuvable" : "non lue"}`
         + `${s.attachedToPillar ? " · rattachée au pilier" : ""}${s.citedByFindings ? ` · citée par ${s.citedByFindings} chemin(s)` : ""}`);
     }
+    if (e.structuralReview) {
+      const review = e.structuralReview;
+      lines.push(`    Préparation structurelle en mémoire : ${review.simulatedRekeys} re-clés simulées · refus stricts ${review.before.refusedPaths}→${review.after.refusedPaths}`
+        + ` · maturité ${review.before.maturity?.stage ?? "?"}→${review.after.maturity?.stage ?? "?"} · aucune écriture ni approbation`);
+      for (const candidate of review.candidates) lines.push(`      ${candidate.sourceKey}→${candidate.targetKey} : ${candidate.qualification}`
+        + (candidate.referencesToRemap.length ? ` · ${candidate.referencesToRemap.length} référence(s) à remapper` : ""));
+    }
   }
   return lines.join("\n");
 }
@@ -576,6 +710,7 @@ export interface ReadInventoryOptions {
   strategyIds?: readonly string[];
   pillars?: readonly AdveInventoryPillar[];
   includeExcerpts?: boolean;
+  includeStructuralProposals?: boolean;
   /** Durée maximale de la transaction de lecture (ms). */
   timeoutMs?: number;
 }
@@ -598,6 +733,8 @@ export async function readAdveStrictShapeInventory(
     await tx.$executeRaw`SET TRANSACTION READ ONLY`;
     const [ro] = await tx.$queryRaw<Array<{ transaction_read_only: string }>>`SHOW transaction_read_only`;
     const [iso] = await tx.$queryRaw<Array<{ transaction_isolation: string }>>`SHOW transaction_isolation`;
+    if (ro?.transaction_read_only !== "on" || iso?.transaction_isolation !== "repeatable read")
+      throw new Error("Inventory requires a confirmed READ ONLY / REPEATABLE READ transaction");
     const rows = await tx.pillar.findMany({
       where: { key: { in: pillars }, ...(strategyFilter ? { strategyId: { in: strategyFilter } } : {}) },
       select: { id: true, strategyId: true, key: true, content: true, fieldCertainty: true, currentVersion: true, validationStatus: true, sources: true },
@@ -619,11 +756,12 @@ export async function readAdveStrictShapeInventory(
       currentVersion: row.currentVersion,
       validationStatus: row.validationStatus,
       sources: row.sources,
-      includeExcerpts: options.includeExcerpts,
+      includeExcerpts: options.includeStructuralProposals ? false : options.includeExcerpts,
+      includeStructuralProposals: options.includeStructuralProposals,
     }));
 
     // Les archives ne sont lues que pour les piliers effectivement refusés.
-    const refused = inputs.filter(i => inventoryPillarContent(i).findings.length > 0);
+    const refused = inputs.filter(i => options.includeStructuralProposals || inventoryPillarContent(i).findings.length > 0);
     const archives = refused.length ? await tx.pillarVersion.findMany({
       where: { pillarId: { in: refused.map(i => i.pillarId!) } },
       select: { id: true, pillarId: true, version: true, content: true, author: true, reason: true, intentId: true, createdAt: true, checkpoint: true },
@@ -641,7 +779,10 @@ export async function readAdveStrictShapeInventory(
 
     const withHistory = inputs.map(i => archivesByPillar.has(i.pillarId!)
       ? { ...i, archives: archivesByPillar.get(i.pillarId!), intentKinds: kindsFor(i.strategyId) } : i);
-    const sourceIds = [...new Set(withHistory.flatMap(i => inventoryPillarContent(i).sources.map(s => s.sourceId)))];
+    const sourceIds = [...new Set(withHistory.flatMap(i => {
+      const inventory = inventoryPillarContent(i);
+      return [...inventory.sources.map(s => s.sourceId), ...(inventory.structuralReview?.candidates.flatMap(c => c.sources.map(s => s.sourceId)) ?? [])];
+    }))];
     const sourceRows = sourceIds.length ? await tx.brandDataSource.findMany({
       where: { id: { in: sourceIds } },
       select: { id: true, strategyId: true, sourceType: true, certainty: true, rawContent: true, rawData: true, extractedFields: true, fileName: true, fileType: true },

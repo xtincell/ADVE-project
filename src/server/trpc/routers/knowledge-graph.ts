@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
-import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure, assertInternalStaff } from "../init";
 import { found } from "../entity-access";
-import { compositeSummary, measuredNumber, measurementRecord } from "@/server/services/knowledge-aggregator/measurements";
+import { benchmarkSector, compositeSummary, measuredComposite, measurementRecord } from "@/server/services/knowledge-aggregator/measurements";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -14,6 +15,7 @@ export const knowledgeGraphRouter = createTRPCRouter({
       limit: z.number().min(1).max(100).default(20),
     }))
     .query(async ({ ctx, input }) => {
+      assertInternalStaff(ctx.session.user.role);
       // Search across strategies, pillars, and brand assets using text matching
       const strategies = await ctx.db.strategy.findMany({
         where: { name: { contains: input.queryText, mode: "insensitive" } },
@@ -29,18 +31,31 @@ export const knowledgeGraphRouter = createTRPCRouter({
       category: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      // Aggregate strategy scores as sector benchmarks
+      assertInternalStaff(ctx.session.user.role);
+      if (input.category?.trim()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Le filtre de catégorie n'est pas pris en charge." });
+      }
+      const sector = input.sector?.trim() ? benchmarkSector(input.sector) : null;
+      if (input.sector?.trim() && sector === null) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Secteur non reconnu dans la taxonomie." });
+      }
+      // Operator aggregate across active strategies. This is not a peer comparison.
       const strategies = await ctx.db.strategy.findMany({
         where: { status: "ACTIVE" },
-        select: { advertis_vector: true },
+        select: { advertis_vector: true, client: { select: { sector: true } } },
       });
-      return compositeSummary(strategies);
+      const population = sector === null ? strategies : strategies.filter(s => benchmarkSector(s.client?.sector) === sector);
+      return {
+        ...compositeSummary(population),
+        scope: { sector, countries: "ALL" as const, marketScales: "ALL" as const },
+      };
     }),
 
   // ADR-0166 — classement cross-marques (noms + scores) : lane opérateur.
   getFrameworkRanking: operatorProcedure
     .input(z.object({ frameworkId: z.string().optional() }))
     .query(async ({ ctx }) => {
+      assertInternalStaff(ctx.session.user.role);
       const strategies = await ctx.db.strategy.findMany({
         where: { status: "ACTIVE" },
         select: { id: true, name: true, advertis_vector: true },
@@ -48,7 +63,7 @@ export const knowledgeGraphRouter = createTRPCRouter({
       });
       return strategies
         .map((s) => {
-          return { strategyId: s.id, name: s.name, composite: measuredNumber(measurementRecord(s.advertis_vector).composite) };
+          return { strategyId: s.id, name: s.name, composite: measuredComposite(measurementRecord(s.advertis_vector).composite) };
         })
         .sort((a, b) => (b.composite ?? -1) - (a.composite ?? -1));
     }),
