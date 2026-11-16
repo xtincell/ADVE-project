@@ -15,8 +15,8 @@ interface ChangelogEntry {
 }
 
 async function loadEntries(): Promise<ChangelogEntry[]> {
-  // In dev/build we read git with explicit argv; in serverless prod we read
-  // a pre-generated file (scripts/sync-changelog.ts to be added).
+  // Local checkouts read Git with explicit argv. The image has no Git and reads
+  // the snapshot produced before Docker by scripts/sync-changelog.mjs.
   try {
     const child = await import("node:child_process");
     const out = child.execFileSync(
@@ -54,9 +54,8 @@ const TYPE_ACCENT: Record<ChangelogEntry["type"], string> = {
 };
 
 // Baked at build time. `loadEntries()` reads git (execFileSync) / the filesystem,
-// neither of which exist on the Cloudflare Workers runtime — so we prerender
-// the snapshot once during `next build` (where git is available) and serve it
-// statically on every host. Refreshes on each deploy.
+// so the image prerenders its supplied JSON snapshot during `next build` and
+// serves it statically on every host. Refreshes on each deploy.
 export const dynamic = "force-static";
 
 export default async function ChangelogPage() {
@@ -69,8 +68,8 @@ export default async function ChangelogPage() {
         </div>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Changelog</h1>
         <p className="mt-3 text-sm text-zinc-400">
-          Toutes les évolutions de l&apos;OS, par ordre chronologique inverse.
-          Régénéré à chaque construction de l&apos;image déployée.
+          Dernières évolutions disponibles, par ordre chronologique inverse.
+          Journal mis à jour à chaque déploiement.
         </p>
       </header>
 

@@ -5,474 +5,123 @@ import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
-import {
-  PILLAR_KEYS,
-  PILLAR_NAMES,
-  classifyBrand,
-  type PillarKey,
-  type BrandClassification,
-} from "@/lib/types/advertis-vector";
+import { PILLAR_KEYS, PILLAR_NAMES, classifyBrand, type PillarKey, type BrandClassification } from "@/lib/types/advertis-vector";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { BrandComparablesPanel } from "@/components/shared/brand-comparables-panel";
 import { DevelopmentGate } from "@/components/cockpit/development-gate";
 import { AlertTriangle, BarChart3, Info, Medal, Target } from "lucide-react";
 
-const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
-  LATENT: "bg-error",
-  FRAGILE: "bg-warning",
-  ORDINAIRE: "bg-warning",
-  FORTE: "bg-warning",
-  CULTE: "bg-success",
-  ICONE: "bg-accent",
-};
-
 const CLASSIFICATION_LABELS: Record<BrandClassification, string> = {
-  LATENT: "Latent",
-  FRAGILE: "Fragile",
-  ORDINAIRE: "Ordinaire",
-  FORTE: "Forte",
-  CULTE: "Culte",
-  ICONE: "Icone",
+  LATENT: "Latent", FRAGILE: "Fragile", ORDINAIRE: "Ordinaire", FORTE: "Forte", CULTE: "Culte", ICONE: "Icône",
 };
+const measured = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
 
 export default function BenchmarksPage() {
   const strategyId = useCurrentStrategyId();
+  const strategyQuery = trpc.strategy.getWithScore.useQuery({ id: strategyId! }, { enabled: !!strategyId });
+  const benchmarkQuery = trpc.knowledgeGraph.getBenchmarks.useQuery({}, { enabled: !!strategyId });
+  const rankingQuery = trpc.knowledgeGraph.getFrameworkRanking.useQuery({}, { enabled: !!strategyId });
 
-  const strategyQuery = trpc.strategy.getWithScore.useQuery(
-    { id: strategyId! },
-    { enabled: !!strategyId },
-  );
-
-  const benchmarkQuery = trpc.knowledgeGraph.getBenchmarks.useQuery(
-    {},
-    { enabled: !!strategyId },
-  );
-
-  const rankingQuery = trpc.knowledgeGraph.getFrameworkRanking.useQuery(
-    {},
-    { enabled: !!strategyId },
-  );
-
-  if (!strategyId || strategyQuery.isLoading) {
-    return <SkeletonPage />;
-  }
-
-  if (strategyQuery.error) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Benchmarks" />
-        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
-          <p className="mt-2 text-sm text-error">
-            {strategyQuery.error.message}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (!strategyId || strategyQuery.isLoading) return <SkeletonPage />;
+  if (strategyQuery.error) return <div className="space-y-6">
+    <PageHeader title="Benchmarks" />
+    <div role="alert" className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
+      <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+      <p className="mt-2 text-sm text-error">{strategyQuery.error.message}</p>
+    </div>
+  </div>;
 
   const strategy = strategyQuery.data;
-  const vector = (strategy?.advertis_vector as Record<string, number>) ?? {};
+  const vector = (strategy?.advertis_vector as Record<string, unknown> | null) ?? {};
   const scores: Partial<Record<PillarKey, number>> = {};
-  for (const k of PILLAR_KEYS) {
-    scores[k] = vector[k] ?? 0;
-  }
-  // Absence ≠ zéro. Sans mesure, la comparaison au secteur n'a pas de sens :
-  // un `0` fabriqué plaçait la marque dernière de son secteur par défaut.
-  const compositeOrNull = strategy?.composite ?? null;
-  const composite = compositeOrNull ?? 0;
-  const hasComposite = compositeOrNull !== null;
+  for (const key of PILLAR_KEYS) if (measured(vector[key])) scores[key] = vector[key];
+  const hasFullVector = PILLAR_KEYS.every(key => scores[key] !== undefined);
+  const composite = measured(strategy?.composite) ? strategy.composite : null;
+  const classification = composite === null ? null : classifyBrand(composite);
 
-  const benchmark = benchmarkQuery.data;
-  const sectorAvg = benchmark?.avgComposite ?? null;
-  const sectorCount = benchmark?.coverage.observedCount ?? 0;
+  // These endpoints currently cover all active strategies, without a sector filter.
+  // A composite provides no evidence about the distribution of its eight pillars.
+  const benchmark = benchmarkQuery.error ? undefined : benchmarkQuery.data;
+  const average = measured(benchmark?.avgComposite) ? benchmark.avgComposite : null;
+  const ranking = (rankingQuery.error ? [] : rankingQuery.data ?? [])
+    .filter((row): row is typeof row & { composite: number } => measured(row.composite));
+  const ownRankedScore = ranking.find(row => row.strategyId === strategyId)?.composite;
+  const rank = ownRankedScore === undefined ? null : 1 + ranking.filter(row => row.composite > ownRankedScore).length;
+  const tied = ownRankedScore !== undefined && ranking.filter(row => row.composite === ownRankedScore).length > 1;
+  const distribution = (Object.entries(CLASSIFICATION_LABELS) as [BrandClassification, string][])
+    .map(([key, label]) => ({ key, label, count: ranking.filter(row => classifyBrand(row.composite) === key).length }));
+  const compositeDifference = composite !== null && average !== null ? composite - average : null;
 
-  const ranking = (rankingQuery.data ?? []).filter((r): r is typeof r & { composite: number } => r.composite !== null);
-  const myRank = ranking.findIndex((r) => r.strategyId === strategyId) + 1;
-  const topPerformer = ranking.length > 0 ? ranking[0] : null;
-
-  // Derive sector average per pillar from the sector avg composite
-  const sectorPillarAvg: Partial<Record<PillarKey, number>> = {};
-  const pillarAvgBase = (sectorAvg ?? 0) / 8;
-  for (const k of PILLAR_KEYS) {
-    // No invented per-pillar differentiation — only the sector aggregate is real;
-    // show it spread evenly (the "simulé" notice below discloses the limitation).
-    sectorPillarAvg[k] = Math.min(25, Math.max(0, pillarAvgBase));
-  }
-
-  // Top performer scores derived from ranking
-  const topVector: Partial<Record<PillarKey, number>> = {};
-  if (topPerformer) {
-    const topAvg = topPerformer.composite / 8;
-    for (const k of PILLAR_KEYS) {
-      // Real aggregate only; no fabricated per-pillar spread (cf. notice).
-      topVector[k] = Math.min(25, Math.max(0, topAvg));
-    }
-  }
-
-  // Classification distribution derived from sector count
-  const classifications: {
-    label: string;
-    cls: BrandClassification;
-    count: number;
-  }[] = [
-    { label: "Latent", cls: "LATENT", count: Math.round(sectorCount * 0.10) },
-    { label: "Fragile", cls: "FRAGILE", count: Math.round(sectorCount * 0.20) },
-    {
-      label: "Ordinaire",
-      cls: "ORDINAIRE",
-      count: Math.round(sectorCount * 0.20),
-    },
-    { label: "Forte", cls: "FORTE", count: Math.round(sectorCount * 0.3) },
-    { label: "Culte", cls: "CULTE", count: Math.round(sectorCount * 0.15) },
-    { label: "Icone", cls: "ICONE", count: Math.round(sectorCount * 0.05) },
-  ];
-  const maxClassCount = Math.max(...classifications.map((c) => c.count), 1);
-  const myClassification = classifyBrand(composite);
-
-  // Portail « en construction » (mandat opérateur 2026-07-13) : la comparaison
-  // par pilier et la distribution sectorielle sont encore dérivées d'agrégats
-  // étalés uniformément — pas confirmé fiable → invisible des comptes clients
-  // tant que les comparaisons réelles ne sont pas branchées.
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Benchmarks"
-        description="Positionnement de votre marque par rapport au secteur"
-        breadcrumbs={[
-          { label: "Cockpit", href: "/cockpit" },
-          { label: "Insights" },
-          { label: "Benchmarks" },
-        ]}
-      />
-
-      <DevelopmentGate feature="Le benchmark sectoriel">
-
-      {/* Synthetic data notice */}
-      <div className="flex items-start gap-3 rounded-lg border border-border bg-background/50 px-4 py-3">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-foreground-muted" />
-        <p className="text-xs leading-relaxed text-foreground-muted">
-          Donnees de benchmark simulees — les comparaisons reelles seront disponibles avec plus de marques dans le systeme.
-        </p>
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Votre score"
-          value={hasComposite ? composite.toFixed(0) : "—"}
-          trend={
-            !hasComposite || sectorAvg === null
-              ? "flat"
-              : composite > sectorAvg
-                ? "up"
-                : composite < sectorAvg
-                  ? "down"
-                  : "flat"
-          }
-          trendValue={hasComposite ? CLASSIFICATION_LABELS[myClassification] : "pas encore évaluée"}
-          icon={Target}
-        />
-        <StatCard
-          title="Moyenne secteur"
-          value={sectorAvg?.toFixed(0) ?? "—"}
-          trend="flat"
-          trendValue={`${sectorCount}/${benchmark?.count ?? 0} scores renseignés`}
-          icon={BarChart3}
-        />
-        <StatCard
-          title="Votre rang"
-          value={myRank > 0 ? `#${myRank}` : "N/A"}
-          trend={
-            myRank === 0 ? "flat" : myRank <= 3
-              ? "up"
-              : myRank <= Math.ceil(sectorCount / 2)
-                ? "flat"
-                : "down"
-          }
-          trendValue={`sur ${sectorCount}`}
-          icon={Medal}
-        />
-      </div>
-
-      {/* Radar comparison card */}
-      <div className="rounded-xl border border-border bg-background/80 p-6">
-        <h3 className="mb-4 font-semibold text-foreground">
-          Comparaison radar : Vous vs Secteur
-        </h3>
-        <div className="flex flex-col items-center">
-          <div className="mb-4 flex gap-6">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-accent" />
-              <span className="text-xs text-foreground-secondary">Votre marque</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-foreground-muted" />
-              <span className="text-xs text-foreground-secondary">Moyenne secteur</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="text-center">
-              <p className="mb-2 text-xs font-medium text-accent">
-                Votre marque
-              </p>
-              <AdvertisRadar
-                scores={scores}
-                size={280}
-                className="flex justify-center"
-              />
-            </div>
-            <div className="text-center">
-              <p className="mb-2 text-xs font-medium text-foreground-secondary">
-                Moyenne secteur
-              </p>
-              {sectorAvg !== null ? <AdvertisRadar
-                scores={sectorPillarAvg}
-                size={280}
-                className="flex justify-center"
-              /> : <p className="text-sm text-foreground-muted">Score moyen non mesuré</p>}
-            </div>
-          </div>
-          <div className="mt-4 grid w-full grid-cols-4 gap-2">
-            {PILLAR_KEYS.map((k) => {
-              const mine = scores[k] ?? 0;
-              const avg = sectorPillarAvg[k] ?? 0;
-              const diff = mine - avg;
-              return (
-                <div
-                  key={k}
-                  className="rounded-lg border border-border bg-background/50 p-2 text-center"
-                >
-                  <p className="text-xs font-bold text-foreground-secondary">
-                    {k.toUpperCase()}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {mine.toFixed(1)}
-                  </p>
-                  <p className="text-xs text-foreground-muted">
-                    moy: {sectorAvg !== null ? avg.toFixed(1) : "—"}
-                  </p>
-                  <p
-                    className={`text-xs font-semibold ${
-                      sectorAvg !== null && diff > 0
-                        ? "text-success"
-                        : sectorAvg !== null && diff < 0
-                          ? "text-error"
-                          : "text-foreground-muted"
-                    }`}
-                  >
-                    {sectorAvg !== null && diff >= 0 ? "+" : ""}
-                    {sectorAvg !== null ? diff.toFixed(1) : "—"}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+  // The existing internal-preview gate remains until sector-specific comparisons are received.
+  return <div className="space-y-6">
+    <PageHeader title="Benchmarks" description="Vos scores et les repères disponibles parmi les marques actives observées"
+      breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Insights" }, { label: "Benchmarks" }]} />
+    <DevelopmentGate feature="Le benchmark sectoriel">
+      <div className="space-y-6">
+        <div className="flex items-start gap-3 rounded-lg border border-border bg-background/50 px-4 py-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
+          <p className="text-sm leading-relaxed text-foreground-secondary">
+            Périmètre des repères : marques actives observées, tous secteurs confondus. Les comparaisons par secteur et par pilier restent indisponibles.
+          </p>
         </div>
-      </div>
 
-      {/* Pillar comparison table */}
-      <div className="rounded-xl border border-border bg-background/80 p-6">
-        <h3 className="mb-4 font-semibold text-foreground">
-          Comparaison detaillee par pilier
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="pb-3 text-left text-xs font-medium text-foreground-secondary">
-                  Pilier
-                </th>
-                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
-                  Votre score
-                </th>
-                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
-                  Moy. secteur
-                </th>
-                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
-                  Top performer
-                </th>
-                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
-                  Ecart
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {PILLAR_KEYS.map((k) => {
-                const mine = scores[k] ?? 0;
-                const avg = sectorPillarAvg[k] ?? 0;
-                const top = topVector[k] ?? avg;
-                const diff = mine - avg;
-                return (
-                  <tr key={k} className="hover:bg-background/30">
-                    <td className="py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-xs font-bold text-foreground">
-                          {k.toUpperCase()}
-                        </span>
-                        <span className="text-foreground-secondary">
-                          {PILLAR_NAMES[k]}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 text-right font-semibold text-foreground">
-                      {mine.toFixed(1)}
-                    </td>
-                    <td className="py-3 text-right text-foreground-secondary">
-                      {sectorAvg !== null ? avg.toFixed(1) : "—"}
-                    </td>
-                    <td className="py-3 text-right text-foreground-secondary">
-                      {topPerformer ? top.toFixed(1) : "—"}
-                    </td>
-                    <td className="py-3 text-right">
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
-                          sectorAvg !== null && diff > 0
-                            ? "bg-success/10 text-success"
-                            : sectorAvg !== null && diff < 0
-                              ? "bg-error/10 text-error"
-                              : "bg-foreground-muted/10 text-foreground-secondary"
-                        }`}
-                      >
-                        {sectorAvg !== null && diff >= 0 ? "+" : ""}
-                        {sectorAvg !== null ? diff.toFixed(1) : "—"}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-2"><StatCard title="Votre score" value={composite === null ? "—" : `${composite.toFixed(0)}/200`} icon={Target} />
+            <p className="text-sm text-foreground-secondary">{classification === null ? "Pas encore évaluée" : CLASSIFICATION_LABELS[classification]}</p></div>
+          <div className="space-y-2"><StatCard title="Moyenne des marques observées" value={average === null ? "—" : `${average.toFixed(0)}/200`} icon={BarChart3} />
+            <p className="text-sm text-foreground-secondary">{benchmarkQuery.isLoading ? "Chargement…" : benchmark
+              ? `${benchmark.coverage.observedCount}/${benchmark.count} marques avec un score` : "Comparaison indisponible"}</p></div>
+          <div className="space-y-2"><StatCard title="Votre rang parmi les marques observées" value={rank === null ? "—" : `#${rank}`} icon={Medal} />
+            <p className="text-sm text-foreground-secondary">{rankingQuery.isLoading ? "Chargement…" : rankingQuery.error ? "Classement indisponible" : rank === null ? "Votre marque n’est pas classée"
+              : `sur ${ranking.length} marques classées${tied ? " · ex æquo" : ""}`}</p></div>
         </div>
-      </div>
+        {compositeDifference !== null && <p className="text-sm text-foreground-secondary">
+          Écart de votre score composite à la moyenne reçue : {compositeDifference > 0 ? "+" : ""}{compositeDifference.toFixed(1)} points.
+        </p>}
+        {benchmarkQuery.error && <p role="alert" className="text-sm text-error">La moyenne des marques observées est indisponible.</p>}
+        {rankingQuery.error && <p role="alert" className="text-sm text-error">Le classement des marques observées est indisponible.</p>}
 
-      {/* Votre positionnement unique */}
-      {(() => {
-        const strengths = PILLAR_KEYS.filter(
-          (k) => sectorAvg !== null && (scores[k] ?? 0) > (sectorPillarAvg[k] ?? 0),
-        );
-        const weaknesses = PILLAR_KEYS.filter(
-          (k) => sectorAvg !== null && (scores[k] ?? 0) < (sectorPillarAvg[k] ?? 0),
-        );
-        return (
-          <div className="rounded-xl border border-border bg-background/80 p-6">
-            <h3 className="mb-4 font-semibold text-foreground">
-              Votre positionnement unique
-            </h3>
+        <section aria-labelledby="brand-radar-title" className="rounded-xl border border-border bg-background/80 p-6">
+          <h2 id="brand-radar-title" className="mb-4 font-semibold text-foreground">Profil de votre marque</h2>
+          {hasFullVector ? <AdvertisRadar scores={scores} size={280} interactive={false} className="flex justify-center" />
+            : <p className="text-sm text-foreground-secondary">Le radar sera disponible lorsque les huit piliers seront renseignés. Les valeurs déjà reçues figurent ci-dessous.</p>}
+          <p className="mt-4 text-sm text-foreground-secondary">Comparaison par pilier indisponible : aucun agrégat par pilier n’a été reçu.</p>
+        </section>
 
-            {strengths.length > 0 && (
-              <div className="mb-4">
-                <p className="mb-2 text-xs font-medium text-foreground-secondary">
-                  Forces differenciatrices
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {strengths.map((k) => (
-                    <span
-                      key={k}
-                      className="rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success"
-                    >
-                      {k.toUpperCase()} - {PILLAR_NAMES[k]}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {weaknesses.length > 0 && (
-              <div className="mb-4">
-                <p className="mb-2 text-xs font-medium text-foreground-secondary">
-                  Opportunites de progression
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {weaknesses.map((k) => (
-                    <span
-                      key={k}
-                      className="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning"
-                    >
-                      {k.toUpperCase()} - {PILLAR_NAMES[k]}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <p className="text-sm leading-relaxed text-foreground-secondary">
-              {strengths.length > 0 && (
-                <>
-                  Vos forces en{" "}
-                  {strengths.map((k) => PILLAR_NAMES[k]).join(", ")}{" "}
-                  vous differencient.{" "}
-                </>
-              )}
-              {weaknesses.length > 0 && (
-                <>
-                  Investissez dans{" "}
-                  {weaknesses.map((k) => PILLAR_NAMES[k]).join(", ")}{" "}
-                  pour combler l&apos;ecart.
-                </>
-              )}
-            </p>
+        <section aria-labelledby="brand-pillar-scores-title" className="rounded-xl border border-border bg-background/80 p-6">
+          <h2 id="brand-pillar-scores-title" className="mb-4 font-semibold text-foreground">Vos scores par pilier</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-border">
+                <th scope="col" className="pb-3 text-left font-medium text-foreground-secondary">Pilier</th>
+                <th scope="col" className="pb-3 text-right font-medium text-foreground-secondary">Votre score sur 25</th>
+              </tr></thead>
+              <tbody className="divide-y divide-border/50">
+                {PILLAR_KEYS.map(key => <tr key={key}>
+                  <th scope="row" className="py-3 text-left font-normal text-foreground-secondary">{key.toUpperCase()} — {PILLAR_NAMES[key]}</th>
+                  <td className="py-3 text-right font-semibold text-foreground">{scores[key] === undefined ? "Non renseigné" : scores[key].toFixed(1)}</td>
+                </tr>)}
+              </tbody>
+            </table>
           </div>
-        );
-      })()}
+        </section>
 
-      {/* Classification distribution */}
-      <div className="rounded-xl border border-border bg-background/80 p-6">
-        <h3 className="mb-4 font-semibold text-foreground">
-          Distribution des classifications
-        </h3>
-        <p className="mb-6 text-xs text-foreground-secondary">
-          Répartition des marques du secteur par classification
-        </p>
-        <div className="space-y-3">
-          {classifications.map((c) => {
-            const pct =
-              maxClassCount > 0 ? (c.count / maxClassCount) * 100 : 0;
-            const isMyClass = hasComposite && c.cls === myClassification;
-            return (
-              <div key={c.cls} className="flex items-center gap-3">
-                <span
-                  className={`w-24 text-sm font-medium ${
-                    isMyClass ? "text-foreground" : "text-foreground-secondary"
-                  }`}
-                >
-                  {c.label}
-                  {isMyClass && (
-                    <span className="ml-1 text-xs text-accent">
-                      (vous)
-                    </span>
-                  )}
-                </span>
-                <div className="flex-1">
-                  <div className="relative h-7 overflow-hidden rounded-md bg-background">
-                    <div
-                      className={`h-full rounded-md transition-all duration-700 ${
-                        CLASSIFICATION_COLORS[c.cls]
-                      } ${isMyClass ? "opacity-100" : "opacity-60"}`}
-                      style={{ width: `${Math.max(pct, 2)}%` }}
-                    />
-                    {isMyClass && (
-                      <div className="absolute inset-0 rounded-md ring-2 ring-accent/50" />
-                    )}
-                  </div>
-                </div>
-                <span
-                  className={`w-10 text-right text-sm font-semibold ${
-                    isMyClass ? "text-foreground" : "text-foreground-muted"
-                  }`}
-                >
-                  {c.count}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <section aria-labelledby="observed-classifications-title" className="rounded-xl border border-border bg-background/80 p-6">
+          <h2 id="observed-classifications-title" className="mb-2 font-semibold text-foreground">Répartition des marques classées</h2>
+          {rankingQuery.isLoading ? <p className="text-sm text-foreground-secondary">Chargement du classement…</p>
+            : ranking.length === 0 ? <p className="text-sm text-foreground-secondary">Répartition indisponible : aucun score composite reçu.</p>
+            : <>
+              <p className="mb-4 text-sm text-foreground-secondary">{ranking.length} scores composites reçus, tous secteurs confondus. Les marques sans score sont exclues.</p>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {distribution.map(item => <li key={item.key} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                  <span className="text-sm text-foreground-secondary">{item.label}</span>
+                  <span className="font-semibold text-foreground">{item.count}</span>
+                </li>)}
+              </ul>
+            </>}
+        </section>
+        <BrandComparablesPanel strategyId={strategyId} topK={6} />
       </div>
-
-      {/* V5.4 — Comparables sémantiques (Seshat ranker) */}
-      {strategyId && <BrandComparablesPanel strategyId={strategyId} topK={6} />}
-
-      </DevelopmentGate>
-    </div>
-  );
+    </DevelopmentGate>
+  </div>;
 }

@@ -28,6 +28,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 588 — journal public vide dans une image sans Git (2026-11-16)
+
+Symptôme reçu en production : `/changelog` répondait 200 avec « Aucune entrée disponible ». Le loader disposait d’un fallback JSON, mais aucun build ne le produisait, tandis que `.git` est exclu de l’image. Correction dans 6.27.588 : `scripts/sync-changelog.mjs` produit le contrat JSON existant immédiatement après le checkout, avant Docker ; le fichier généré reste ignoré par Git. La profondeur du checkout est conservée, et le texte désigne les dernières évolutions disponibles. Le smoke vérifie le SHA du checkout dans le JSON et le HTML de l’image exacte avant son push. Réception locale : cinq tests sur des dépôts Git temporaires, dont un checkout superficiel, puis rendu sans Git et refus des snapshots/pages absents ou périmés ; trois nouveaux cas rouges sur les sources précédentes, cinq verts après correction. La réception de l’image relève du workflow, pas de cette preuve locale.
+
+Hypothèse de cause racine : le fallback de présentation était supposé alimenté sans producteur ni contrôle du contenu livré. Dette liée : aucune extension d’historique ni récupération réseau ajoutée ; le journal reflète le checkout disponible.
+
+### 588 — un composite transformé en comparaisons par pilier (2026-11-16)
+
+Symptôme : l’aperçu interne `/cockpit/insights/benchmarks` divisait une moyenne et un meilleur score composites par huit pour dessiner des profils, puis en déduisait écarts, forces et conseils. La répartition des classifications utilisait des proportions fixes ; les axes absents devenaient zéro et un classement global était présenté comme sectoriel. Correction dans 6.27.588 : profils et conclusions synthétiques retirés, moyenne limitée à son périmètre réel de marques actives, rang partagé pour les ex æquo et répartition comptée sur les scores reçus. Le radar propre exige huit valeurs ; le tableau conserve les valeurs disponibles, dont zéro, et marque les absentes. La comparaison par pilier reste explicitement indisponible et la garde d’aperçu interne est conservée. Dans `/agency/knowledge`, le nombre de marques est nommé « Marques observées ». Les pages `/console/seshat/knowledge` et `/console/seshat/market` conservent leurs valeurs et couvertures actuelles sans les présenter comme une variation face à une période précédente absente. Réception : neuf tests de rendu, dont huit rouges avec les pages précédentes puis neuf verts après correction.
+
+Hypothèse de cause racine : des projections de présentation étaient traitées comme des mesures, puis réutilisées pour produire des conclusions. Dette liée : la réception de véritables comparaisons sectorielles et par pilier reste au plan d’achèvement ; aucun nouvel agrégat ni contrat serveur n’est ajouté ici.
+
 ### 588 — chemins et contrôles dépendants du shell local (2026-11-16)
 
 Symptôme : des médias valides étaient refusés sur Windows et plusieurs contrôles du dépôt dépendaient de `grep`, `ls`, `npx` ou des séparateurs Unix. Le journal public composait aussi un appel Git interprété par le shell. Correction dans 6.27.588 : chemins relatifs natifs avec confinement conservé, scans Node et arguments Git distincts. Reçus : deux tests avec fichiers réels, 44 tests PostgreSQL de médias publics et deux dépôts Git temporaires. Les contrôles portables restent dans la suite globale ; aucun garde-fou ni périmètre n'est réduit.

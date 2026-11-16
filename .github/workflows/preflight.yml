@@ -19,6 +19,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
+      NODE_OPTIONS: --max-old-space-size=6144
 
     steps:
       - uses: actions/checkout@v7

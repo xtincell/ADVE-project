@@ -143,20 +143,21 @@ export default function KnowledgeGraphPage() {
           title="Entrees totales"
           value={totalEntries}
           icon={Database}
-          trend={totalEntries > 0 ? "up" : "flat"}
-          trendValue={`${totalEntries} indexees`}
         />
-        <StatCard
-          title="Benchmarks sectoriels"
-          value={sectorBenchmarks}
-          icon={BarChart3}
-          trendValue={`Score moy: ${benchmarks?.avgComposite?.toFixed(0) ?? "—"} · ${benchmarks?.coverage.observedCount ?? 0}/${benchmarks?.count ?? 0} renseignés`}
-        />
+        <div className="space-y-2">
+          <StatCard
+            title="Benchmarks sectoriels"
+            value={sectorBenchmarks}
+            icon={BarChart3}
+          />
+          <p className="text-sm text-foreground-secondary">
+            Moyenne des marques observées : {benchmarks?.avgComposite?.toFixed(0) ?? "—"}/200 · {benchmarks?.coverage.observedCount ?? 0}/{benchmarks?.count ?? 0} scores renseignés
+          </p>
+        </div>
         <StatCard
           title="Patterns de briefs"
           value={briefPatternCount}
           icon={GitBranch}
-          trendValue="missions completees"
         />
       </div>
 

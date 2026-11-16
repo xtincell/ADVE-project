@@ -42,6 +42,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Snapshot du journal public
+        run: node scripts/sync-changelog.mjs
+
       - name: Image name en minuscules (ghcr l'exige)
         id: img
         run: echo "ref=$(echo '${{ env.IMAGE }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
@@ -128,6 +131,21 @@ jobs:
           # La page de connexion ne prouve pas que le endpoint de session rend du JSON.
           curl --fail --silent --show-error http://localhost:3000/api/auth/session \
             | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8")); console.log("Anonymous session: HTTP 200 and valid JSON in exact image");'
+          # Le checkout reste superficiel : vérifier le commit disponible dans
+          # le snapshot ET la page statique de l'image avant toute publication.
+          curl --fail --silent --show-error http://localhost:3000/changelog.json -o /tmp/lafusee-changelog.json
+          curl --fail --silent --show-error http://localhost:3000/changelog -o /tmp/lafusee-changelog.html
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const [jsonPath, htmlPath, expectedHash] = process.argv.slice(1);
+            if (!/^[a-f0-9]{7}$/.test(expectedHash)) throw new Error("Missing checkout SHA for changelog receipt");
+            const entries = JSON.parse(readFileSync(jsonPath, "utf8"));
+            const entry = Array.isArray(entries) && entries.find(item => typeof item.hash === "string" && item.hash.startsWith(expectedHash));
+            if (!entry || !readFileSync(htmlPath, "utf8").includes(entry.hash)) {
+              throw new Error("Changelog snapshot or rendered page does not contain the checkout commit");
+            }
+            console.log("Changelog checkout commit received in JSON and HTML of exact image");
+          ' /tmp/lafusee-changelog.json /tmp/lafusee-changelog.html "${GITHUB_SHA:0:7}"
           # La publication de pièce utilise le moteur natif dans JSDOM externe.
           # Vérifier ses fichiers runtime et le contexte VM dans le standalone exact.
           docker exec app node --input-type=module -e '

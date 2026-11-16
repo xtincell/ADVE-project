@@ -135,21 +135,21 @@ export default function MarketContextPage() {
           title="Etudes de marche"
           value={totalStudies}
           icon={FileText}
-          trend={totalStudies > 0 ? "up" : "flat"}
-          trendValue={`${totalStudies} realisees`}
         />
-        <StatCard
-          title="Score marche moy."
-          value={avgScore?.toFixed(0) ?? "—"}
-          icon={BarChart3}
-          trend={avgScore !== null && avgScore > 100 ? "up" : "flat"}
-          trendValue={`/200 · ${benchmarkStats?.coverage.observedCount ?? 0}/${benchmarkStats?.count ?? 0} renseignés`}
-        />
+        <div className="space-y-2">
+          <StatCard
+            title="Moyenne des marques observées"
+            value={avgScore === null ? "—" : `${avgScore.toFixed(0)}/200`}
+            icon={BarChart3}
+          />
+          <p className="text-sm text-foreground-secondary">
+            {benchmarkStats?.coverage.observedCount ?? 0}/{benchmarkStats?.count ?? 0} scores renseignés
+          </p>
+        </div>
         <StatCard
           title="Secteurs couverts"
           value={sectorsSet.size}
           icon={Layers}
-          trendValue={`${sectorsSet.size} secteur(s)`}
         />
         <StatCard
           title="Derniere etude"

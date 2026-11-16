@@ -42,7 +42,7 @@ export default function AgencyKnowledgePage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Benchmarks" value={benchmarkData?.count ?? 0} icon={BarChart3} />
+        <StatCard title="Marques observées" value={benchmarkData?.count ?? 0} icon={BarChart3} />
         <StatCard title="Score composite moyen" value={benchmarkData?.avgComposite != null ? `${benchmarkData.avgComposite.toFixed(0)}/200` : "-"} icon={Network} />
         <StatCard title="Patterns brief" value={patternData?.length ?? 0} icon={BookOpen} />
       </div>
