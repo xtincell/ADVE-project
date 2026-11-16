@@ -28,6 +28,10 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### Complément d’outillage 589 — crawl Windows (2026-11-16)
+
+Le crawl produisait `/src/app/.../page.tsx` sous Windows et ne recevait aucune des 283 pages malgré un code de sortie nul. `pageRouteFromFile` normalise les séparateurs avant de retirer les groupes et segments dynamiques ; six contre-épreuves rouges, puis 18 tests verts. La relance HTTP sous session ADMIN et base locale distincte reçoit 278 pages et trois RPC valides, cinq identités `demo` absentes restent explicitement non reçues. Aucun outil de stress n’est embarqué dans l’image applicative. Hypothèse de cause racine : chemin fichier natif et route Web supposés identiques. Ce reçu HTTP ne remplace pas le rendu hydraté ni le contrat des forges ; reprise bornée dans RESIDUAL-DEBT.
+
 ### 589 — autorité, cohortes et références effectivement admissibles (2026-11-16)
 
 Symptômes reproduits : un simple rattachement commercial ouvrait des dossiers voisins et des lectures internes ; trois voisins dont un seul score valide suffisaient à publier une médiane ; le secteur et les axes des benchmarks n'étaient pas respectés ; les filtres Prisma sur des champs JSON/texte nullables perdaient des références recevables ou conservaient un agrégat expiré. Correction dans 6.27.589 : garde de portefeuille distincte du rattachement, rôle interne explicite sur les lectures globales, données Client filtrées et gestion séparée, trois scores admissibles, observations par axe et cohorte canonique, prédicats nullables explicites. Les contre-épreuves rouges puis vertes, les appels HTTP sous rôles réels et les deux recettes PostgreSQL des références sont conservés hors dépôt.

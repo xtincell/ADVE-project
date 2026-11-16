@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyPageProbe, pageRouteFromFile } from "../../../scripts/_stress_helpers";
+import { classifyPageProbe, listFiles, pageRouteFromFile } from "../../../scripts/_stress_helpers";
 
 describe("HTTP page routes", () => {
   it.each([
@@ -7,8 +7,20 @@ describe("HTTP page routes", () => {
     ["src/app/page.tsx", "/"],
     ["src/app/(console)/console/artemis/missions/page.tsx", "/console/artemis/missions"],
     ["src/app/(public)/b/[slug]/page.tsx", "/b/demo"],
+    ["src\\app\\(marketing)\\page.tsx", "/"],
+    ["src\\app\\page.tsx", "/"],
+    ["src\\app\\(console)\\console\\artemis\\missions\\page.tsx", "/console/artemis/missions"],
+    ["src\\app\\(public)\\b\\[slug]\\page.tsx", "/b/demo"],
+    ["src/app\\(console)\\console/artemis\\missions/page.tsx", "/console/artemis/missions"],
   ])("uses a navigable route for %s", (file, expected) => {
     expect(pageRouteFromFile(file)).toBe(expected);
+  });
+
+  it("turns native filesystem discovery into the public routes that can be probed", async () => {
+    const files = await listFiles("src/app", /^page\.tsx$/);
+    const routes = files.map(pageRouteFromFile);
+    expect(routes).toEqual(expect.arrayContaining(["/status", "/login", "/changelog"]));
+    expect(routes.every((route) => !route.includes("\\") && !route.includes("page.tsx") && !route.startsWith("/src/"))).toBe(true);
   });
 });
 

@@ -5,7 +5,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 export function pageRouteFromFile(file: string): string {
-  const segments = file.replace(/^src\/app\//, "").split("/")
+  const segments = file.replaceAll("\\", "/").replace(/^src\/app\//, "").split("/")
     .filter((part) => part !== "page.tsx" && !/^\([^)]+\)$/.test(part));
   return "/" + segments.map((part) => /^\[[^\]]+\]$/.test(part) ? "demo" : part).join("/");
 }

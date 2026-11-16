@@ -7,7 +7,8 @@
 - Les benchmarks honorent le secteur canonique, refusent la catégorie sans contrat et calculent chaque axe à partir de ses observations. Le batch groupe par secteur/pays/échelle, sans sélectionner arbitrairement un intake. Couverture, cohorte incomplète et historique non certifié restent qualifiés. Seshat exclut les agrégats expirés et conserve les références admissibles sans schéma JSON.
 - Le CLI d’inventaire ADVE dispose d’un mode de propositions structurelles, strictement en lecture seule : six correspondances existantes, conflits et ambiguïtés explicites, comparaison en mémoire sans adoption ni validation humaine.
 - Quatre suites PostgreSQL nettoient leurs propres fixtures ; deux passages réels retrouvent les mêmes comptes et identifiants sur 237 tables. Les helpers navigateur attendent l’hydratation, vérifient la session obtenue et ne prennent plus une redirection de connexion pour une page reçue. Six recettes de connexion et de refus passent dans Chrome avec les rôles de recette.
-- Réception du candidat et de la copie hors hôte suivie dans le rapport d’exécution ; aucune migration, aucun changement de rôle ou de clé fournisseur, aucune publication ni transaction réelle ajoutée.
+- Complément d’outillage : le crawl normalise aussi les chemins Windows. Six cas rouges deviennent verts ; la relance sous session ADMIN reçoit 278 pages HTTP et trois RPC, avec cinq identités de démonstration absentes explicitement non reçues. Cet outil n’est pas embarqué dans l’image applicative.
+- Version 589 reçue techniquement en production et copie hors hôte vérifiée (8/8), avec preuves dans le rapport d’exécution ; aucune migration, aucun changement de rôle ou de clé fournisseur, aucune publication ni transaction réelle ajoutée.
 
 ## v6.27.588 — fix(core): accès révoqués, mesures qualifiées et contrôles exécutables (2026-11-16)
 
