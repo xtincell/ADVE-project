@@ -10,6 +10,8 @@
 - À la demande d’Alexandre, Configuration → Intégrations permet de compléter plus tard les emails et CinetPay : formulaires indépendants, secrets chiffrés et masqués, brouillons et retour aux valeurs du serveur. Les consommateurs utilisent les paramètres effectifs ; enregistrement et vérification réelle restent distincts (ADR-0246).
 - La lecture des médias publics et les contrôles du dépôt acceptent les chemins Windows tout en conservant le refus des sorties de dossier et les garde-fous existants. Le journal public appelle Git sans interprétation du shell. Le build prépare son instantané avant Docker depuis les commits disponibles, sans élargir le checkout ; le smoke de l’image exige le commit livré dans le JSON et le HTML avant publication.
 
+- Réception 16 novembre : source `c003398`, CI 6 168 unitaires / 870 PostgreSQL / cinq reçus sociaux verts, preflight 17 contrôles réussis sans échec, image construite et testée hors VPS puis 588 servie en production. Données, 108 migrations, volume et clés conservés ; journal public reçu. Restauration authentifiée sur 3 132 médias ; copie hors hôte complète encore en transfert. Détails et validations métier ouvertes dans le rapport d’exécution.
+
 ## v6.27.587 — fix(seshat): deux défauts révélés par le premier relevé SLO réel (2026-11-12)
 
 **Suite du geste 1.4 du programme Shinkiro : le premier relevé SLO mesuré en production (23 kinds, 4 dépassés) a été trié en lisant les émissions, en lecture seule. Deux dépassements sont des défauts, corrigés ici ; deux sont des budgets posés sans mesure, soumis au propriétaire.**
