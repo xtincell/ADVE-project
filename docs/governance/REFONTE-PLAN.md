@@ -1,6 +1,6 @@
 ## Plan d’achèvement du 16 novembre 2026
 
-L’exécution est suivie dans le [rapport du 16 novembre](../planning/rapport-execution-la-fusee-2026-11-16.md) : **6.27.588 / `c003398` livrée**, sauvegarde/restauration éprouvée, correctifs et configuration email/CinetPay demandée par Alexandre. Tests, livraison et acceptation métier gardent leurs reçus distincts.
+L’exécution est suivie dans le [rapport du 16 novembre](../planning/rapport-execution-la-fusee-2026-11-16.md) : **6.27.589 / `3d43f01` livrée**, sauvegarde/restauration éprouvée et copie hors hôte reçue, correctifs de droits/mesures et configuration email/CinetPay demandée par Alexandre. Tests, livraison et acceptation métier gardent leurs reçus distincts.
 
 La reprise demandée par Alexandre est ordonnée dans le [plan d’achèvement de La Fusée](../planning/achevement-la-fusee-2026-11-16.md) : installation et contrôles, droits et restauration, données ADVE, stratégie et livrables, production et diffusion, mesures, vente et parcours collectifs, puis réception complète. Chaque lot précise ses dépendances et sa preuve de clôture. Ce plan est ancré sur `39423e6` / 6.27.587 et les reçus disponibles ; sa rédaction ne change aucun statut de livraison ou d’acceptation métier.
 

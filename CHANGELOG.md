@@ -10,6 +10,8 @@
 - Complément d’outillage : le crawl normalise aussi les chemins Windows. Six cas rouges deviennent verts ; la relance sous session ADMIN reçoit 278 pages HTTP et trois RPC, avec cinq identités de démonstration absentes explicitement non reçues. Cet outil n’est pas embarqué dans l’image applicative.
 - Version 589 reçue techniquement en production et copie hors hôte vérifiée (8/8), avec preuves dans le rapport d’exécution ; aucune migration, aucun changement de rôle ou de clé fournisseur, aucune publication ni transaction réelle ajoutée.
 
+- Rapport final : déploiement 589, contrôle public, conservation des données et clés, restauration et copie hors hôte reçus. Les correspondances ADVE restent des propositions sans écriture ; configuration des fournisseurs et acceptations métier gardent leurs conditions de clôture.
+
 ## v6.27.588 — fix(core): accès révoqués, mesures qualifiées et contrôles exécutables (2026-11-16)
 
 **Reprise du plan d’achèvement : les accès privilégiés suivent le compte courant et les observations ne comblent plus les données manquantes.**
