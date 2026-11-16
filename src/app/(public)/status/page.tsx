@@ -35,7 +35,7 @@ async function loadStatus() {
     }).catch(() => null),
   ]);
 
-  const providers = listProviders();
+  const providers = await listProviders();
   const models = listAvailableModels();
 
   return {

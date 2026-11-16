@@ -15,12 +15,12 @@ interface ChangelogEntry {
 }
 
 async function loadEntries(): Promise<ChangelogEntry[]> {
-  // In dev/build we read git via execSync; in serverless prod we read
+  // In dev/build we read git with explicit argv; in serverless prod we read
   // a pre-generated file (scripts/sync-changelog.ts to be added).
   try {
     const child = await import("node:child_process");
-    const out = child.execSync(
-      "git log --pretty=format:'%h|%ad|%s' --date=short -200",
+    const out = child.execFileSync(
+      "git", ["log", "--pretty=format:%h|%ad|%s", "--date=short", "-200"],
       { cwd: process.cwd(), encoding: "utf8" },
     );
     return out.split("\n").filter(Boolean).map((line) => {
@@ -53,7 +53,7 @@ const TYPE_ACCENT: Record<ChangelogEntry["type"], string> = {
   other: "border-zinc-800 text-zinc-500",
 };
 
-// Baked at build time. `loadEntries()` reads git (execSync) / the filesystem,
+// Baked at build time. `loadEntries()` reads git (execFileSync) / the filesystem,
 // neither of which exist on the Cloudflare Workers runtime — so we prerender
 // the snapshot once during `next build` (where git is available) and serve it
 // statically on every host. Refreshes on each deploy.

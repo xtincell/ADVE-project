@@ -88,7 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = (user as { role?: string }).role ?? "USER";
         token.id = user.id;
-        token.email = (user as { email?: string }).email ?? token.email;
+        token.email = user.email ?? null;
       }
       // Le jeton reste signé après la suppression du compte ou le retrait d'un
       // rôle. Hors connexion (où `authorize`/l'adaptateur viennent de lire la
@@ -101,13 +101,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       //    reste couvert) : un ADMIN rétrogradé gardait ses droits sur sa
       //    session ouverte jusqu'à l'expiration du jeton (IN7, 2026-11-11).
       // Le god-mode n'est appliqué qu'à un compte existant, après la relecture.
-      if (!user && token.id) {
+      if (!user) {
+        if (typeof token.id !== "string" || !token.id.trim()) return null;
         const stored = await db.user.findUnique({
-          where: { id: token.id as string },
-          select: { role: true },
+          where: { id: token.id },
+          select: { role: true, email: true },
         });
         if (!stored) return null;
         token.role = stored.role || "USER";
+        // An old signed email must not preserve founder privileges after the
+        // account's address changes; the current row is the authority.
+        token.email = stored.email;
       }
       // God mode — un compte founder de l'allowlist est TOUJOURS ADMIN, même
       // si la BDD prod n'a jamais été re-seedée (aucune écriture DB requise).

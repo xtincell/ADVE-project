@@ -1,8 +1,7 @@
 /**
  * ANUBIS — Sender email transactionnel RÉEL (Vague 10, CRM/newsletter).
  *
- * Cascade de providers par variables d'environnement (ADR-0075 : clés
- * système en env, jamais en DB) :
+ * Configuration administrateur chiffrée, avec repli sur l'environnement :
  *   1. Resend   (RESEND_API_KEY)            — POST api.resend.com/emails
  *   2. Mailgun  (MAILGUN_API_KEY + DOMAIN)  — POST api.mailgun.net/v3/.../messages
  *   3. SendGrid (SENDGRID_API_KEY)          — POST api.sendgrid.com/v3/mail/send
@@ -11,6 +10,7 @@
  * jamais un succès simulé (doctrine « ne stub rien », cf. payouts momo).
  * `EMAIL_FROM` requis (ex: "La Fusée <postmaster@mg.lafusee.io>").
  */
+import { resolveDeliverySettings, configuredEmailProviders } from "./delivery-settings";
 
 export interface SendEmailInput {
   to: string;
@@ -33,14 +33,12 @@ export type SendEmailResult =
 
 const TIMEOUT_MS = 10_000;
 
-function from(): string | null {
-  return process.env.EMAIL_FROM?.trim() || null;
-}
-
 /** Readiness is global and reveals no account existence or credential value. */
-export function systemEmailIsArmed(): boolean {
-  return Boolean(from() && (process.env.RESEND_API_KEY || process.env.SENDGRID_API_KEY
-    || process.env.BREVO_API_KEY || (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN)));
+export async function systemEmailIsArmed(): Promise<boolean> {
+  try {
+    const { email } = await resolveDeliverySettings();
+    return Boolean(email.from && configuredEmailProviders(email).length);
+  } catch { return false; }
 }
 
 async function timedFetch(url: string, init: RequestInit): Promise<Response> {
@@ -53,11 +51,11 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
   }
 }
 
-async function viaResend(input: SendEmailInput, sender: string): Promise<SendEmailResult> {
+async function viaResend(input: SendEmailInput, sender: string, apiKey: string): Promise<SendEmailResult> {
   const res = await timedFetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -71,13 +69,11 @@ async function viaResend(input: SendEmailInput, sender: string): Promise<SendEma
     }),
   });
   const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-  if (!res.ok) return { ok: false, provider: "RESEND", error: `Resend ${res.status}: ${data.message ?? "refusé"}` };
+  if (!res.ok) return { ok: false, provider: "RESEND", error: `Resend ${res.status}: envoi refusé` };
   return { ok: true, provider: "RESEND", providerRef: data.id ?? null };
 }
 
-async function viaMailgun(input: SendEmailInput, sender: string): Promise<SendEmailResult> {
-  const domain = process.env.MAILGUN_DOMAIN!;
-  const region = (process.env.MAILGUN_REGION ?? "us").toLowerCase();
+async function viaMailgun(input: SendEmailInput, sender: string, apiKey: string, domain: string, region: string): Promise<SendEmailResult> {
   const base = region === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
   const params = new URLSearchParams({
     from: sender,
@@ -92,21 +88,21 @@ async function viaMailgun(input: SendEmailInput, sender: string): Promise<SendEm
   const res = await timedFetch(`${base}/v3/${domain}/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Basic ${Buffer.from(`api:${process.env.MAILGUN_API_KEY}`).toString("base64")}`,
+      Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString("base64")}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: params.toString(),
   });
   const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-  if (!res.ok) return { ok: false, provider: "MAILGUN", error: `Mailgun ${res.status}: ${data.message ?? "refusé"}` };
+  if (!res.ok) return { ok: false, provider: "MAILGUN", error: `Mailgun ${res.status}: envoi refusé` };
   return { ok: true, provider: "MAILGUN", providerRef: data.id ?? null };
 }
 
-async function viaSendgrid(input: SendEmailInput, sender: string): Promise<SendEmailResult> {
+async function viaSendgrid(input: SendEmailInput, sender: string, apiKey: string): Promise<SendEmailResult> {
   const res = await timedFetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -121,8 +117,7 @@ async function viaSendgrid(input: SendEmailInput, sender: string): Promise<SendE
     }),
   });
   if (res.status !== 202) {
-    const body = await res.text().catch(() => "");
-    return { ok: false, provider: "SENDGRID", error: `SendGrid ${res.status}: ${body.slice(0, 200)}` };
+    return { ok: false, provider: "SENDGRID", error: `SendGrid ${res.status}: envoi refusé` };
   }
   return { ok: true, provider: "SENDGRID", providerRef: res.headers.get("x-message-id") };
 }
@@ -164,7 +159,7 @@ export async function sendViaBrevo(
   });
   const data = (await res.json().catch(() => ({}))) as { messageId?: string; message?: string };
   if (!res.ok) {
-    return { ok: false, provider: "BREVO", error: `Brevo ${res.status}: ${data.message ?? "refusé"}` };
+    return { ok: false, provider: "BREVO", error: `Brevo ${res.status}: envoi refusé` };
   }
   return { ok: true, provider: "BREVO", providerRef: data.messageId ?? null };
 }
@@ -174,19 +169,21 @@ export async function sendViaBrevo(
  * en cas d'échec. DEFERRED explicite si aucun provider n'est armé.
  */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
-  const sender = from();
+  let email: Awaited<ReturnType<typeof resolveDeliverySettings>>["email"];
+  try { email = (await resolveDeliverySettings()).email; }
+  catch { return { ok: false, provider: null, deferred: true, error: "DELIVERY_SETTINGS_UNAVAILABLE" }; }
+  const sender = email.from;
   if (!sender) {
     return { ok: false, provider: null, deferred: true, error: "DEFERRED_AWAITING_CREDENTIALS: EMAIL_FROM absent — sender email non armé." };
   }
 
-  const chain: Array<{ enabled: boolean; fn: () => Promise<SendEmailResult> }> = [
-    { enabled: Boolean(process.env.RESEND_API_KEY), fn: () => viaResend(input, sender) },
-    { enabled: Boolean(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN), fn: () => viaMailgun(input, sender) },
-    { enabled: Boolean(process.env.SENDGRID_API_KEY), fn: () => viaSendgrid(input, sender) },
-    { enabled: Boolean(process.env.BREVO_API_KEY), fn: () => sendViaBrevo(input, sender, process.env.BREVO_API_KEY!) },
-  ];
-
-  const armed = chain.filter((c) => c.enabled);
+  const implementations: Record<EmailProviderName, () => Promise<SendEmailResult>> = {
+    RESEND: () => viaResend(input, sender, email.credentials.RESEND.value!),
+    MAILGUN: () => viaMailgun(input, sender, email.credentials.MAILGUN.value!, email.mailgunDomain!, email.mailgunRegion),
+    SENDGRID: () => viaSendgrid(input, sender, email.credentials.SENDGRID.value!),
+    BREVO: () => sendViaBrevo(input, sender, email.credentials.BREVO.value!),
+  };
+  const armed = configuredEmailProviders(email).map(provider => implementations[provider]);
   if (armed.length === 0) {
     return {
       ok: false,
@@ -199,12 +196,12 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   let lastError = "";
   for (const provider of armed) {
     try {
-      const result = await provider.fn();
+      const result = await provider();
       if (result.ok) return result;
       lastError = result.error;
       if (input.allowFallback === false) return result;
-    } catch (err) {
-      lastError = err instanceof Error ? err.message : String(err);
+    } catch {
+      lastError = "Connexion au fournisseur indisponible";
       if (input.allowFallback === false) break;
     }
   }

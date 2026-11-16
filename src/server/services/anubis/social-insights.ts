@@ -2,8 +2,8 @@
  * social-insights — métriques PRIVÉES par publication (ADR-0133).
  *
  * Owning Neter : ANUBIS. Consomme les scopes Insights quand la connexion les
- * porte (read_insights pour les Pages FB, instagram_manage_insights pour IG
- * Business — actifs en mode testeurs, App Review groupée pour le public).
+ * porte (read_insights pour les Pages FB, instagram_manage_insights via Meta,
+ * instagram_business_manage_insights pour Instagram Login).
  * Connexion sans le scope → on n'appelle PAS l'endpoint et on ne fabrique
  * rien : `SocialPost.insights` reste null (jamais un zéro inventé).
  *
@@ -25,12 +25,19 @@ export interface InsightsRow {
   postsMeasured: number;
 }
 
-async function guard(url: string): Promise<Record<string, unknown> | "AUTH" | "OUTAGE"> {
+async function guard(url: string): Promise<Record<string, unknown> | "AUTH" | "OUTAGE" | "RATE_LIMIT"> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (res.status === 401 || res.status === 403) return "AUTH";
+    if (res.status === 429) return "RATE_LIMIT";
+    const json: unknown = await res.json();
+    if (!json || typeof json !== "object" || Array.isArray(json)) return "OUTAGE";
+    const body = json as Record<string, unknown>;
+    // Graph also returns revoked/expired tokens as HTTP 400 (OAuth code 190).
+    const error = body.error;
+    if (error && typeof error === "object" && "code" in error && error.code === 190) return "AUTH";
     if (!res.ok) return "OUTAGE";
-    return (await res.json()) as Record<string, unknown>;
+    return body;
   } catch {
     return "OUTAGE";
   }
@@ -39,12 +46,14 @@ async function guard(url: string): Promise<Record<string, unknown> | "AUTH" | "O
 /** Extrait { name → value } d'une réponse Graph insights. */
 function metricMap(json: Record<string, unknown>): Record<string, number> {
   const out: Record<string, number> = {};
-  const data = (json.data as Array<Record<string, unknown>> | undefined) ?? [];
+  const data: unknown[] = Array.isArray(json.data) ? json.data : [];
   for (const m of data) {
-    const name = typeof m.name === "string" ? m.name : null;
-    const values = (m.values as Array<Record<string, unknown>> | undefined) ?? [];
+    if (!m || typeof m !== "object") continue;
+    const row = m as Record<string, unknown>;
+    const name = typeof row.name === "string" ? row.name : null;
+    const values = Array.isArray(row.values) ? row.values : [];
     const v = values[0]?.value;
-    if (name && typeof v === "number" && Number.isFinite(v)) out[name] = v;
+    if (name && typeof v === "number" && Number.isFinite(v) && v >= 0) out[name] = v;
   }
   return out;
 }
@@ -65,20 +74,27 @@ export async function enrichRecentPostInsights(
   const rows: InsightsRow[] = [];
   let sawAuthFailure = false;
   let sawOutage = false;
+  let sawRateLimit = false;
   let anyScoped = false;
 
   for (const conn of connections) {
-    if (!conn.accessToken) { sawAuthFailure = true; continue; }
     const meta = (conn.metadata ?? {}) as Record<string, unknown>;
     const scopes = Array.isArray(meta.scopes) ? meta.scopes.map(String) : [];
-    const needed = conn.platform === "FACEBOOK" ? "read_insights" : "instagram_manage_insights";
+    const instagramLogin = conn.platform === "INSTAGRAM" && meta.provider === "instagram";
+    const needed = conn.platform === "FACEBOOK" ? "read_insights"
+      : instagramLogin ? "instagram_business_manage_insights" : "instagram_manage_insights";
     if (!scopes.includes(needed)) continue; // pas le scope → pas d'appel, pas d'invention
     anyScoped = true;
+    if (!conn.accessToken) { sawAuthFailure = true; continue; }
 
     let payload: SocialTokenPayload;
     try {
       payload = decryptTokenPayload<SocialTokenPayload>(conn.accessToken);
     } catch { sawAuthFailure = true; continue; }
+    if (!payload || typeof payload.access_token !== "string" || !payload.access_token.trim()) { sawAuthFailure = true; continue; }
+
+    // Same provider distinction as social-connect / social-inbox / publishing.
+    const graphBase = instagramLogin ? "https://graph.instagram.com" : "https://graph.facebook.com/v21.0";
 
     const posts = await db.socialPost.findMany({
       where: { connectionId: conn.id },
@@ -94,10 +110,11 @@ export async function enrichRecentPostInsights(
           ? "post_impressions,post_impressions_unique,post_clicks"
           : "reach,saved,total_interactions";
       const json = await guard(
-        `https://graph.facebook.com/v21.0/${encodeURIComponent(post.externalPostId)}/insights?metric=${metrics}&access_token=${encodeURIComponent(payload.access_token)}`,
+        `${graphBase}/${encodeURIComponent(post.externalPostId)}/insights?metric=${metrics}&access_token=${encodeURIComponent(payload.access_token)}`,
       );
       if (json === "AUTH") { sawAuthFailure = true; break; }
       if (json === "OUTAGE") { sawOutage = true; continue; }
+      if (json === "RATE_LIMIT") { sawRateLimit = true; break; }
       const m = metricMap(json);
       if (Object.keys(m).length === 0) continue;
 
@@ -107,7 +124,7 @@ export async function enrichRecentPostInsights(
         where: { id: post.id },
         data: {
           insights: m,
-          ...(reach != null && reach > 0 ? { reach: Math.round(reach) } : {}),
+          ...(reach != null ? { reach: Math.round(reach) } : {}),
         },
       });
       // Separate telemetry emission. Failure is visible in the spine and does not undo native insights.
@@ -122,12 +139,13 @@ export async function enrichRecentPostInsights(
       }
       measured++;
     }
-    rows.push({ platform: String(conn.platform), postsMeasured: measured });
+    if (measured > 0) rows.push({ platform: String(conn.platform), postsMeasured: measured });
   }
 
-  if (rows.length > 0) return { state: "LIVE", data: rows, observedAt: new Date().toISOString() };
   if (!anyScoped) return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
   if (sawAuthFailure) return { state: "DEGRADED", reason: "AUTH_REVOKED" };
+  if (sawRateLimit) return { state: "DEGRADED", reason: "RATE_LIMITED" };
   if (sawOutage) return { state: "DEGRADED", reason: "VENDOR_OUTAGE" };
+  if (rows.length > 0) return { state: "LIVE", data: rows, observedAt: new Date().toISOString() };
   return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
 }

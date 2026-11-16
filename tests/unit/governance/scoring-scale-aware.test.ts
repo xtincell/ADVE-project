@@ -16,6 +16,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { existsSync } from "node:fs";
+import { sourceFilesMatching } from "../../support/source-file-scan";
 import {
   MARKET_SCALES,
   EVIDENCE_TARGETS_BY_SCALE,
@@ -203,16 +204,7 @@ describe("ADR-0126 — naissance gouvernée des SuperfanProfile (single-writer H
   it("aucun writer superfanProfile hors de la voie gouvernée superfan.register", () => {
     // Les rows SuperfanProfile nourrissent le bras superfans du plafond
     // d'évidence : tout chemin de création non gouverné = vecteur d'inflation.
-    const { execSync } = require("node:child_process") as typeof import("node:child_process");
-    const out = execSync(
-      "grep -rln 'superfanProfile\\.\\(create\\|upsert\\|createMany\\)' src/ --include='*.ts' --include='*.tsx' || true",
-      { encoding: "utf8" },
-    ).trim();
-    // Normalisation des slashes : le grep BSD (macOS) rend « src//server/… »
-    // pour une racine « src/ » là où le GNU grep (CI Linux) rend « src/server/… ».
-    // Sans ça le garde passait en CI et échouait en local — pire, un vrai
-    // writer illégitime aurait été noyé dans un échec « de plateforme ».
-    const files = (out ? out.split("\n") : []).map((f) => f.replace(/\/{2,}/g, "/"));
+    const files = sourceFilesMatching(process.cwd(), /superfanProfile\.(create|upsert|createMany)/, [".ts", ".tsx"]);
     // ADR-0134 §B4 : le corps d'écriture a déménagé du router vers le service
     // de mesure Seshat — UN seul fichier writer, deux portes gouvernées du
     // même kind (tRPC superfan.register + case commandant chemin cron).

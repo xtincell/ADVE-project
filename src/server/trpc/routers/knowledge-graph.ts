@@ -2,6 +2,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { found } from "../entity-access";
+import { compositeSummary, measuredNumber, measurementRecord } from "@/server/services/knowledge-aggregator/measurements";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -33,14 +34,7 @@ export const knowledgeGraphRouter = createTRPCRouter({
         where: { status: "ACTIVE" },
         select: { advertis_vector: true },
       });
-      const vectors = strategies
-        .map((s) => s.advertis_vector as Record<string, number> | null)
-        .filter(Boolean) as Record<string, number>[];
-
-      if (vectors.length === 0) return { count: 0, avgComposite: 0, benchmarks: {} };
-
-      const avgComposite = vectors.reduce((sum, v) => sum + (v.composite ?? 0), 0) / vectors.length;
-      return { count: vectors.length, avgComposite, benchmarks: {} };
+      return compositeSummary(strategies);
     }),
 
   // ADR-0166 — classement cross-marques (noms + scores) : lane opérateur.
@@ -54,10 +48,9 @@ export const knowledgeGraphRouter = createTRPCRouter({
       });
       return strategies
         .map((s) => {
-          const vec = s.advertis_vector as Record<string, number> | null;
-          return { strategyId: s.id, name: s.name, composite: vec?.composite ?? 0 };
+          return { strategyId: s.id, name: s.name, composite: measuredNumber(measurementRecord(s.advertis_vector).composite) };
         })
-        .sort((a, b) => b.composite - a.composite);
+        .sort((a, b) => (b.composite ?? -1) - (a.composite ?? -1));
     }),
 
   getCreatorPatterns: adminProcedure

@@ -59,7 +59,8 @@ describe("sendViaBrevo", () => {
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.provider).toBe("BREVO");
-      expect(res.error).toContain("Sender not valid");
+      expect(res.error).toContain("Brevo 400");
+      expect(res.error).not.toContain("Sender not valid"); // no untrusted provider-body echo
     }
   });
 });

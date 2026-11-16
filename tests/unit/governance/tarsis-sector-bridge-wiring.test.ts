@@ -22,7 +22,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..", "..");
-const read = (rel: string) => readFileSync(join(ROOT, rel), "utf-8");
+const read = (rel: string) => readFileSync(join(ROOT, rel), "utf-8").replace(/\r\n/g, "\n");
 
 describe("ADR-0134 §B6 — pont RSS→axe Overton câblé", () => {
   const orchestrator = read("src/server/services/seshat/tarsis/sector-refresh.ts");

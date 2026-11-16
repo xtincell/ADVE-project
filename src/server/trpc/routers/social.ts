@@ -20,6 +20,7 @@
 
 import { z } from "zod";
 import { prepareSocialPublication } from "@/domain/social-publication-package";
+import { socialMetricEvidence } from "@/domain/social-metric-evidence";
 import type { InputJsonValue as PrismaInputJson } from "@prisma/client/runtime/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -89,14 +90,14 @@ export const socialRouter = createTRPCRouter({
       platform: z.string(),
       postId: z.string(),
       metrics: z.object({
-        impressions: z.number().default(0),
-        reach: z.number().default(0),
-        engagement: z.number().default(0),
-        likes: z.number().default(0),
-        comments: z.number().default(0),
-        shares: z.number().default(0),
-        saves: z.number().default(0),
-        clicks: z.number().default(0),
+        impressions: z.number().finite().nonnegative().optional(),
+        reach: z.number().finite().nonnegative().optional(),
+        engagement: z.number().finite().nonnegative().optional(),
+        likes: z.number().finite().nonnegative().optional(),
+        comments: z.number().finite().nonnegative().optional(),
+        shares: z.number().finite().nonnegative().optional(),
+        saves: z.number().finite().nonnegative().optional(),
+        clicks: z.number().finite().nonnegative().optional(),
       }),
     }),
 
@@ -104,15 +105,18 @@ export const socialRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      // Create a Signal from social metrics
-      const engagementRate = input.metrics.reach > 0
+      // Preserve explicitly supplied zeroes; an omitted metric has no value.
+      // This endpoint receives declarations, not authenticated native insights.
+      const evidence = socialMetricEvidence(input.metrics, Object.keys(input.metrics), "DECLARED");
+      const engagementRate = input.metrics.reach !== undefined && input.metrics.reach > 0
+        && input.metrics.engagement !== undefined
         ? (input.metrics.engagement / input.metrics.reach) * 100
-        : 0;
+        : null;
 
       // Determine ADVE impact based on engagement rate
       const adveImpact: Record<string, number> = {
-        e: Math.min(25, engagementRate * 2.5), // Engagement pillar
-        d: input.metrics.impressions > 10000 ? 2 : 0, // Distinction via visibility
+        e: Math.min(25, (engagementRate ?? 0) * 2.5), // Engagement pillar
+        d: (input.metrics.impressions ?? 0) > 10000 ? 2 : 0, // Distinction via visibility
         t: 1, // Track — any measured data is positive
       };
 
@@ -124,7 +128,8 @@ export const socialRouter = createTRPCRouter({
             platform: input.platform,
             postId: input.postId,
             driverId: input.driverId,
-            ...input.metrics,
+            ...evidence.values,
+            ...evidence.receipt,
             engagementRate,
           } as PrismaInputJson,
           advertis_vector: adveImpact as PrismaInputJson,

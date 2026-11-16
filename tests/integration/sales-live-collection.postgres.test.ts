@@ -44,7 +44,8 @@ const webhook = (reference: string, extra: Record<string, unknown> = {}) => noti
   body: JSON.stringify({ merchant_transaction_id: reference, transaction_id: `tx-${reference}`, notify_token: "owned-proof-only", ...extra }) }));
 beforeAll(async () => {
   const target = new URL(process.env.DATABASE_URL!);
-  if (!["127.0.0.1", "localhost"].includes(target.hostname) || target.pathname !== "/shinkiro_verify" || (!process.env.CI && target.port !== "5445")) throw new Error("Only the owned collection5445 or isolated CI database may receive these fixtures.");
+  const ownedFixture = target.hostname === "127.0.0.1" && target.port === "55439" && target.username === "shinkiro_fixture" && (target.searchParams.get("schema") ?? "public") === "public";
+  if (!["127.0.0.1", "localhost"].includes(target.hostname) || target.pathname !== "/shinkiro_verify" || (!process.env.CI && target.port !== "5445" && !ownedFixture)) throw new Error("Only the owned collection5445, local fixture relay or isolated CI database may receive these fixtures.");
   vi.stubEnv("CINETPAY_BASE_URL", "https://api.cinetpay.co"); vi.stubEnv("CINETPAY_API_KEY", "sk_live_owned_synthetic_only"); vi.stubEnv("CINETPAY_API_PASSWORD", "owned-password-only");
   vi.stubEnv("INTEGRATION_TOKEN_KEY", "owned-sales-collection-key-32-characters");
   vi.stubEnv("AUTH_URL", "https://owned.invalid"); vi.stubEnv("NEXTAUTH_URL", "https://owned.invalid");
@@ -52,7 +53,7 @@ beforeAll(async () => {
   const founder = await db.user.create({ data: { name: "Owned effective founder", email: "alexandre@upgraders.com", role: "FOUNDER" } }); founderId = founder.id;
   const brand = await db.strategy.create({ data: { name: `Owned collection ${seed}`, userId: ownerId } }); brandId = brand.id;
   const profile = await db.salesRepresentative.create({ data: { strategyId: brandId, name: "Owned seller", mode: "HUMAN", status: "ACTIVE", humanUserId: ownerId } }); profileId = profile.id;
-  account = { version: 1, mode: "LIVE", credentialFingerprint: cinetpayCredentialFingerprint(), merchantAccountId: "owned-merchant", beneficiary: "Owned merchant", destinationRef: "owned-merchant-destination",
+  account = { version: 1, mode: "LIVE", credentialFingerprint: await cinetpayCredentialFingerprint(), merchantAccountId: "owned-merchant", beneficiary: "Owned merchant", destinationRef: "owned-merchant-destination",
     countryCode: "CI", currency: "XOF", authorizedStrategyIds: [brandId], accountActive: true, attestedAt: new Date().toISOString(), expiresAt: "2030-01-01T00:00:00.000Z", evidenceRef: "Owned synthetic account receipt; not a real account." };
   await providerConfig();
 });
@@ -92,7 +93,7 @@ describe.sequential("owned Sales → existing CinetPay collection; all PSP trans
   it("initializes exactly once outside the transaction and preserves the canonical receipt on retry", async () => {
     const f = await fixture(); const first = await request(f), second = await request(f);
     expect(first).toEqual(second); expect(wire.init).toHaveBeenCalledTimes(1);
-    const sent = wire.init.mock.calls[0]![0]; expect(sent).toMatchObject({ amount: 10000, currency: "XOF", customer: { email: f.input.email } });
+    const sent = wire.init.mock.calls[0]![0]; expect(sent).toMatchObject({ amount: 10000, currency: "XOF", customer: { email: f.input.email }, expectedCredentialFingerprint: account.credentialFingerprint });
     expect(JSON.stringify(sent)).not.toContain(f.token); expect(sent.returnUrl).toMatch(/^https:\/\/owned.invalid\/api\/sales\/payment-return\/[a-f0-9]{32}$/);
     const p = await db.intakePayment.findUniqueOrThrow({ where: { reference: first.reference } });
     expect(p).toMatchObject({ provider: "CINETPAY", tierKey: "SALES_COLLECTION", amount: 10000, status: "PENDING", notificationTokenHash: digest("owned-proof-only") });

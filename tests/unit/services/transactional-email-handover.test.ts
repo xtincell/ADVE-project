@@ -1,8 +1,13 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const findSettings = vi.hoisted(() => vi.fn());
+// No saved override is the environment-fallback case. Keep the actual resolver,
+// readiness and provider adapter; only persistence and transport are simulated.
+vi.mock("@/lib/db", () => ({ db: { mcpServerConfig: { findUnique: findSettings } } }));
 import { sendEmail } from "@/server/services/email";
 
 const emailKeys = ["BREVO_API_KEY", "RESEND_API_KEY", "SENDGRID_API_KEY", "MAILGUN_API_KEY", "MAILGUN_DOMAIN", "EMAIL_FROM"] as const;
 function clearEmailConfiguration() { for (const key of emailKeys) vi.stubEnv(key, ""); }
+beforeEach(() => { findSettings.mockReset(); findSettings.mockResolvedValue(null); });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("transactional handover through the existing email transport", () => {
@@ -29,5 +34,14 @@ describe("transactional handover through the existing email transport", () => {
     const [url, init] = network.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe("https://api.brevo.com/v3/smtp/email");
     expect(JSON.parse(init.body as string).tags).toEqual(["password-reset"]);
+  });
+  it("does not bypass an unavailable override store with environment credentials", async () => {
+    clearEmailConfiguration(); vi.stubEnv("BREVO_API_KEY", "owned-fake-test-key");
+    vi.stubEnv("EMAIL_FROM", "La Fusée <owned-sender@example.invalid>");
+    findSettings.mockRejectedValueOnce(new Error("Owned unavailable store"));
+    const network = vi.fn(); vi.stubGlobal("fetch", network);
+    expect(await sendEmail({ to: "owned@example.invalid", subject: "Access", html: "Owned fixture" }))
+      .toMatchObject({ ok: false, deferred: true, error: "DELIVERY_SETTINGS_UNAVAILABLE" });
+    expect(network).not.toHaveBeenCalled();
   });
 });

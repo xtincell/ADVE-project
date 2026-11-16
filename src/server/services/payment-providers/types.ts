@@ -32,6 +32,9 @@ export interface PaymentInitInput {
   };
   /** Optional metadata propagated to the provider for tracking. */
   readonly metadata?: Record<string, string>;
+  /** Server-only binding to the merchant approval captured before checkout.
+   * A credential rotation must not redirect an already approved sale. */
+  readonly expectedCredentialFingerprint?: string;
 }
 
 export interface PaymentInitResult {
@@ -45,8 +48,8 @@ export interface PaymentInitResult {
 
 export interface PaymentProvider {
   readonly id: PaymentProviderId;
-  /** Whether the provider has the env vars / config to function. */
-  isConfigured(): boolean;
+  /** Settings presence only, not a live provider verification. */
+  isConfigured(): boolean | Promise<boolean>;
   /** Initialize a payment session and return the URL to redirect to. */
   initPayment(input: PaymentInitInput): Promise<PaymentInitResult>;
   /** Verify a payment status by reference (post-webhook reconciliation). */

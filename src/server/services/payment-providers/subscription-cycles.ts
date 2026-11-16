@@ -124,7 +124,7 @@ export async function startManualSubscriptionCycle(
     };
   }
 
-  const providerImpl = pickProvider({
+  const providerImpl = await pickProvider({
     countryCode: input.countryCode,
     preferred: input.preferredProvider,
   });

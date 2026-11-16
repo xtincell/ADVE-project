@@ -2,7 +2,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { open, realpath } from "node:fs/promises";
 import { constants } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import sharp from "sharp";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -50,7 +50,9 @@ async function sourceBytes(rawUrl: string): Promise<Buffer> {
   if (url.origin === resolveBrandDeploymentOrigin() && /^\/brand\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(png|webp|jpe?g|svg|otf|ttf)$/.test(url.pathname)) {
     const root = await realpath(join(process.cwd(), "public"));
     const filePath = await realpath(join(root, url.pathname));
-    if (!filePath.startsWith(root + "/")) throw new Error("Le fichier public sort de son périmètre.");
+    const withinPublic = relative(root, filePath);
+    if (!withinPublic || withinPublic === ".." || withinPublic.startsWith(`..${sep}`) || isAbsolute(withinPublic))
+      throw new Error("Le fichier public sort de son périmètre.");
     const file = await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
     try {
       const stat = await file.stat();

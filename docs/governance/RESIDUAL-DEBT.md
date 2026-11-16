@@ -1,3 +1,29 @@
+## Reprise du 16 novembre 2026 — plan d’achèvement et constats supplémentaires
+
+Le [plan d’achèvement](../planning/achevement-la-fusee-2026-11-16.md), demandé par Alexandre, ordonne les dettes et les réceptions. Le [rapport d’exécution](../planning/rapport-execution-la-fusee-2026-11-16.md) rapproche désormais les corrections et les recettes locales du candidat 6.27.588, préparé depuis `39423e6` / 6.27.587. La livraison du candidat reste à recevoir ; les détails historiques ci-dessous restent datés.
+
+### Contrôle hebdomadaire — correction locale reçue, exécution distante à recevoir, lot L01
+
+Le [run du 15 novembre](https://github.com/xtincell/ADVE-project/actions/runs/43720391091) avait deux contrôles en échec : `.env` absent et Vitest (14 échecs sur 5 991 tests ; 12 `Map.groupBy is not a function`, 2 `globSync is not a function`). Le workflow utilisait Node 20 et la notification échouait faute de permission. **Corrigé localement le 16 novembre :** `.github/workflows/preflight.yml` lit `.nvmrc`, fournit les paramètres de recette et accorde à la notification la permission d’issue nécessaire. `scripts/preflight.sh` accepte les variables effectives, lit les résultats réels des commandes et le workflow conserve un échec final même si la notification échoue. Les 13 scénarios de `tests/integration/preflight-cli.test.mjs` exercent les vrais outils, leurs démarrages en échec et la priorité des paramètres.
+
+**Reste et plan :** recevoir le workflow GitHub du candidat, son rapport conservé et son verdict final ; la recette CLI ne reçoit pas l’exécution distante ni l’ouverture effective d’une issue. **Responsable :** agent / Console-Admin. **Effort :** une recette du workflow. **Déclencheur :** livraison du candidat puis première exécution L01. Les défauts de ce contrôle ne démontraient pas une panne de production.
+
+### Variation de marque après publication — correction et recette PostgreSQL reçues, lot L09 ouvert
+
+Le défaut initial utilisait `AssetVersion.createdAt` sans preuve de diffusion. **Corrigé localement le 16 novembre :** `src/server/services/seshat/asset-impact-tracker.ts` exige le paquet relu, le matériel et sa filiation concordants, le compte prévu, un reçu `PUBLISHED` avec identifiant réseau et le `SocialPost.publishedAt` synchronisé. Deux snapshots réellement présents encadrent cette date ; le second est postérieur d’au moins 24 heures. Les identifiants, dates et valeurs sont conservés dans la métadonnée existante, avec écriture conditionnelle protégeant concurrence et rejeu. Le lecteur de bibliothèque affiche uniquement cette preuve comme variation globale de marque ; les anciens deltas sans preuve ne sont pas affichés comme effets du média.
+
+**Reçu :** 21 tests unitaires du tracker et quatre tests sur PostgreSQL réel couvrent notamment absence de publication, publication différée, autre marque, relevé manquant, zéro observé, concurrence et rejeu. Le retour temporaire à une baseline de création fait échouer la recette, puis la correction la remet au vert. **Reste et plan :** recevoir une publication autorisée sur un compte réel, sa collecte et les deux relevés, puis relire leur preuve dans le consommateur prévu. Cette comparaison ne démontre aucun effet causal individuel ni acquisition de superfans par le média. **Responsable :** Seshat avec Anubis. **Effort :** une recette de diffusion et d’observation, avec attente de la fenêtre. **Déclencheur :** L08/L09, après publication et disponibilité des relevés. Aucun score de production modifié par ces recettes.
+
+### Médias publics sous Windows — cause corrigée, exploitation étendue ouverte
+
+`brand-vault/public-media.ts` refusait un fichier valide après `realpath`, car son contrôle de périmètre ajoutait un slash à un chemin Windows. Le contrôle utilise désormais `path.relative` et refuse un chemin absolu, vide ou sortant vers le parent ; `realpath`, `O_NOFOLLOW`, les limites d’octets et les formats autorisés sont conservés. **Reçu localement le 16 novembre :** reproduction rouge puis verte sur les octets réels, deux tests fichiers avec refus d’une jonction extérieure sans archive créée, et 44 tests PostgreSQL de publication/restauration d’identité publique verts. La cause Windows est close dans le candidat ; ce reçu ne ferme pas les dettes de disponibilité, de sauvegarde hors hôte ou de lifecycle distant ci-dessous. **Reprise :** déployer le candidat puis recevoir le lecteur cible ; pour l’exploitation étendue, conserver le plan de « Disponibilité/récupération des copies publiées ».
+
+### Recette PostgreSQL complète reçue — nettoyage des fixtures à compléter
+
+La passe finale du 16 novembre sur PostgreSQL local dédié reçoit **870 tests verts dans 69 fichiers, zéro échec et zéro test ignoré**, en 467,10 secondes. Elle inclut les trois tests de configuration backend et les quatre tests du tracker. Les rapports `postgres-release.json` et `postgres-release.log` sont conservés hors du dépôt ; ce reçu ne vaut ni livraison ni validation de toute la chaîne métier.
+
+La base de recette n’est pas vide après les suites. Ce run conserve cinq utilisateurs fictifs, quatre opérateurs fictifs, dix stratégies de test et vingt sources de test, en plus de résidus antérieurs. `BrandAsset`, `SocialPost`, `AssetVersion`, `GenerativeTask`, `CultIndexSnapshot` et `KnowledgeEntry` sont vides au contrôle final. `document-versions`, `document-representations`, `portfolio/friesland-scope` et `agency-score-presence` ne nettoient pas toutes leurs fixtures. **Plan :** compléter leur nettoyage par identifiants créés dans chaque suite, dans l’ordre des contraintes, puis recevoir le retour aux comptes initiaux après deux passes ; aucune purge globale. **Responsable :** agent / infrastructure de tests. **Effort :** un lot de nettoyage ciblé. **Déclencheur :** prochaine recette PostgreSQL complète, avant toute affirmation de base de recette vidée.
+
 ## 585 — contrôle SLO depuis le VPS : mesuré en production, deux défauts corrigés, deux budgets à arbitrer (2026-11-12)
 
 **Constaté.** GitHub Actions ne joint pas la base de production : depuis 6.27.580,
@@ -2708,10 +2734,14 @@ sept chantiers ; les résidus actifs suivent.
   sans réécrire l’édition historique. **Déclencheur** : prochaine demande de retour
   sur une édition legacy, avant réception C2/C3 de ce parcours ; effort : une
   adoption et recette par famille concernée. [ADR-0211](adr/0211-retained-public-logo-bytes.md).
-- **Disponibilité/récupération des copies publiées** : la copie VOLUME du logo est
-  reçue, pas la restauration après perte du volume/clé ni une disponibilité SLO.
-  **Fermer** par sauvegarde/reprise qualifiées sur les primitives existantes,
-  relecture/hash et refus sans repli source, puis récupération vérifiée. Crash
+- **Disponibilité/récupération des copies publiées — reçu rapproché le 16 novembre** :
+  la copie VOLUME du logo est reçue. La restauration isolée des archives médias et
+  des clés reçoit 3 132 objets authentifiés au déchiffrement, zéro échec, sur le même
+  hôte ; les 44 recettes PostgreSQL d’identité publique sont également vertes.
+  La copie hors hôte, la bascule du service après perte du volume/clé et une
+  disponibilité SLO restent à recevoir. **Fermer** par copie hors hôte puis reprise
+  qualifiée du lecteur et des applications cibles, relecture/hash et refus sans
+  repli source. Les reçus de restauration ne valent pas cette bascule. Crash
   précommit : jeune orphelin possible, balayage VOLUME après 24 h protège les
   références. Lifecycle/orphelins HTTP_BLOB restent dans « Archive durable —
   exploitation cible et lifecycle distant à recevoir », sans réception distante
@@ -4502,10 +4532,18 @@ qui rendent correctement en l'état mais ne sont pas strictement canoniques. Auc
 
 ### Réseaux / suite sociale (ADR-0128/0129/0130/0131/0132/0133)
 
-- **Inbox + insights provider-aware IG direct** : `social-inbox`/`social-insights` restent codés
-  `graph.facebook.com` (une connexion `instagram` y dégrade honnêtement AUTH/OUTAGE). **Plan** :
-  hôte choisi selon `metadata.provider` (même mouvement que la collecte v6.27.146). **Déclencheur** :
-  vague Inbox S3 (post App Review).
+- **Inbox et insights Instagram direct — code corrigé, compte réel à recevoir** :
+  `social-inbox.ts` choisissait déjà le fournisseur au commit `39423e6`. Le candidat
+  du 16 novembre corrige `social-insights.ts` : Instagram Login appelle
+  `graph.instagram.com` avec `instagram_business_manage_insights` ; le flux Meta
+  conserve son hôte et sa permission propres. La permission directe est demandée
+  par les deux contrats OAuth existants et les anciens comptes doivent se reconnecter.
+  Les 22 tests ciblés reçoivent routage, refus de permission, panne, absence de mesure
+  et zéro explicite, sans faux `LIVE`. **Plan restant :** recevoir l’Inbox existante,
+  la reconnexion autorisée et une mesure native sur le bon compte, avec refus explicite
+  si les données manquent ; aucun appel distant ni accord fournisseur reçu par ces tests.
+  **Responsable :** Anubis/Seshat. **Effort :** une recette compte/publication/mesure.
+  **Déclencheur :** lots L08/L09 après livraison du candidat et disponibilité du compte.
 - **Supervision console des `SocialConnection`** : liste cross-marques lecture seule (états ERROR,
   tokens expirés). **Effort** : faible. **Déclencheur** : à l'occasion de la prochaine passe console.
 - **UI de gestion des collaborateurs** (« Équipe » sur la fiche marque console : liste, rôle,

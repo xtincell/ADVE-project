@@ -10,6 +10,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
+import { briefPatternExcerpt, sectorBenchmarkExcerpt } from "@/server/services/knowledge-aggregator/measurements";
 // `Prisma` en import de VALEUR : `Prisma.DbNull` est utilisé à l'exécution
 // dans le prédicat de portée transverse ci-dessous.
 import { Prisma } from "@prisma/client";
@@ -102,7 +103,7 @@ export async function enrichBrief(
       title: `Brief Pattern: ${bp.channel ?? "Général"}`,
       type: "benchmark",
       relevance: bp.successScore ?? 0.5,
-      excerpt: `Taux de succès: ${((data.successRate as number) ?? 0) * 100}%. Révisions moyennes: ${data.avgRevisions ?? "N/A"}`,
+      excerpt: briefPatternExcerpt(data),
       source: "Knowledge Graph (local)",
       tags: [bp.channel ?? "", "brief_pattern"].filter(Boolean),
     });
@@ -115,7 +116,7 @@ export async function enrichBrief(
       title: `Benchmark ${bm.sector ?? ""} ${bm.market ?? ""}`,
       type: "benchmark",
       relevance: bm.successScore ?? 0.5,
-      excerpt: `Score moyen: ${data.avgComposite ?? "N/A"}/200. Top quartile: ${data.topQuartile ?? "N/A"}/200`,
+      excerpt: sectorBenchmarkExcerpt(data, bm.id.startsWith("agg-benchmark-")),
       source: "Knowledge Graph (local)",
       tags: [bm.sector ?? "", bm.market ?? ""].filter(Boolean),
     });
@@ -573,7 +574,7 @@ function knowledgeEntryToReference(entry: {
     title: generateTitle(entry),
     type: typeMap[entry.entryType] ?? "article",
     relevance: entry.successScore ?? 0.5,
-    excerpt: generateExcerpt(entry.entryType, data),
+    excerpt: generateExcerpt(entry.entryType, data, entry.id),
     source: "Knowledge Graph (local)",
     tags: [entry.sector, entry.market, entry.channel].filter(Boolean) as string[],
   };
@@ -611,12 +612,12 @@ function generateTitle(entry: { entryType: string; sector: string | null; market
  * Les types non couverts rendent désormais un libellé générique. Perdre un
  * extrait vaut mieux que fuiter un payload dont le schéma n'est pas garanti.
  */
-function generateExcerpt(entryType: string, data: Record<string, unknown>): string {
+function generateExcerpt(entryType: string, data: Record<string, unknown>, entryId: string): string {
   switch (entryType) {
     case "SECTOR_BENCHMARK":
-      return `Score moyen: ${data.avgComposite ?? "N/A"}/200. ${data.insight ?? ""}`;
+      return sectorBenchmarkExcerpt(data, entryId.startsWith("agg-benchmark-"));
     case "BRIEF_PATTERN":
-      return `Taux succès: ${((data.successRate as number) ?? 0) * 100}%. Révisions: ${data.avgRevisions ?? "N/A"}`;
+      return briefPatternExcerpt(data);
     case "CREATOR_PATTERN":
       return String(data.insight ?? "Patterns de performance créateurs");
     case "DIAGNOSTIC_RESULT":

@@ -7,6 +7,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Modal } from "@/components/shared/modal";
 import { FormField } from "@/components/shared/form-field";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { DeliverySettingsPanel } from "@/components/config/delivery-settings-panel";
 import {
   Plug,
   Share2,
@@ -188,14 +189,16 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Integrations"
-        description="Connexions aux plateformes externes : social, media, CRM et paiement"
+        title="Intégrations"
+        description="Configuration des emails, des paiements et des connexions aux plateformes externes."
         breadcrumbs={[
           { label: "Console", href: "/console" },
           { label: "Configuration", href: "/console/config" },
           { label: "Integrations" },
         ]}
       />
+
+      <DeliverySettingsPanel />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

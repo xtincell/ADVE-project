@@ -32,6 +32,7 @@ import { CURATED_MCP_TOOLS } from "@/server/services/anubis/mcp-curated";
 
 const ROOT = join(__dirname, "..", "..", "..");
 const MCP_DIR = join(ROOT, "src", "server", "mcp");
+const readSource = (file: string) => readFileSync(file, "utf8").replace(/\r\n/g, "\n");
 
 interface ParsedTool {
   server: string;
@@ -50,7 +51,7 @@ interface ParsedTool {
  */
 function parseServer(server: string): ParsedTool[] {
   const file = join(MCP_DIR, server, "index.ts");
-  const src = readFileSync(file, "utf8");
+  const src = readSource(file);
   const out: ParsedTool[] = [];
   const nameRe = /name:\s*"([a-zA-Z0-9_\-]+)",\s*\n\s*description:/g;
   const starts: Array<{ name: string; at: number }> = [];
@@ -173,9 +174,8 @@ describe("surface MCP — les exceptions de portée sont explicites", () => {
 
 describe("surface MCP — aucune exception ORM ne repart à l'appelant", () => {
   it("le dispatcher est en REFUS PAR DÉFAUT sur les messages d'erreur", () => {
-    const src = readFileSync(
+    const src = readSource(
       join(ROOT, "src", "server", "services", "anubis", "mcp-server.ts"),
-      "utf8",
     );
     expect(src).toMatch(/normalizeToolError/);
 
@@ -198,9 +198,8 @@ describe("surface MCP — aucune exception ORM ne repart à l'appelant", () => {
   });
 
   it("le dispatcher valide les paramètres avant d'appeler le handler", () => {
-    const src = readFileSync(
+    const src = readSource(
       join(ROOT, "src", "server", "services", "anubis", "mcp-server.ts"),
-      "utf8",
     );
     // Zod ne tournait NULLE PART : ni les routes REST ni `dispatchTool` ne
     // parsaient. Un `strategyId` « requis » ne l'était donc pas à l'exécution —
@@ -211,9 +210,8 @@ describe("surface MCP — aucune exception ORM ne repart à l'appelant", () => {
   });
 
   it("le dispatcher refuse un appel sans contexte d'authentification", () => {
-    const src = readFileSync(
+    const src = readSource(
       join(ROOT, "src", "server", "services", "anubis", "mcp-server.ts"),
-      "utf8",
     );
     // `enforceBrandScope` retournait les params intacts quand `__auth` était
     // absent — fail-OPEN. `dispatchTool` étant ré-exporté publiquement, c'était

@@ -84,16 +84,16 @@ export default function BenchmarksPage() {
   const hasComposite = compositeOrNull !== null;
 
   const benchmark = benchmarkQuery.data;
-  const sectorAvg = benchmark?.avgComposite ?? 0;
-  const sectorCount = benchmark?.count ?? 0;
+  const sectorAvg = benchmark?.avgComposite ?? null;
+  const sectorCount = benchmark?.coverage.observedCount ?? 0;
 
-  const ranking = rankingQuery.data ?? [];
+  const ranking = (rankingQuery.data ?? []).filter((r): r is typeof r & { composite: number } => r.composite !== null);
   const myRank = ranking.findIndex((r) => r.strategyId === strategyId) + 1;
   const topPerformer = ranking.length > 0 ? ranking[0] : null;
 
   // Derive sector average per pillar from the sector avg composite
   const sectorPillarAvg: Partial<Record<PillarKey, number>> = {};
-  const pillarAvgBase = sectorAvg / 8;
+  const pillarAvgBase = (sectorAvg ?? 0) / 8;
   for (const k of PILLAR_KEYS) {
     // No invented per-pillar differentiation — only the sector aggregate is real;
     // show it spread evenly (the "simulé" notice below discloses the limitation).
@@ -162,7 +162,7 @@ export default function BenchmarksPage() {
           title="Votre score"
           value={hasComposite ? composite.toFixed(0) : "—"}
           trend={
-            !hasComposite
+            !hasComposite || sectorAvg === null
               ? "flat"
               : composite > sectorAvg
                 ? "up"
@@ -175,16 +175,16 @@ export default function BenchmarksPage() {
         />
         <StatCard
           title="Moyenne secteur"
-          value={sectorAvg.toFixed(0)}
+          value={sectorAvg?.toFixed(0) ?? "—"}
           trend="flat"
-          trendValue={`${sectorCount} marque${sectorCount > 1 ? "s" : ""}`}
+          trendValue={`${sectorCount}/${benchmark?.count ?? 0} scores renseignés`}
           icon={BarChart3}
         />
         <StatCard
           title="Votre rang"
           value={myRank > 0 ? `#${myRank}` : "N/A"}
           trend={
-            myRank <= 3
+            myRank === 0 ? "flat" : myRank <= 3
               ? "up"
               : myRank <= Math.ceil(sectorCount / 2)
                 ? "flat"
@@ -226,11 +226,11 @@ export default function BenchmarksPage() {
               <p className="mb-2 text-xs font-medium text-foreground-secondary">
                 Moyenne secteur
               </p>
-              <AdvertisRadar
+              {sectorAvg !== null ? <AdvertisRadar
                 scores={sectorPillarAvg}
                 size={280}
                 className="flex justify-center"
-              />
+              /> : <p className="text-sm text-foreground-muted">Score moyen non mesuré</p>}
             </div>
           </div>
           <div className="mt-4 grid w-full grid-cols-4 gap-2">
@@ -250,19 +250,19 @@ export default function BenchmarksPage() {
                     {mine.toFixed(1)}
                   </p>
                   <p className="text-xs text-foreground-muted">
-                    moy: {avg.toFixed(1)}
+                    moy: {sectorAvg !== null ? avg.toFixed(1) : "—"}
                   </p>
                   <p
                     className={`text-xs font-semibold ${
-                      diff > 0
+                      sectorAvg !== null && diff > 0
                         ? "text-success"
-                        : diff < 0
+                        : sectorAvg !== null && diff < 0
                           ? "text-error"
                           : "text-foreground-muted"
                     }`}
                   >
-                    {diff >= 0 ? "+" : ""}
-                    {diff.toFixed(1)}
+                    {sectorAvg !== null && diff >= 0 ? "+" : ""}
+                    {sectorAvg !== null ? diff.toFixed(1) : "—"}
                   </p>
                 </div>
               );
@@ -319,23 +319,23 @@ export default function BenchmarksPage() {
                       {mine.toFixed(1)}
                     </td>
                     <td className="py-3 text-right text-foreground-secondary">
-                      {avg.toFixed(1)}
+                      {sectorAvg !== null ? avg.toFixed(1) : "—"}
                     </td>
                     <td className="py-3 text-right text-foreground-secondary">
-                      {top.toFixed(1)}
+                      {topPerformer ? top.toFixed(1) : "—"}
                     </td>
                     <td className="py-3 text-right">
                       <span
                         className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
-                          diff > 0
+                          sectorAvg !== null && diff > 0
                             ? "bg-success/10 text-success"
-                            : diff < 0
+                            : sectorAvg !== null && diff < 0
                               ? "bg-error/10 text-error"
                               : "bg-foreground-muted/10 text-foreground-secondary"
                         }`}
                       >
-                        {diff >= 0 ? "+" : ""}
-                        {diff.toFixed(1)}
+                        {sectorAvg !== null && diff >= 0 ? "+" : ""}
+                        {sectorAvg !== null ? diff.toFixed(1) : "—"}
                       </span>
                     </td>
                   </tr>
@@ -349,10 +349,10 @@ export default function BenchmarksPage() {
       {/* Votre positionnement unique */}
       {(() => {
         const strengths = PILLAR_KEYS.filter(
-          (k) => (scores[k] ?? 0) > (sectorPillarAvg[k] ?? 0),
+          (k) => sectorAvg !== null && (scores[k] ?? 0) > (sectorPillarAvg[k] ?? 0),
         );
         const weaknesses = PILLAR_KEYS.filter(
-          (k) => (scores[k] ?? 0) < (sectorPillarAvg[k] ?? 0),
+          (k) => sectorAvg !== null && (scores[k] ?? 0) < (sectorPillarAvg[k] ?? 0),
         );
         return (
           <div className="rounded-xl border border-border bg-background/80 p-6">
@@ -428,7 +428,7 @@ export default function BenchmarksPage() {
           {classifications.map((c) => {
             const pct =
               maxClassCount > 0 ? (c.count / maxClassCount) * 100 : 0;
-            const isMyClass = c.cls === myClassification;
+            const isMyClass = hasComposite && c.cls === myClassification;
             return (
               <div key={c.cls} className="flex items-center gap-3">
                 <span

@@ -163,8 +163,8 @@ describe("exceptions — la liste ne peut que décroître", () => {
     const results = await bareLint.lintFiles(files.map((f) => path.join(ROOT, f)));
     const actual = new Set<string>();
     for (const result of results) {
-      const file = path.relative(ROOT, result.filePath);
-      const lines = readFileSync(result.filePath, "utf8").split("\n");
+      const file = path.relative(ROOT, result.filePath).replace(/\\/g, "/");
+      const lines = readFileSync(result.filePath, "utf8").replace(/\r\n/g, "\n").split("\n");
       for (const m of result.messages) {
         expect(m.message.startsWith("Resolve error"), `${file}: ${m.message}`).toBe(false);
         if (m.ruleId !== RULE) continue;
@@ -174,7 +174,7 @@ describe("exceptions — la liste ne peut que décroître", () => {
         expect(source, `${file}:${m.line} — spécifiant introuvable`).toBeTruthy();
         const resolved = resolver.resolve(source!, result.filePath, { project: TSCONFIG });
         expect(resolved.found, `${file}:${m.line} — ${source} non résolu`).toBe(true);
-        const to = layering.layerOf(path.relative(ROOT, resolved.path!));
+        const to = layering.layerOf(path.relative(ROOT, resolved.path!).replace(/\\/g, "/"));
         actual.add(`${file} → ${to}`);
       }
     }

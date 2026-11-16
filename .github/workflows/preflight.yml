@@ -13,6 +13,9 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
 
     env:
       DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
@@ -21,11 +24,13 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
       - run: npx prisma generate
+      - name: Exercise preflight verdicts
+        run: node --test tests/integration/preflight-cli.test.mjs
 
       - name: Make preflight executable
         run: chmod +x ./scripts/preflight.sh
@@ -53,9 +58,20 @@ jobs:
           retention-days: 30
 
       - name: Open issue on failure
-        if: steps.preflight.outcome == 'failure'
+        if: always() && steps.preflight.outcome == 'failure' && env.REPORT_PATH
         uses: peter-evans/create-issue-from-file@v6
+        continue-on-error: true
         with:
           title: "Preflight drift detected — ${{ github.event.repository.name }} @ ${{ github.run_id }}"
           content-filepath: ${{ env.REPORT_PATH }}
           labels: governance, automated, drift
+
+      - name: Preserve preflight verdict
+        if: always()
+        env:
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+        run: |
+          if [ "$PREFLIGHT_OUTCOME" != "success" ]; then
+            echo "Preflight did not succeed ($PREFLIGHT_OUTCOME). See its report and logs."
+            exit 1
+          fi

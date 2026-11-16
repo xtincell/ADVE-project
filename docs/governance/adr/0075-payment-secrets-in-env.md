@@ -126,3 +126,9 @@ Avertissement explicite encadré sur l'étape 1 :
 
 - Si un provider futur (ex: Wave, Orange Money direct) nécessite des credentials per-operator, il rejoindra `ExternalConnector` + Credentials Vault (ADR-0021), pas `PaymentProviderConfig`. Cet ADR clarifie la frontière.
 - `cinetpay-mcp` (MCP server officiel) reste une option future si CinetPay publie un MCP mature — il s'intégrerait via Anubis Credentials Vault + Glory tools MCP-backed (pattern Higgsfield), pas via cet ADR.
+
+## Exception ciblée du 16 novembre 2026
+
+[ADR-0246](0246-admin-delivery-settings.md) autorise, sur demande explicite d’Alexandre, les remplacements CinetPay chiffrés depuis la page administrateur de configuration. Les paramètres d’environnement restent le repli lorsque aucun remplacement n’est enregistré ; les autres secrets de paiement gardent la règle historique ci-dessus. Cette exception ne met jamais les secrets en clair dans `PaymentProviderConfig`, une réponse ou une émission.
+
+La procédure CinetPay ci-dessus (`SITE_ID`, clé HMAC et API v2) est conservée comme historique ; elle est supersédée par le contrat Aurore v1 décrit dans [ADR-0246](0246-admin-delivery-settings.md) : clé API, mot de passe API et mode sandbox/production.

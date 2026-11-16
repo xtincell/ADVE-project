@@ -14,10 +14,10 @@
  *   6. §B2 — ugcGenerationRate reste EXCLU (décision négative explicite).
  */
 
-import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { sourceFilesMatching } from "../../support/source-file-scan";
 
 const ROOT = join(__dirname, "..", "..", "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf-8");
@@ -47,15 +47,7 @@ describe("ADR-0134 — chaîne de mesure communautaire", () => {
   });
 
   it("single-writer : communitySnapshot.create vit dans UN seul fichier src/", () => {
-    const out = execSync(
-      "grep -rln 'communitySnapshot\\.\\(create\\|createMany\\|upsert\\)' src/ --include='*.ts' --include='*.tsx' || true",
-      { encoding: "utf8", cwd: ROOT },
-    ).trim();
-    // Normalisation des slashes : le grep BSD (macOS) rend « src//server/… »
-    // pour une racine « src/ » là où le GNU grep (CI Linux) rend « src/server/… ».
-    // Sans ça le garde passait en CI et échouait en local — pire, un vrai
-    // writer illégitime aurait été noyé dans un échec « de plateforme ».
-    const files = (out ? out.split("\n") : []).map((f) => f.replace(/\/{2,}/g, "/"));
+    const files = sourceFilesMatching(ROOT, /communitySnapshot\.(create|createMany|upsert)/, [".ts", ".tsx"]);
     expect(files).toEqual([
       "src/server/services/cult-index-engine/community-snapshot-writer.ts",
     ]);

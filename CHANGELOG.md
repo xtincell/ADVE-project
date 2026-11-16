@@ -1,3 +1,15 @@
+## v6.27.588 — fix(core): accès révoqués, mesures qualifiées et contrôles exécutables (2026-11-16)
+
+**Reprise du plan d’achèvement : les accès privilégiés suivent le compte courant et les observations ne comblent plus les données manquantes.**
+
+- Le proxy des portails Console/Launchpad relit l’identité et le rôle actuels ; le callback JWT relit aussi l’email avant le god-mode. Compte supprimé, rôle retiré, identité incomplète et base indisponible ont des refus explicites.
+- Le contrôle hebdomadaire suit `.nvmrc`, les variables effectives et les codes de sortie réels ; sa notification ne masque plus son verdict. Sa recette CLI exerce de vrais outils sur des projets jetables.
+- Les agrégats de connaissance distinguent valeurs absentes et observations, couverture et métriques non comparables. Les insights sociaux respectent le fournisseur Instagram direct, ses scopes et le zéro réellement reçu.
+- Le suivi d’une version matérielle attend une publication attestée et des snapshots avant/après ; il conserve la preuve d’une variation globale de marque, sans l’attribuer causalement au média. Les anciennes valeurs non qualifiées ne sont pas présentées comme un effet démontré.
+- Plan d’achèvement et réceptions d’exécution reliés aux registres existants. Aucun schéma Prisma, migration ou nouveau fournisseur. Les tests, le runtime et la réception métier gardent leurs preuves distinctes dans le rapport d’exécution.
+- À la demande d’Alexandre, Configuration → Intégrations permet de compléter plus tard les emails et CinetPay : formulaires indépendants, secrets chiffrés et masqués, brouillons et retour aux valeurs du serveur. Les consommateurs utilisent les paramètres effectifs ; enregistrement et vérification réelle restent distincts (ADR-0246).
+- La lecture des médias publics et les contrôles du dépôt acceptent les chemins Windows tout en conservant le refus des sorties de dossier et les garde-fous existants. Le journal public appelle Git sans interprétation du shell.
+
 ## v6.27.587 — fix(seshat): deux défauts révélés par le premier relevé SLO réel (2026-11-12)
 
 **Suite du geste 1.4 du programme Shinkiro : le premier relevé SLO mesuré en production (23 kinds, 4 dépassés) a été trié en lisant les émissions, en lecture seule. Deux dépassements sont des défauts, corrigés ici ; deux sont des budgets posés sans mesure, soumis au propriétaire.**

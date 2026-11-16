@@ -4,20 +4,23 @@
  * Panneau de configuration step-by-step pour un payment provider
  * (CinetPay / Stripe / PayPal). Rend explicite le mécanisme safe :
  *
- *   1. Env vars (Vercel dashboard, jamais en git ni en DB)
+ *   1. CinetPay : coffre chiffré administrateur ou configuration serveur.
+ *      Stripe/PayPal : env vars (jamais en git ni en DB).
  *   2. Enabled flag (toggle DB via paymentProviderConfig)
  *   3. Webhook URL côté provider
  *
  * Refuse de toggler `enabled=true` si le provider n'est pas `configured`
- * (env vars absents) — propage l'erreur serveur au lieu de silencieusement
+ * (accès incomplets) — propage l'erreur serveur au lieu de silencieusement
  * laisser un provider "enabled mais cassé".
  *
- * Cf. ADR-0075 — Payment provider secrets stay in env vars.
+ * Cf. ADR-0075 et exception CinetPay : coffre chiffré, jamais le JSON paiement.
  */
 
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Badge } from "@/components/primitives/badge";
 import { CheckCircle2, XCircle, ExternalLink, Copy, Check, AlertTriangle } from "lucide-react";
 
 interface ProviderGuideEntry {
@@ -80,6 +83,7 @@ export function PaymentProviderGuide(props: PaymentProviderGuideProps): React.Re
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const guide = GUIDES.find((g) => g.id === props.providerId);
   if (!guide) return null;
+  const isCinetpay = props.providerId === "CINETPAY";
   const baseUrl = props.baseUrl ?? (typeof window !== "undefined" ? window.location.origin : "");
   const fullWebhookUrl = baseUrl ? `${baseUrl}${guide.webhookPath}` : guide.webhookPath;
 
@@ -92,9 +96,11 @@ export function PaymentProviderGuide(props: PaymentProviderGuideProps): React.Re
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-background/40 p-4 text-xs">
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-foreground">{guide.label}</h3>
-        <span
+        {isCinetpay ? <Badge tone={props.configured ? "info" : "neutral"}>
+          {props.configured ? "Accès renseignés · non vérifiés" : "Accès à compléter"}
+        </Badge> : <span
           className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
             props.configured
               ? "bg-emerald-500/15 text-emerald-300"
@@ -110,14 +116,22 @@ export function PaymentProviderGuide(props: PaymentProviderGuideProps): React.Re
               <XCircle className="h-3 w-3" /> Env vars manquantes
             </>
           )}
-        </span>
+        </span>}
       </header>
 
       {/* Step 1 — env vars */}
       <section>
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-foreground-muted">
-          1. Configurer les env vars (Vercel Dashboard)
+          {isCinetpay ? "1. Renseigner les accès CinetPay" : "1. Configurer les env vars (Vercel Dashboard)"}
         </p>
+        {isCinetpay ? <div className="space-y-2 text-sm text-foreground-secondary">
+          <p>La clé API, le mot de passe API et le mode de paiement se gèrent dans la configuration de la console.</p>
+          <Link href="/console/config/integrations#email-paiement" className="inline-flex min-h-11 items-center text-accent underline underline-offset-4">
+            Configurer CinetPay
+          </Link>
+          <p>Les accès peuvent provenir du coffre chiffré de la console ou de la configuration du serveur. Les secrets restent masqués.</p>
+          <p>Leur présence ne confirme pas la validation du compte marchand ni le fonctionnement d’un paiement.</p>
+        </div> : <>
         <ul className="space-y-1">
           {guide.envVars.map((v) => (
             <li key={v.name} className="flex items-start justify-between gap-2 rounded border border-border bg-background px-2 py-1.5">
@@ -141,12 +155,13 @@ export function PaymentProviderGuide(props: PaymentProviderGuideProps): React.Re
           Les secrets restent <strong>uniquement en env vars</strong> (Vercel chiffre at-rest).
           Jamais en DB, jamais en git, jamais dans <code>config</code>.
         </p>
+        </>}
       </section>
 
       {/* Step 2 — enabled toggle */}
       <section>
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-foreground-muted">
-          2. Activer le provider
+          {isCinetpay ? "2. Autoriser les paiements" : "2. Activer le provider"}
         </p>
         <label className="flex items-center gap-2">
           <input
@@ -160,7 +175,8 @@ export function PaymentProviderGuide(props: PaymentProviderGuideProps): React.Re
             {props.enabled ? "Activé" : "Désactivé"}
           </span>
           {!props.configured && !props.enabled && (
-            <span className="text-[10px] text-rose-300">— configure d&apos;abord les env vars</span>
+            isCinetpay ? <span className="text-sm text-foreground-secondary">— renseignez d’abord les accès CinetPay</span>
+              : <span className="text-sm text-error">— configure d&apos;abord les env vars</span>
           )}
         </label>
         {props.toggleError && (
@@ -174,7 +190,7 @@ export function PaymentProviderGuide(props: PaymentProviderGuideProps): React.Re
       {/* Step 3 — webhook URL */}
       <section>
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-foreground-muted">
-          3. Webhook URL (à configurer côté provider)
+          {isCinetpay ? "3. Adresse de notification (à renseigner chez CinetPay)" : "3. Webhook URL (à configurer côté provider)"}
         </p>
         <div className="flex items-center gap-2 rounded border border-border bg-background px-2 py-1.5">
           <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-blue-300">{fullWebhookUrl}</code>

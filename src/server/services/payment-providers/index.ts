@@ -39,29 +39,29 @@ export interface PickContext {
   readonly allowMock?: boolean;
 }
 
-export function pickProvider(ctx: PickContext): PaymentProvider {
+export async function pickProvider(ctx: PickContext): Promise<PaymentProvider> {
   const isProd = process.env.NODE_ENV === "production";
 
   // 1. Explicit preference (when configured).
   if (ctx.preferred && ctx.preferred !== "MOCK") {
     const candidate = REGISTRY[ctx.preferred];
-    if (candidate.isConfigured()) return candidate;
+    if (await candidate.isConfigured()) return candidate;
   }
 
   // 2. Auto selection by country.
   let auto: PaymentProvider;
   if (ctx.countryCode && isCinetPayCountry(ctx.countryCode)) {
     auto = cinetpayProvider;
-  } else if (process.env.PAYMENT_PREFER_PAYPAL === "true" && paypalProvider.isConfigured()) {
+  } else if (process.env.PAYMENT_PREFER_PAYPAL === "true" && await paypalProvider.isConfigured()) {
     auto = paypalProvider;
   } else {
     auto = stripeProvider;
   }
-  if (auto.isConfigured()) return auto;
+  if (await auto.isConfigured()) return auto;
 
   // 3. Fall back to first configured provider.
   for (const provider of Object.values(REGISTRY)) {
-    if (provider.isConfigured()) return provider;
+    if (await provider.isConfigured()) return provider;
   }
 
   // 4. Mock — non-prod only.
@@ -74,11 +74,11 @@ export function pickProvider(ctx: PickContext): PaymentProvider {
   );
 }
 
-export function listProviders(): readonly { id: PaymentProviderId; configured: boolean }[] {
+export async function listProviders(): Promise<readonly { id: PaymentProviderId; configured: boolean }[]> {
   const list: Array<{ id: PaymentProviderId; configured: boolean }> = [];
   for (const id of Object.keys(REGISTRY) as Array<Exclude<PaymentProviderId, "MOCK">>) {
-    list.push({ id, configured: REGISTRY[id].isConfigured() });
+    list.push({ id, configured: await REGISTRY[id].isConfigured() });
   }
-  list.push({ id: "MOCK", configured: mockProvider.isConfigured() });
+  list.push({ id: "MOCK", configured: await mockProvider.isConfigured() });
   return list;
 }

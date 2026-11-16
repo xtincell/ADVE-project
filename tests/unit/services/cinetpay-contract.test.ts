@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
+vi.mock("@/lib/db", () => ({ db: { mcpServerConfig: { findUnique: vi.fn().mockResolvedValue(null) } } }));
 const fetcher = vi.fn();
 const input = {
   reference: "owned-order", amount: 10000, currency: "XAF", description: "Recette détenue",
@@ -63,7 +64,7 @@ describe("CinetPay v1 wire contract — all transport is fake, no PSP call", () 
   ])("refuses a production environment mismatch before authentication %#", async setting => {
     vi.stubEnv("NODE_ENV", "production"); vi.stubEnv("CINETPAY_BASE_URL", setting.base); vi.stubEnv("CINETPAY_API_KEY", setting.key);
     const { cinetpayProvider: p } = await import("@/server/services/payment-providers/cinetpay");
-    expect(p.isConfigured()).toBe(false); await expect(p.initPayment(input)).rejects.toThrow("environment unavailable"); expect(fetcher).not.toHaveBeenCalled();
+    expect(await p.isConfigured()).toBe(false); await expect(p.initPayment(input)).rejects.toThrow("environment unavailable"); expect(fetcher).not.toHaveBeenCalled();
   });
   it("does not reuse an authenticated token after a credential rotation", async () => {
     auth(); fetcher.mockResolvedValueOnce(Response.json(status));

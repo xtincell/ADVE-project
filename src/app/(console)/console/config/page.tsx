@@ -8,7 +8,7 @@ export default function ConfigPage() {
   const sections = [
     { href: "/console/config/thresholds", label: "Seuils & Alertes", desc: "Seuils ADVE, promotion guilde, commissions, SLA", icon: Sliders },
     { href: "/console/config/templates", label: "Templates", desc: "Briefs, guidelines, value reports, playbooks", icon: Layout },
-    { href: "/console/config/integrations", label: "Integrations", desc: "Connexions sociales, media, webhooks", icon: Plug },
+    { href: "/console/config/integrations#email-paiement", label: "Intégrations", desc: "Email, CinetPay et connexions aux plateformes", icon: Plug },
     { href: "/console/config/system", label: "Systeme", desc: "MCP keys, pricing marche, parametres globaux", icon: Settings },
   ];
 

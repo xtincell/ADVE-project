@@ -28,7 +28,9 @@ export default function AgencyKnowledgePage() {
     );
   }
 
-  const benchmarkData = benchmarks as { count?: number; avgComposite?: number; benchmarks?: Array<Record<string, unknown>> } | null;
+  const benchmarkData = benchmarks;
+  const benchmarkRows: Array<Record<string, unknown>> = Array.isArray(benchmarks?.benchmarks)
+    ? benchmarks.benchmarks : [];
   const patternData = patterns as Array<Record<string, unknown>> | null;
 
   return (
@@ -41,7 +43,7 @@ export default function AgencyKnowledgePage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard title="Benchmarks" value={benchmarkData?.count ?? 0} icon={BarChart3} />
-        <StatCard title="Score composite moyen" value={benchmarkData?.avgComposite ? `${benchmarkData.avgComposite.toFixed(0)}/200` : "-"} icon={Network} />
+        <StatCard title="Score composite moyen" value={benchmarkData?.avgComposite != null ? `${benchmarkData.avgComposite.toFixed(0)}/200` : "-"} icon={Network} />
         <StatCard title="Patterns brief" value={patternData?.length ?? 0} icon={BookOpen} />
       </div>
 
@@ -73,11 +75,11 @@ export default function AgencyKnowledgePage() {
       )}
 
       {/* Benchmarks */}
-      {benchmarkData?.benchmarks && benchmarkData.benchmarks.length > 0 && (
+      {benchmarkRows.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-zinc-400">Benchmarks sectoriels</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {benchmarkData.benchmarks.slice(0, 6).map((b, i) => (
+            {benchmarkRows.slice(0, 6).map((b, i) => (
               <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-4">
                 <p className="text-sm font-medium text-white">{String(b.sector ?? b.name ?? "-")}</p>
                 <p className="mt-1 text-xs text-zinc-500">
@@ -104,7 +106,7 @@ export default function AgencyKnowledgePage() {
         </div>
       )}
 
-      {!benchmarkData?.benchmarks?.length && !patternData?.length && queryText.length < 2 && (
+      {!benchmarkData?.count && !benchmarkRows.length && !patternData?.length && queryText.length < 2 && (
         <EmptyState icon={Network} title="Knowledge Graph vide" description="Les donnees sectorielles s'accumuleront avec l'utilisation." />
       )}
     </div>

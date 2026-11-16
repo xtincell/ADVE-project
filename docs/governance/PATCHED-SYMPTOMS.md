@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 588 — chemins et contrôles dépendants du shell local (2026-11-16)
+
+Symptôme : des médias valides étaient refusés sur Windows et plusieurs contrôles du dépôt dépendaient de `grep`, `ls`, `npx` ou des séparateurs Unix. Le journal public composait aussi un appel Git interprété par le shell. Correction dans 6.27.588 : chemins relatifs natifs avec confinement conservé, scans Node et arguments Git distincts. Reçus : deux tests avec fichiers réels, 44 tests PostgreSQL de médias publics et deux dépôts Git temporaires. Les contrôles portables restent dans la suite globale ; aucun garde-fou ni périmètre n'est réduit.
+
+Hypothèse de cause racine : hypothèses Unix implicites dans des chemins exécutés aussi sous Windows. Dette liée : aucune pour ces défauts bornés ; la réception métier complète reste au plan d’achèvement.
+
 ### 1.4 — le contrôle SLO aurait signalé des dépassements inventés (2026-11-12)
 
 Symptôme : `scripts/check-slos.ts` relisait les budgets dans `slos.ts` par expression régulière. `p95LatencyMs:\s*(\d+)` lisait `25_000` comme 25 : 547 budgets de latence sur 635 étaient 1 000 fois trop petits, et le kind `LEGACY_STRATEGY_MIGRATE_TO_V4` (chiffre dans le nom) était ignoré. Le taux d'erreur mesuré, en pourcentage, était comparé à `errorRatePct`, qui est une part (0..1) : 0,1 % d'échecs dépassait déjà un budget de 5 %. Invisible tant que GitHub Actions ne joignait pas la base ; la première mesure depuis le VPS aurait déclaré presque tout en dépassement. Patch (v6.27.585) : la table `INTENT_SLOS` est importée, donc embarquée dans le bundle de l'image, et la comparaison se fait en part, dans `src/server/governance/slo-measure.ts`. Test `slo-measure.test.ts` (rouge en remettant le taux en pourcentage, vert après) et recette du bundle sur un PostgreSQL jetable (codes 0, 1 et 2).

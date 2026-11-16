@@ -22,7 +22,7 @@
  */
 
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..", "..");
@@ -80,7 +80,7 @@ describe("HARD — aucune écriture pilier n'ignore le verdict de la gateway", (
   it("les appels en position d'instruction sont soit corrigés, soit sur la liste", () => {
     const offenders: string[] = [];
     for (const file of files) {
-      const rel = file.replace(`${SRC}/`, "");
+      const rel = relative(SRC, file).split(sep).join("/");
       if (ALLOWLIST[rel]) continue;
       const src = readFileSync(file, "utf8");
       for (const hit of bareCallLines(src)) {

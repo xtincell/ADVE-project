@@ -111,6 +111,8 @@ run_timed() {
 # ── Init ─────────────────────────────────────────────────────────────────────
 
 # Find project root (look for package.json)
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+SCRIPT_PATH="${SCRIPT_DIR}/$(basename -- "${BASH_SOURCE[0]}")"
 PROJECT_ROOT="."
 if [ ! -f "package.json" ]; then
     if [ -f "../package.json" ]; then
@@ -120,6 +122,43 @@ if [ ! -f "package.json" ]; then
         echo -e "${RED}${FAIL} Exécute ce script depuis la racine du projet (là où est package.json)${NC}"
         exit 1
     fi
+fi
+
+# Load the same effective environment as Prisma: process > .env.local > .env.
+# dotenv parses data only; never source an environment file as shell code.
+REQUIRED_NODE_MAJOR=$(tr -d '[:space:]' < .nvmrc)
+NODE_VERSION=$(node -p 'process.versions.node' 2>/dev/null || true)
+if [[ ! "$REQUIRED_NODE_MAJOR" =~ ^[0-9]+$ ]] || [ "${NODE_VERSION%%.*}" != "$REQUIRED_NODE_MAJOR" ]; then
+    echo "Node.js ${REQUIRED_NODE_MAJOR} requis (.nvmrc), version actuelle: ${NODE_VERSION:-absente}."
+    exit 1
+fi
+if [ "${PREFLIGHT_ENV_LOADED:-}" != "1" ]; then
+    if [ ! -d "node_modules" ]; then
+        echo "node_modules manquant. Lance: npm ci"
+        exit 1
+    fi
+    PREFLIGHT_BASH="$BASH"
+    if command -v cygpath >/dev/null 2>&1; then
+        PREFLIGHT_BASH=$(cygpath -w "$BASH")
+    fi
+    exec node -e '
+        const fs = require("node:fs");
+        const { spawnSync } = require("node:child_process");
+        const { config } = require("dotenv");
+        for (const path of [".env.local", ".env"]) {
+            if (!fs.existsSync(path)) continue;
+            const result = config({ path, quiet: true });
+            if (result.error) {
+                console.error("Impossible de charger " + path);
+                process.exit(1);
+            }
+        }
+        const result = spawnSync(process.argv[1], process.argv.slice(2), {
+            stdio: "inherit", env: { ...process.env, PREFLIGHT_ENV_LOADED: "1" }
+        });
+        if (result.error) console.error("Impossible de démarrer le preflight.");
+        process.exit(result.status ?? 1);
+    ' "$PREFLIGHT_BASH" "$SCRIPT_PATH" "$@"
 fi
 
 > "$LOG_FILE"
@@ -139,40 +178,13 @@ else
     exit 1
 fi
 
-# Check Node version
-NODE_VERSION=$(node -v 2>/dev/null | sed 's/v//' | cut -d. -f1)
-if [ "$NODE_VERSION" -ge 20 ] 2>/dev/null; then
-    check_result "Node.js >= 20" "pass" "v$(node -v | sed 's/v//')"
-else
-    check_result "Node.js >= 20 requis" "fail" "Version actuelle: $(node -v 2>/dev/null || echo 'non installé')"
-fi
+check_result "Node.js ${REQUIRED_NODE_MAJOR}" "pass" "v${NODE_VERSION} (.nvmrc)"
 
-# Check .env
-if [ -f ".env" ]; then
-    check_result ".env présent" "pass"
-    
-    # Compare .env vs .env.example
-    if [ -f ".env.example" ]; then
-        MISSING_VARS=""
-        while IFS= read -r line; do
-            # Skip comments and empty lines
-            [[ "$line" =~ ^#.*$ ]] && continue
-            [[ -z "$line" ]] && continue
-            VAR_NAME=$(echo "$line" | cut -d= -f1 | xargs)
-            if [ -n "$VAR_NAME" ] && ! grep -q "^${VAR_NAME}=" .env 2>/dev/null; then
-                MISSING_VARS="${MISSING_VARS}${VAR_NAME}, "
-            fi
-        done < .env.example
-        
-        if [ -n "$MISSING_VARS" ]; then
-            check_result "Variables .env manquantes" "warn" "${MISSING_VARS%, }"
-        else
-            check_result "Variables .env complètes" "pass" "Toutes les vars de .env.example sont définies"
-        fi
-    fi
+# Optional providers in .env.example are not prerequisites for static checks.
+if [ -n "${DATABASE_URL:-}" ]; then
+    check_result "Environnement Prisma" "pass" "DATABASE_URL définie (processus, .env.local ou .env)"
 else
-    check_result ".env manquant" "fail" "Lance: cp .env.example .env && configure"
-    critical_stop
+    check_result "Environnement Prisma" "fail" "DATABASE_URL absente ; la définir dans le processus, .env.local ou .env"
 fi
 
 # Check critical files
@@ -192,17 +204,18 @@ phase_header "1" "STATIC ANALYSIS" "TypeScript, imports, types — les bugs que 
 # TypeScript strict check
 echo -e "  ${DIM}Running tsc --noEmit...${NC}"
 TSC_START=$(date +%s)
-TSC_OUTPUT=$(npx tsc --noEmit --pretty 2>&1 || true)
+TSC_EXIT=0
+TSC_OUTPUT=$(npx tsc --noEmit --pretty false 2>&1) || TSC_EXIT=$?
 TSC_END=$(date +%s)
 TSC_DURATION=$((TSC_END - TSC_START))
 TSC_ERRORS=$(echo "$TSC_OUTPUT" | grep -c "error TS" || true)
 
-if [ "$TSC_ERRORS" -eq 0 ]; then
+if [ "$TSC_EXIT" -eq 0 ]; then
     check_result "TypeScript compilation" "pass" "0 erreurs" "$TSC_DURATION"
 else
-    check_result "TypeScript compilation" "fail" "${TSC_ERRORS} erreur(s) de type" "$TSC_DURATION"
+    check_result "TypeScript compilation" "fail" "Code ${TSC_EXIT}, ${TSC_ERRORS} erreur(s) de type" "$TSC_DURATION"
     # Show first 10 errors
-    echo "$TSC_OUTPUT" | grep "error TS" | head -10 | while read -r line; do
+    echo "$TSC_OUTPUT" | sed -n '1,10p' | while read -r line; do
         echo -e "     ${RED}${DIM}$line${NC}"
     done
     if [ "$TSC_ERRORS" -gt 10 ]; then
@@ -215,13 +228,17 @@ fi
 if [ -f ".eslintrc.json" ] || [ -f ".eslintrc.js" ] || [ -f "eslint.config.js" ] || [ -f "eslint.config.mjs" ]; then
     echo -e "  ${DIM}Running ESLint...${NC}"
     LINT_START=$(date +%s)
-    LINT_OUTPUT=$(npx eslint src/ --ext .ts,.tsx --format compact 2>&1 || true)
+    LINT_EXIT=0
+    LINT_OUTPUT=$(npx eslint src/ --ext .ts,.tsx --format stylish 2>&1) || LINT_EXIT=$?
     LINT_END=$(date +%s)
     LINT_DURATION=$((LINT_END - LINT_START))
-    LINT_ERRORS=$(echo "$LINT_OUTPUT" | grep -c " Error " || true)
-    LINT_WARNS=$(echo "$LINT_OUTPUT" | grep -c " Warning " || true)
+    LINT_ERRORS=$(echo "$LINT_OUTPUT" | grep -Ec '[[:space:]]error[[:space:]]' || true)
+    LINT_WARNS=$(echo "$LINT_OUTPUT" | grep -Ec '[[:space:]]warning[[:space:]]' || true)
     
-    if [ "$LINT_ERRORS" -eq 0 ] && [ "$LINT_WARNS" -eq 0 ]; then
+    if [ "$LINT_EXIT" -ne 0 ]; then
+        check_result "ESLint" "fail" "Code ${LINT_EXIT}, ${LINT_ERRORS} erreur(s), ${LINT_WARNS} warning(s)" "$LINT_DURATION"
+        echo "$LINT_OUTPUT" >> "$LOG_FILE"
+    elif [ "$LINT_WARNS" -eq 0 ]; then
         check_result "ESLint" "pass" "Clean" "$LINT_DURATION"
     elif [ "$LINT_ERRORS" -eq 0 ]; then
         check_result "ESLint" "warn" "${LINT_WARNS} warning(s)" "$LINT_DURATION"
@@ -235,15 +252,16 @@ fi
 # Prisma schema validation
 echo -e "  ${DIM}Validating Prisma schema...${NC}"
 PRISMA_START=$(date +%s)
-PRISMA_OUTPUT=$(npx prisma validate 2>&1 || true)
+PRISMA_EXIT=0
+PRISMA_OUTPUT=$(npx prisma validate 2>&1) || PRISMA_EXIT=$?
 PRISMA_END=$(date +%s)
 PRISMA_DURATION=$((PRISMA_END - PRISMA_START))
 
-if echo "$PRISMA_OUTPUT" | grep -q "is valid"; then
+if [ "$PRISMA_EXIT" -eq 0 ]; then
     check_result "Prisma schema" "pass" "Schema valide" "$PRISMA_DURATION"
 else
     check_result "Prisma schema" "fail" "Schema invalide" "$PRISMA_DURATION"
-    echo "$PRISMA_OUTPUT" | head -5 | while read -r line; do
+    echo "$PRISMA_OUTPUT" | sed -n '1,5p' | while read -r line; do
         echo -e "     ${RED}${DIM}$line${NC}"
     done
 fi
@@ -270,13 +288,14 @@ fi
 # ============================================================================
 phase_header "2" "DEEP ANALYSIS" "Imports morts, routes orphelines, routers tRPC, Zod gaps"
 
-ANALYZER_SCRIPT="$(dirname "$0")/preflight-analyzer.ts"
+ANALYZER_SCRIPT="${SCRIPT_DIR}/preflight-analyzer.ts"
 if [ -f "$ANALYZER_SCRIPT" ]; then
     echo -e "  ${DIM}Running deep analyzer...${NC}"
     DEEP_START=$(date +%s)
     
     # Run analyzer, capture structured output
-    DEEP_OUTPUT=$(npx tsx "$ANALYZER_SCRIPT" 2>&1 || true)
+    DEEP_EXIT=0
+    DEEP_OUTPUT=$(npx tsx "$ANALYZER_SCRIPT" 2>&1) || DEEP_EXIT=$?
     DEEP_END=$(date +%s)
     DEEP_DURATION=$((DEEP_END - DEEP_START))
     
@@ -284,8 +303,16 @@ if [ -f "$ANALYZER_SCRIPT" ]; then
     while IFS='|' read -r status name detail; do
         [ -z "$status" ] && continue
         [[ "$status" =~ ^# ]] && continue
-        check_result "$name" "$status" "$detail"
+        case "$status" in
+            pass|fail|warn|skip) check_result "$name" "$status" "$detail" ;;
+        esac
     done <<< "$DEEP_OUTPUT"
+    if [ "$DEEP_EXIT" -ne 0 ]; then
+        check_result "Deep analyzer" "fail" "Code ${DEEP_EXIT}. Voir log."
+        echo "$DEEP_OUTPUT" >> "$LOG_FILE"
+    elif ! echo "$DEEP_OUTPUT" | grep -Eq '^(pass|fail|warn|skip)\|'; then
+        check_result "Deep analyzer" "fail" "Aucun résultat de contrôle reçu"
+    fi
     
     echo -e "  ${DIM}Deep analysis terminée (${DEEP_DURATION}s)${NC}"
 else
@@ -300,7 +327,8 @@ phase_header "3" "UNIT TESTS" "Vitest — logique isolée"
 if [ -f "vitest.config.ts" ] || [ -f "vitest.config.js" ]; then
     echo -e "  ${DIM}Running Vitest...${NC}"
     VT_START=$(date +%s)
-    VT_OUTPUT=$(npx vitest run --reporter=json 2>&1 || true)
+    VT_EXIT=0
+    VT_OUTPUT=$(npx vitest run --reporter=json 2>&1) || VT_EXIT=$?
     VT_END=$(date +%s)
     VT_DURATION=$((VT_END - VT_START))
     
@@ -309,20 +337,11 @@ if [ -f "vitest.config.ts" ] || [ -f "vitest.config.js" ]; then
     VT_PASSED=$(echo "$VT_OUTPUT" | grep -o '"numPassedTests":[0-9]*' | grep -o '[0-9]*' || echo "?")
     VT_FAILED_COUNT=$(echo "$VT_OUTPUT" | grep -o '"numFailedTests":[0-9]*' | grep -o '[0-9]*' || echo "0")
     
-    if [ "$VT_FAILED_COUNT" = "0" ] || [ "$VT_FAILED_COUNT" = "?" ]; then
-        # Also check exit-code style
-        if echo "$VT_OUTPUT" | grep -qi "failed"; then
-            check_result "Vitest" "fail" "Tests en échec. Voir log." "$VT_DURATION"
-            echo "$VT_OUTPUT" | tail -20 >> "$LOG_FILE"
-        else
-            check_result "Vitest" "pass" "${VT_PASSED:-?}/${VT_TOTAL:-?} tests OK" "$VT_DURATION"
-        fi
+    if [ "$VT_EXIT" -eq 0 ]; then
+        check_result "Vitest" "pass" "${VT_PASSED:-?}/${VT_TOTAL:-?} tests OK" "$VT_DURATION"
     else
-        check_result "Vitest" "fail" "${VT_FAILED_COUNT} test(s) en échec sur ${VT_TOTAL}" "$VT_DURATION"
-        # Extract failed test names
-        echo "$VT_OUTPUT" | grep -A2 "FAIL" | head -15 | while read -r line; do
-            echo -e "     ${RED}${DIM}$line${NC}"
-        done
+        check_result "Vitest" "fail" "Code ${VT_EXIT}, ${VT_FAILED_COUNT} test(s) en échec sur ${VT_TOTAL}. Voir log." "$VT_DURATION"
+        echo "$VT_OUTPUT" >> "$LOG_FILE"
     fi
     
     # Coverage check (if available)
@@ -356,18 +375,19 @@ phase_header "4" "PRODUCTION BUILD" "next build — SSR, hydration, imports dyna
 
 echo -e "  ${DIM}Running next build (peut prendre 1-3 min)...${NC}"
 BUILD_START=$(date +%s)
-BUILD_OUTPUT=$(npx next build 2>&1 || true)
+BUILD_EXIT=0
+BUILD_OUTPUT=$(npx next build 2>&1) || BUILD_EXIT=$?
 BUILD_END=$(date +%s)
 BUILD_DURATION=$((BUILD_END - BUILD_START))
 
 BUILD_ERRORS=$(echo "$BUILD_OUTPUT" | grep -ci "error\|failed" || true)
 BUILD_WARNINGS=$(echo "$BUILD_OUTPUT" | grep -ci "warn" || true)
 
-if echo "$BUILD_OUTPUT" | grep -q "Compiled successfully\|Build completed\| ✓ "; then
+if [ "$BUILD_EXIT" -eq 0 ]; then
     check_result "next build" "pass" "Build OK" "$BUILD_DURATION"
     
     # Check for large bundles
-    LARGE_PAGES=$(echo "$BUILD_OUTPUT" | grep -E "○|●|λ|ƒ" | awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+(\.[0-9]+)?[[:space:]]*(kB|MB)$/ || $(i-1) ~ /^[0-9]+(\.[0-9]+)?$/ && $i ~ /^(kB|MB)$/) print}' | head -5)
+    LARGE_PAGES=$(echo "$BUILD_OUTPUT" | grep -E "○|●|λ|ƒ" | awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+(\.[0-9]+)?[[:space:]]*(kB|MB)$/ || $(i-1) ~ /^[0-9]+(\.[0-9]+)?$/ && $i ~ /^(kB|MB)$/) print}' | head -5 || true)
     
     # Check for hydration warnings in build output
     HYDRATION_ISSUES=$(echo "$BUILD_OUTPUT" | grep -ci "hydrat" || true)
@@ -389,7 +409,7 @@ if echo "$BUILD_OUTPUT" | grep -q "Compiled successfully\|Build completed\| ✓ 
                 }
             }
         }
-    ' | head -5)
+    ' | head -5 || true)
     
     if [ -n "$OVERSIZED" ]; then
         check_result "Bundle size" "warn" "Pages > 300kB détectées — vérifie les imports"
@@ -397,10 +417,10 @@ if echo "$BUILD_OUTPUT" | grep -q "Compiled successfully\|Build completed\| ✓ 
         check_result "Bundle size" "pass" "Aucune page surdimensionnée"
     fi
     
-elif [ "$BUILD_ERRORS" -gt 0 ]; then
-    check_result "next build" "fail" "Build échoué (${BUILD_ERRORS} erreur(s))" "$BUILD_DURATION"
+else
+    check_result "next build" "fail" "Build échoué (code ${BUILD_EXIT}, ${BUILD_ERRORS} erreur(s))" "$BUILD_DURATION"
     # Show the actual errors
-    echo "$BUILD_OUTPUT" | grep -i "error" | head -10 | while read -r line; do
+    echo "$BUILD_OUTPUT" | sed -n '1,10p' | while read -r line; do
         echo -e "     ${RED}${DIM}$line${NC}"
     done
     echo "$BUILD_OUTPUT" >> "$LOG_FILE"
@@ -409,36 +429,37 @@ elif [ "$BUILD_ERRORS" -gt 0 ]; then
     echo ""
     echo -e "  ${RED}${BOLD}  ⚡ C'est probablement ici que vivent tes bugs UI.${NC}"
     echo -e "  ${RED}     Le build prod expose les problèmes que le dev server masque.${NC}"
-else
-    check_result "next build" "warn" "Statut incertain — vérifie manuellement" "$BUILD_DURATION"
-    echo "$BUILD_OUTPUT" | tail -10 >> "$LOG_FILE"
 fi
 
 # ============================================================================
 # PHASE 5 — E2E TESTS (Playwright against prod build)
 # ============================================================================
-if [ "$MODE" = "--full" ] && [ -f "playwright.config.ts" ]; then
+if [ "$MODE" = "--full" ] && [ "$BUILD_EXIT" -eq 0 ] && [ -f "playwright.config.ts" ]; then
     phase_header "5" "E2E TESTS" "Playwright — tests d'interface contre le build de prod"
     
     # Check if Playwright browsers are installed
     if npx playwright --version > /dev/null 2>&1; then
         echo -e "  ${DIM}Running Playwright...${NC}"
         E2E_START=$(date +%s)
-        E2E_OUTPUT=$(npx playwright test --reporter=json 2>&1 || true)
+        E2E_EXIT=0
+        E2E_OUTPUT=$(npx playwright test --reporter=json 2>&1) || E2E_EXIT=$?
         E2E_END=$(date +%s)
         E2E_DURATION=$((E2E_END - E2E_START))
         
         E2E_PASSED=$(echo "$E2E_OUTPUT" | grep -o '"expected":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "?")
         E2E_FAILED_COUNT=$(echo "$E2E_OUTPUT" | grep -o '"unexpected":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
         
-        if [ "$E2E_FAILED_COUNT" = "0" ]; then
+        if [ "$E2E_EXIT" -eq 0 ]; then
             check_result "Playwright E2E" "pass" "${E2E_PASSED} test(s) OK" "$E2E_DURATION"
         else
-            check_result "Playwright E2E" "fail" "${E2E_FAILED_COUNT} test(s) en échec" "$E2E_DURATION"
+            check_result "Playwright E2E" "fail" "Code ${E2E_EXIT}, ${E2E_FAILED_COUNT} test(s) en échec. Voir log." "$E2E_DURATION"
+            echo "$E2E_OUTPUT" >> "$LOG_FILE"
         fi
     else
-        check_result "Playwright" "skip" "Browsers non installés. Lance: npx playwright install"
+        check_result "Playwright" "fail" "Commande Playwright indisponible. Vérifier l'installation."
     fi
+elif [ "$BUILD_EXIT" -ne 0 ]; then
+    check_result "Playwright E2E" "skip" "Build échoué ; aucune recette E2E de cet artefact"
 elif [ ! -f "playwright.config.ts" ]; then
     check_result "Playwright E2E" "skip" "Pas de playwright.config.ts"
 fi
@@ -452,11 +473,21 @@ phase_header "6" "SECURITY & HYGIENE" "Dépendances vulnérables, secrets expos�
 
 # npm audit
 echo -e "  ${DIM}Running npm audit...${NC}"
-AUDIT_OUTPUT=$(npm audit --json 2>&1 || true)
-AUDIT_HIGH=$(echo "$AUDIT_OUTPUT" | grep -o '"high":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-AUDIT_CRITICAL=$(echo "$AUDIT_OUTPUT" | grep -o '"critical":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
+AUDIT_EXIT=0
+AUDIT_OUTPUT=$(npm audit --json 2>&1) || AUDIT_EXIT=$?
+AUDIT_COUNTS=$(printf '%s' "$AUDIT_OUTPUT" | node -e '
+    try {
+        const data = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+        const v = data.metadata?.vulnerabilities;
+        if (!v || !Number.isInteger(v.high) || !Number.isInteger(v.critical)) process.exit(1);
+        console.log(`${v.high} ${v.critical}`);
+    } catch { process.exit(1); }
+' || true)
+read -r AUDIT_HIGH AUDIT_CRITICAL <<< "$AUDIT_COUNTS"
 
-if [ "$AUDIT_CRITICAL" -gt 0 ]; then
+if [ -z "$AUDIT_COUNTS" ] || [ "$AUDIT_EXIT" -gt 1 ]; then
+    check_result "npm audit" "fail" "Audit indisponible ou résultat invalide (code ${AUDIT_EXIT})"
+elif [ "$AUDIT_CRITICAL" -gt 0 ]; then
     check_result "npm audit" "fail" "${AUDIT_CRITICAL} vulnérabilité(s) critique(s)"
 elif [ "$AUDIT_HIGH" -gt 0 ]; then
     check_result "npm audit" "warn" "${AUDIT_HIGH} vulnérabilité(s) haute(s)"

@@ -72,7 +72,7 @@ export const authRouter = createTRPCRouter({
       const { systemEmailIsArmed } = await import("@/server/services/email");
       // This global capability is identical for known and unknown addresses.
       // Do not issue an unusable proof or print it into a delivery log.
-      if (!systemEmailIsArmed()) return { success: true, deliveryAvailable: false };
+      if (!await systemEmailIsArmed()) return { success: true, deliveryAvailable: false };
       const user = await ctx.db.user.findUnique({
         where: { email: input.email.toLowerCase() },
       });

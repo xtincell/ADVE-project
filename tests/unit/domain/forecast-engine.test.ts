@@ -3,6 +3,7 @@
  * aux outliers, backtest intégré, calibration. Pur, sans IO.
  */
 import { describe, it, expect } from "vitest";
+import { sourceFilesMatching } from "../../support/source-file-scan";
 import {
   forecastSeries,
   normalizeDaily,
@@ -92,18 +93,8 @@ describe("slopeDirection / calibrateConfidence", () => {
 });
 
 describe("single-writer PredictionRecord (verrou HARD, ADR-0156)", () => {
-  it("db.predictionRecord.create n'existe QUE dans seshat/prediction", async () => {
-    const { execSync } = await import("node:child_process");
-    const out = execSync(
-      `grep -rln "predictionRecord.create" src/ || true`,
-      { encoding: "utf8", cwd: process.cwd() },
-    )
-      .split("\n")
-      .filter(Boolean)
-      // grep BSD (macOS) émet `src//server/...` quand le motif de départ finit
-      // par `/` — normalisé pour que le verrou tourne à l'identique en local
-      // et en CI Linux (pré-existant, constaté 2026-07-20).
-      .map((p) => p.replace(/\/{2,}/g, "/"));
+  it("db.predictionRecord.create n'existe QUE dans seshat/prediction", () => {
+    const out = sourceFilesMatching(process.cwd(), /predictionRecord.create/);
     expect(out).toEqual(["src/server/services/seshat/prediction/index.ts"]);
   });
 });

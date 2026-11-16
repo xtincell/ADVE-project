@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { isGodModeEmail } from "@/lib/auth/god-mode";
 
 // ---------------------------------------------------------------------------
 // Legacy redirects (kept from previous migration)
@@ -194,7 +195,36 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const userRole = (token.role as string) ?? "USER";
+  let userRole = (token.role as string) ?? "USER";
+
+  // getToken decrypts the cookie without running Auth.js' jwt callback. On
+  // staff-only pages the persisted identity must therefore be read here too:
+  // a role or god-mode email retained in an old cookie cannot grant access.
+  if (matched.prefix === "/console" || matched.prefix === "/launchpad") {
+    if (typeof token.id !== "string" || !token.id.trim()) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+    try {
+      const { db } = await import("@/lib/db");
+      const currentUser = await db.user.findUnique({
+        where: { id: token.id },
+        select: { role: true, email: true },
+      });
+      if (!currentUser) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("callbackUrl", path);
+        return NextResponse.redirect(loginUrl);
+      }
+      userRole = isGodModeEmail(currentUser.email) ? "ADMIN" : currentUser.role;
+    } catch {
+      return new NextResponse("La vérification de vos accès est momentanément indisponible.", {
+        status: 503,
+        headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+  }
 
   if (!matched.roles.includes(userRole)) {
     // Authenticated but wrong role — 403 or redirect to a safe page

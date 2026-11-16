@@ -22,6 +22,7 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import crypto from "crypto";
+import { measuredNumber, measurementRecord, measurementCoverage, readBriefMeasurements, readSectorMeasurements, signalMeasurement } from "./measurements";
 
 /**
  * Knowledge Aggregator (P5) — Batch service that aggregates KnowledgeEntry data.
@@ -62,16 +63,15 @@ export { aggregateSectorBenchmarks, aggregateFrameworkRankings, aggregateCreator
  */
 async function aggregateSectorBenchmarks(): Promise<number> {
   const strategies = await db.strategy.findMany({
-    where: { status: "ACTIVE", advertis_vector: { not: Prisma.JsonNull } },
+    where: { status: "ACTIVE" },
     select: { id: true, advertis_vector: true, operatorId: true },
   });
 
-  // Group by sector (derived from associated KnowledgeEntries)
-  const sectorMap = new Map<string, { composites: number[]; markets: Set<string> }>();
+  // Each market has its own population; a sector-wide mean is not a market mean.
+  const sectorMap = new Map<string, { sector: string; market: string; composites: number[]; count: number }>();
 
   for (const strategy of strategies) {
-    const vector = strategy.advertis_vector as Record<string, number> | null;
-    if (!vector?.composite) continue;
+    const composite = measuredNumber(measurementRecord(strategy.advertis_vector).composite);
 
     // Find sector from related QuickIntake or KnowledgeEntry
     const intake = await db.quickIntake.findFirst({
@@ -82,57 +82,54 @@ async function aggregateSectorBenchmarks(): Promise<number> {
     const sector = intake?.sector ?? "UNKNOWN";
     const market = intake?.country ?? "UNKNOWN";
 
-    if (!sectorMap.has(sector)) {
-      sectorMap.set(sector, { composites: [], markets: new Set() });
+    const key = JSON.stringify([sector, market]);
+    if (!sectorMap.has(key)) {
+      sectorMap.set(key, { sector, market, composites: [], count: 0 });
     }
-    const entry = sectorMap.get(sector)!;
-    entry.composites.push(vector.composite);
-    entry.markets.add(market);
+    const entry = sectorMap.get(key)!;
+    if (composite !== null) entry.composites.push(composite);
+    entry.count++;
   }
 
   let count = 0;
-  for (const [sector, data] of sectorMap) {
-    if (data.composites.length < 2) continue; // Need at least 2 data points
-
-    const sorted = [...data.composites].sort((a, b) => a - b);
-    const avg = sorted.reduce((s, v) => s + v, 0) / sorted.length;
-    const topQuartile = sorted[Math.floor(sorted.length * 0.75)] ?? avg;
-
-    // Find weakest pillar across sector
-    // (simplified — in production would aggregate pillar-level data)
-
-    for (const market of data.markets) {
-      await db.knowledgeEntry.upsert({
-        where: { id: `agg-benchmark-${sector}-${market}` },
-        update: {
-          data: {
-            avgComposite: Math.round(avg),
-            topQuartile: Math.round(topQuartile),
-            sampleSize: data.composites.length,
-            aggregatedAt: new Date().toISOString(),
-          } as Prisma.InputJsonValue,
-          sampleSize: data.composites.length,
-          successScore: avg / 200,
-        },
-        create: {
-          id: `agg-benchmark-${sector}-${market}`,
-          entryType: "SECTOR_BENCHMARK",
-          sector,
-          market,
-          data: {
-            avgComposite: Math.round(avg),
-            topQuartile: Math.round(topQuartile),
-            sampleSize: data.composites.length,
-            aggregatedAt: new Date().toISOString(),
-          } as Prisma.InputJsonValue,
-          sampleSize: data.composites.length,
-          successScore: avg / 200,
-          sourceHash: "aggregator",
-        },
-      });
-      count++;
-    }
+  for (const { sector, market, composites, count: totalCount } of sectorMap.values()) {
+    const sorted = [...composites].sort((a, b) => a - b);
+    const avg = sorted.length >= 2 ? sorted.reduce((sum, value) => sum + value, 0) / sorted.length : null;
+    const topQuartile = avg === null ? null : sorted[Math.floor(sorted.length * 0.75)] ?? null;
+    const data = {
+      metricsVersion: 1,
+      avgComposite: avg === null ? null : Math.round(avg),
+      topQuartile: topQuartile === null ? null : Math.round(topQuartile),
+      sampleSize: composites.length,
+      coverage: measurementCoverage(composites.length, totalCount),
+      aggregatedAt: new Date().toISOString(),
+    };
+    await db.knowledgeEntry.upsert({
+      where: { id: `agg-benchmark-${sector}-${market}` },
+      update: {
+        data: data as Prisma.InputJsonValue,
+        sampleSize: composites.length,
+        successScore: avg === null ? null : avg / 200,
+        sourceHash: "aggregator",
+      },
+      create: {
+        id: `agg-benchmark-${sector}-${market}`,
+        entryType: "SECTOR_BENCHMARK",
+        sector,
+        market,
+        data: data as Prisma.InputJsonValue,
+        sampleSize: composites.length,
+        successScore: avg === null ? null : avg / 200,
+        sourceHash: "aggregator",
+      },
+    });
+    count++;
   }
+
+  await db.knowledgeEntry.updateMany({
+    where: { entryType: "SECTOR_BENCHMARK", sourceHash: "aggregator", id: { startsWith: "agg-benchmark-", notIn: [...sectorMap.values()].map(({ sector, market }) => `agg-benchmark-${sector}-${market}`) } },
+    data: { sampleSize: 0, successScore: null, sourceHash: "aggregator-expired" },
+  });
 
   return count;
 }
@@ -145,48 +142,19 @@ async function aggregateFrameworkRankings(): Promise<number> {
     where: { entryType: "DIAGNOSTIC_RESULT" },
   });
 
-  const frameworkStats = new Map<string, { totalScore: number; count: number }>();
-
-  for (const d of diagnostics) {
-    const data = d.data as Record<string, unknown>;
-    const framework = data.framework as string;
-    if (!framework) continue;
-
-    const score = d.successScore ?? 0.5;
-    if (!frameworkStats.has(framework)) {
-      frameworkStats.set(framework, { totalScore: 0, count: 0 });
-    }
-    const stats = frameworkStats.get(framework)!;
-    stats.totalScore += score;
-    stats.count++;
-  }
-
-  const rankings = [...frameworkStats.entries()]
-    .map(([framework, stats]) => ({
-      framework,
-      effectiveness: stats.count > 0 ? stats.totalScore / stats.count : 0,
-      usageCount: stats.count,
-    }))
-    .sort((a, b) => b.effectiveness - a.effectiveness);
-
-  if (rankings.length > 0) {
-    await db.knowledgeEntry.upsert({
-      where: { id: "agg-framework-rankings" },
-      update: {
-        data: { rankings, aggregatedAt: new Date().toISOString() } as Prisma.InputJsonValue,
-      },
-      create: {
-        id: "agg-framework-rankings",
-        entryType: "DIAGNOSTIC_RESULT",
-        data: {
-          type: "framework_ranking",
-          rankings,
-          aggregatedAt: new Date().toISOString(),
-        } as Prisma.InputJsonValue,
-        sourceHash: "aggregator",
-      },
-    });
-  }
+  const rankings = frameworkMeasurements(diagnostics).map(({ sectors: _sectors, ...ranking }) => ranking);
+  const data = { type: "framework_ranking", rankings, aggregatedAt: new Date().toISOString() };
+  // Also replace a previous ranking when its source population becomes empty.
+  await db.knowledgeEntry.upsert({
+    where: { id: "agg-framework-rankings" },
+    update: { data: data as Prisma.InputJsonValue },
+    create: {
+      id: "agg-framework-rankings",
+      entryType: "DIAGNOSTIC_RESULT",
+      data: data as Prisma.InputJsonValue,
+      sourceHash: "aggregator",
+    },
+  });
 
   return rankings.length;
 }
@@ -253,53 +221,74 @@ async function aggregateBriefPatterns(): Promise<number> {
     take: 500,
   });
 
-  const channelStats = new Map<string, { totalEngagement: number; count: number }>();
+  type Sources = Record<"DECLARED" | "SIGNED_WEBHOOK" | "LEGACY_REPORTED", number>;
+  const channelStats = new Map<string, { totalEngagement: number; engagementCount: number; totalClicks: number; clicksCount: number; count: number; sources: { engagement: Sources; clicks: Sources } }>();
 
   for (const s of signals) {
-    const data = s.data as Record<string, unknown> | null;
-    if (!data) continue;
-    const channel = (data.platform as string) ?? (data.channel as string) ?? "UNKNOWN";
-    const engagement = (data.engagement as number) ?? (data.clicks as number) ?? 0;
+    const data = measurementRecord(s.data);
+    const channel = [data.platform, data.channel].find((value): value is string => typeof value === "string" && value.length > 0) ?? "UNKNOWN";
+    const engagement = signalMeasurement(data, "engagement");
+    const clicks = signalMeasurement(data, "clicks");
 
     if (!channelStats.has(channel)) {
-      channelStats.set(channel, { totalEngagement: 0, count: 0 });
+      channelStats.set(channel, { totalEngagement: 0, engagementCount: 0, totalClicks: 0, clicksCount: 0, count: 0,
+        sources: { engagement: { DECLARED: 0, SIGNED_WEBHOOK: 0, LEGACY_REPORTED: 0 }, clicks: { DECLARED: 0, SIGNED_WEBHOOK: 0, LEGACY_REPORTED: 0 } } });
     }
     const stats = channelStats.get(channel)!;
-    stats.totalEngagement += engagement;
+    if (engagement !== null) {
+      stats.totalEngagement += engagement.value;
+      stats.engagementCount++;
+      stats.sources.engagement[engagement.source]++;
+    }
+    if (clicks !== null) {
+      stats.totalClicks += clicks.value;
+      stats.clicksCount++;
+      stats.sources.clicks[clicks.source]++;
+    }
     stats.count++;
   }
 
   let count = 0;
   for (const [channel, stats] of channelStats) {
-    if (stats.count < 3) continue;
+    const data = {
+      metricsVersion: 1,
+      channel,
+      // Keep the minimum sample requirement for each metric, not for missing values.
+      avgEngagement: stats.engagementCount >= 3 ? Math.round(stats.totalEngagement / stats.engagementCount) : null,
+      avgClicks: stats.clicksCount >= 3 ? Math.round(stats.totalClicks / stats.clicksCount) : null,
+      sampleSize: stats.engagementCount,
+      signalCount: stats.count,
+      coverage: {
+        engagement: measurementCoverage(stats.engagementCount, stats.count),
+        clicks: measurementCoverage(stats.clicksCount, stats.count),
+      },
+      measurementSources: stats.sources,
+      aggregatedAt: new Date().toISOString(),
+    };
 
     await db.knowledgeEntry.upsert({
       where: { id: `agg-brief-${channel}` },
       update: {
-        data: {
-          channel,
-          avgEngagement: stats.count > 0 ? Math.round(stats.totalEngagement / stats.count) : 0,
-          sampleSize: stats.count,
-          aggregatedAt: new Date().toISOString(),
-        } as Prisma.InputJsonValue,
-        sampleSize: stats.count,
+        data: data as Prisma.InputJsonValue,
+        sampleSize: stats.engagementCount,
+        sourceHash: "aggregator",
       },
       create: {
         id: `agg-brief-${channel}`,
         entryType: "BRIEF_PATTERN",
         channel,
-        data: {
-          channel,
-          avgEngagement: stats.count > 0 ? Math.round(stats.totalEngagement / stats.count) : 0,
-          sampleSize: stats.count,
-          aggregatedAt: new Date().toISOString(),
-        } as Prisma.InputJsonValue,
-        sampleSize: stats.count,
+        data: data as Prisma.InputJsonValue,
+        sampleSize: stats.engagementCount,
         sourceHash: "aggregator",
       },
     });
     count++;
   }
+
+  await db.knowledgeEntry.updateMany({
+    where: { entryType: "BRIEF_PATTERN", sourceHash: "aggregator", id: { startsWith: "agg-brief-", notIn: [...channelStats.keys()].map(channel => `agg-brief-${channel}`) } },
+    data: { sampleSize: 0, successScore: null, sourceHash: "aggregator-expired" },
+  });
 
   return count;
 }
@@ -349,24 +338,22 @@ export async function queryKnowledgeGraph(
 // REQ-5: FRAMEWORK RANKINGS — Which ARTEMIS frameworks score highest
 // ============================================================================
 
-export async function getFrameworkRankings(sector?: string) {
-  const where: Prisma.KnowledgeEntryWhereInput = { entryType: "DIAGNOSTIC_RESULT" };
-  if (sector) where.sector = sector;
-
-  const entries = await db.knowledgeEntry.findMany({ where });
-
-  const frameworkMap = new Map<string, { totalScore: number; count: number; sectors: Set<string> }>();
+function frameworkMeasurements(entries: { data: unknown; successScore: number | null; sector: string | null }[]) {
+  const frameworkMap = new Map<string, { totalScore: number; count: number; observedCount: number; sectors: Set<string> }>();
 
   for (const entry of entries) {
-    const data = entry.data as Record<string, unknown>;
-    const framework = data.framework as string;
-    if (!framework) continue;
+    const framework = measurementRecord(entry.data).framework;
+    if (typeof framework !== "string" || framework.length === 0) continue;
 
     if (!frameworkMap.has(framework)) {
-      frameworkMap.set(framework, { totalScore: 0, count: 0, sectors: new Set() });
+      frameworkMap.set(framework, { totalScore: 0, count: 0, observedCount: 0, sectors: new Set() });
     }
     const stats = frameworkMap.get(framework)!;
-    stats.totalScore += entry.successScore ?? 0.5;
+    const score = measuredNumber(entry.successScore);
+    if (score !== null) {
+      stats.totalScore += score;
+      stats.observedCount++;
+    }
     stats.count++;
     if (entry.sector) stats.sectors.add(entry.sector);
   }
@@ -374,11 +361,23 @@ export async function getFrameworkRankings(sector?: string) {
   return [...frameworkMap.entries()]
     .map(([framework, stats]) => ({
       framework,
-      avgScore: stats.count > 0 ? Math.round((stats.totalScore / stats.count) * 100) / 100 : 0,
+      effectiveness: stats.observedCount > 0 ? stats.totalScore / stats.observedCount : null,
       usageCount: stats.count,
+      observedCount: stats.observedCount,
+      missingCount: stats.count - stats.observedCount,
       sectors: [...stats.sectors],
     }))
-    .sort((a, b) => b.avgScore - a.avgScore);
+    .sort((a, b) => (b.effectiveness ?? -1) - (a.effectiveness ?? -1));
+}
+
+export async function getFrameworkRankings(sector?: string) {
+  const where: Prisma.KnowledgeEntryWhereInput = { entryType: "DIAGNOSTIC_RESULT" };
+  if (sector) where.sector = sector;
+  const entries = await db.knowledgeEntry.findMany({ where });
+  return frameworkMeasurements(entries).map(({ effectiveness, ...ranking }) => ({
+    ...ranking,
+    avgScore: effectiveness === null ? null : Math.round(effectiveness * 100) / 100,
+  }));
 }
 
 // ============================================================================
@@ -391,18 +390,22 @@ export async function getCreatorPatterns(sector?: string) {
 
   const entries = await db.knowledgeEntry.findMany({ where });
 
-  const tierMap = new Map<string, { totalScore: number; count: number; skills: Map<string, number> }>();
+  const tierMap = new Map<string, { totalScore: number; count: number; observedCount: number; skills: Map<string, number> }>();
 
   for (const entry of entries) {
-    const data = entry.data as Record<string, unknown>;
-    const tier = (data.tier as string) ?? "UNKNOWN";
-    const skills = (data.skills as string[]) ?? [];
+    const data = measurementRecord(entry.data);
+    const tier = typeof data.tier === "string" ? data.tier : "UNKNOWN";
+    const skills = Array.isArray(data.skills) ? data.skills.filter((skill): skill is string => typeof skill === "string") : [];
 
     if (!tierMap.has(tier)) {
-      tierMap.set(tier, { totalScore: 0, count: 0, skills: new Map() });
+      tierMap.set(tier, { totalScore: 0, count: 0, observedCount: 0, skills: new Map() });
     }
     const stats = tierMap.get(tier)!;
-    stats.totalScore += entry.successScore ?? 0.5;
+    const score = measuredNumber(entry.successScore);
+    if (score !== null) {
+      stats.totalScore += score;
+      stats.observedCount++;
+    }
     stats.count++;
     for (const skill of skills) {
       stats.skills.set(skill, (stats.skills.get(skill) ?? 0) + 1);
@@ -412,14 +415,16 @@ export async function getCreatorPatterns(sector?: string) {
   return [...tierMap.entries()]
     .map(([tier, stats]) => ({
       tier,
-      avgScore: stats.count > 0 ? Math.round((stats.totalScore / stats.count) * 100) / 100 : 0,
+      avgScore: stats.observedCount > 0 ? Math.round((stats.totalScore / stats.observedCount) * 100) / 100 : null,
       count: stats.count,
+      observedCount: stats.observedCount,
+      missingCount: stats.count - stats.observedCount,
       topSkills: [...stats.skills.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([skill, freq]) => ({ skill, frequency: freq })),
     }))
-    .sort((a, b) => b.avgScore - a.avgScore);
+    .sort((a, b) => (b.avgScore ?? -1) - (a.avgScore ?? -1));
 }
 
 // ============================================================================
@@ -433,14 +438,25 @@ export async function getBriefPatterns(sector?: string) {
   const entries = await db.knowledgeEntry.findMany({ where, orderBy: { successScore: "desc" } });
 
   return entries.map((entry) => {
-    const data = entry.data as Record<string, unknown>;
+    const data = measurementRecord(entry.data);
+    const measurements = readBriefMeasurements(data);
+    const metrics = measurementRecord(data.metrics);
+    const isMediaPerformance = data.type === "media_performance" || "metrics" in data;
     return {
       id: entry.id,
       channel: entry.channel ?? (data.channel as string) ?? "UNKNOWN",
-      avgEngagement: data.avgEngagement as number ?? 0,
-      sampleSize: entry.sampleSize,
-      successScore: entry.successScore ?? 0,
+      ...measurements,
+      ...(entry.sourceHash === "aggregator-expired" ? { avgEngagement: null, avgClicks: null } : {}),
+      aggregationStatus: entry.sourceHash === "aggregator-expired" ? "EXPIRED" : measurements.coverage ? "CURRENT" : "UNVERIFIED",
+      sampleSize: entry.sourceHash === "aggregator-expired" ? 0 : measurements.coverage?.engagement.observedCount ?? null,
+      successScore: isMediaPerformance ? null : measuredNumber(entry.successScore),
+      performanceMetrics: isMediaPerformance ? {
+        engagementRate: measuredNumber(metrics.engagementRate),
+        ctr: measuredNumber(metrics.ctr),
+        roas: measuredNumber(metrics.roas),
+      } : null,
       sector: entry.sector,
+      aggregatedAt: typeof data.aggregatedAt === "string" ? data.aggregatedAt : null,
     };
   });
 }
@@ -459,13 +475,13 @@ export async function getSectorBenchmarks(sector: string, market?: string) {
   const entries = await db.knowledgeEntry.findMany({ where });
 
   return entries.map((entry) => {
-    const data = entry.data as Record<string, unknown>;
+    const data = measurementRecord(entry.data);
     return {
       id: entry.id,
       sector: entry.sector,
       market: entry.market,
-      avgComposite: data.avgComposite as number ?? 0,
-      topQuartile: data.topQuartile as number ?? 0,
+      ...readSectorMeasurements(data, entry.id.startsWith("agg-benchmark-")),
+      ...(entry.sourceHash === "aggregator-expired" ? { avgComposite: null, topQuartile: null, basis: "EXPIRED_AGGREGATE" } : {}),
       sampleSize: entry.sampleSize,
       aggregatedAt: data.aggregatedAt as string ?? null,
     };
@@ -532,22 +548,21 @@ export async function ingestMediaPerformance(
     .digest("hex")
     .slice(0, 16);
 
-  const successScore = performanceData.metrics.engagementRate
-    ?? performanceData.metrics.ctr
-    ?? performanceData.metrics.roas
-    ?? 0;
+  // Engagement rate, CTR and ROAS have different denominators/units. Keep their
+  // actual values; no common success-score conversion is defined for this input.
 
   const entry = await db.knowledgeEntry.upsert({
     where: { id: `media-${strategyId}-${hash}` },
     update: {
       data: {
         strategyId,
+        type: "media_performance",
         channel: performanceData.channel,
         metrics: performanceData.metrics,
         period: performanceData.period ?? null,
         ingestedAt: new Date().toISOString(),
       } as Prisma.InputJsonValue,
-      successScore: Math.min(successScore, 1),
+      successScore: null,
     },
     create: {
       id: `media-${strategyId}-${hash}`,
@@ -562,7 +577,7 @@ export async function ingestMediaPerformance(
         period: performanceData.period ?? null,
         ingestedAt: new Date().toISOString(),
       } as Prisma.InputJsonValue,
-      successScore: Math.min(successScore, 1),
+      successScore: null,
       sourceHash: hash,
     },
   });

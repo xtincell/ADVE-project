@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.588", date: "2026-11-16", headline: "Des accès et des résultats mieux qualifiés",
+    highlights: [
+      { emoji: "⚙️", title: "Configurer les emails et les paiements", body: "L’administrateur retrouve les paramètres d’email et de CinetPay dans Configuration, puis Intégrations. Il peut enregistrer un brouillon, compléter les accès plus tard et remplacer les secrets sans les afficher." },
+      { emoji: "🔒", title: "Des droits à jour", body: "Les pages réservées à l’équipe vérifient les droits actuels du compte. Une ancienne connexion ne conserve plus un privilège retiré." },
+      { emoji: "📊", title: "Distinguer un zéro d’une absence", body: "Les statistiques de référence indiquent les observations disponibles. Les clics et l’engagement restent des mesures distinctes ; une information absente n’est plus remplacée par une valeur." },
+      { emoji: "🧭", title: "Relier l’observation à la publication", body: "La variation affichée après une publication conserve ses références et ses dates. Elle décrit l’évolution de la marque, sans présenter le média comme sa cause démontrée." },
+    ],
+  },
+  {
     version: "6.27.568", date: "2026-11-11", headline: "Retrouver l’histoire de chaque produit de votre catalogue",
     highlights: [
       { emoji: "🗂️", title: "Entrées, retraits et retours", body: "La page Offre & Pricing propose un historique du catalogue : pour chaque produit, quand il est entré, a été renommé, retiré ou réintroduit, par quelle modification, avec son identifiant. Il se lit dans les versions conservées, sans rien modifier." },

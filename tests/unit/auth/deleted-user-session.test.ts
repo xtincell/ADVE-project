@@ -51,7 +51,7 @@ describe("jwt callback — un compte supprimé perd sa session", () => {
     state.findUnique.mockResolvedValue(null);
     const token = await jwt({ token: { id: "deleted-admin", role: "ADMIN", email: "former@example.test" } });
     expect(token).toBeNull();
-    expect(state.findUnique).toHaveBeenCalledWith({ where: { id: "deleted-admin" }, select: { role: true } });
+    expect(state.findUnique).toHaveBeenCalledWith({ where: { id: "deleted-admin" }, select: { role: true, email: true } });
   });
 
   it("n'accorde pas le god-mode à un compte de l'allowlist qui n'existe plus", async () => {
@@ -73,7 +73,7 @@ describe("jwt callback — un compte supprimé perd sa session", () => {
   });
 
   it("garde le god-mode au-dessus du rôle relu pour un compte de l'allowlist", async () => {
-    state.findUnique.mockResolvedValue({ role: "USER" });
+    state.findUnique.mockResolvedValue({ role: "USER", email: "xtincell@gmail.com" });
     const token = await jwt({ token: { id: "founder", role: "ADMIN", email: "xtincell@gmail.com" } });
     expect(token).toMatchObject({ role: "ADMIN" });
   });
@@ -91,6 +91,39 @@ describe("jwt callback — un compte supprimé perd sa session", () => {
     });
     expect(token).toMatchObject({ id: "fresh-user", role: "USER" });
     expect(state.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("retire le god-mode quand l'adresse actuelle n'est plus dans l'allowlist", async () => {
+    state.findUnique.mockResolvedValue({ role: "USER", email: "current@example.test" });
+    const token = await jwt({ token: { id: "founder", role: "ADMIN", email: "xtincell@gmail.com" } });
+    expect(token).toMatchObject({ role: "USER", email: "current@example.test" });
+  });
+
+  it("ne conserve pas une ancienne adresse god-mode quand la nouvelle connexion n'a pas d'email", async () => {
+    const token = await jwt({
+      token: { role: "ADMIN", email: "xtincell@gmail.com" },
+      user: { id: "fresh-user", email: null, role: "USER" } as JwtArgs["user"],
+    });
+    expect(token).toMatchObject({ id: "fresh-user", role: "USER", email: null });
+    expect(state.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("applique le god-mode à l'adresse actuelle, même si l'ancien jeton porte une autre adresse", async () => {
+    state.findUnique.mockResolvedValue({ role: "USER", email: "xtincell@gmail.com" });
+    const token = await jwt({ token: { id: "founder", role: "USER", email: "previous@example.test" } });
+    expect(token).toMatchObject({ role: "ADMIN", email: "xtincell@gmail.com" });
+  });
+
+  it.each([undefined, "", "   "])("révoque une identité incomplète (%s) même avec un email god-mode", async (id) => {
+    const token = await jwt({ token: { id, role: "ADMIN", email: "xtincell@gmail.com" } });
+    expect(token).toBeNull();
+    expect(state.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("ne rend aucun jeton si l'identité actuelle ne peut pas être relue", async () => {
+    state.findUnique.mockRejectedValueOnce(new Error("fixture-database-unavailable"));
+    await expect(jwt({ token: { id: "admin", role: "ADMIN", email: "xtincell@gmail.com" } }))
+      .rejects.toThrow("fixture-database-unavailable");
   });
 });
 

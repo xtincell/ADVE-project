@@ -93,6 +93,7 @@ const EXTRA_FILES = [
   join(ROOT, "src/components/neteru/apogee-maintenance-dashboard.tsx"),
   join(ROOT, "src/components/neteru/ptah-forge-button.tsx"),
   join(ROOT, "src/components/neteru/ptah-kiln-tracker.tsx"),
+  join(ROOT, "src/components/neteru/ptah-asset-library.tsx"),
   join(ROOT, "src/lib/i18n/pages/production.ts"),
   // Dette 4.11.a — entrées manquantes du livrable et résumés de production,
   // rendus dans l'atelier Production du cockpit.
@@ -252,7 +253,7 @@ describe("Marketing — vocabulaire lead (audit 2026-07-16)", () => {
   it("aucune sous-marque/plomberie interne dans les chaînes rendues au lead", () => {
     const violations: string[] = [];
     for (const file of files) {
-      const rel = relative(ROOT, file);
+      const rel = relative(ROOT, file).replace(/\\/g, "/");
       const src = stripComments(readFileSync(file, "utf-8"));
       for (const { chunk, line } of renderableChunks(src)) {
         if (IDENTIFIER_CHUNK.test(chunk) || CSS_CLASS_CHUNK.test(chunk) || CODE_CHUNK.test(chunk)) continue;
@@ -288,7 +289,7 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
   it("aucun vocabulaire interne dans les chaînes rendues du portail founder", () => {
     const violations: string[] = [];
     for (const file of files) {
-      const rel = relative(ROOT, file);
+      const rel = relative(ROOT, file).replace(/\\/g, "/");
       if (OPERATOR_GATED_ALLOWLIST.includes(rel)) continue;
       const src = stripComments(readFileSync(file, "utf-8"));
       for (const { chunk, line } of renderableChunks(src)) {
@@ -317,7 +318,7 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
   it("aucun mot FR fréquent rendu sans accent (sweep F5 étendu)", () => {
     const violations: string[] = [];
     for (const file of files) {
-      const rel = relative(ROOT, file);
+      const rel = relative(ROOT, file).replace(/\\/g, "/");
       if (OPERATOR_GATED_ALLOWLIST.includes(rel)) continue;
       const src = stripComments(readFileSync(file, "utf-8"));
       for (const { chunk, line } of renderableChunks(src)) {

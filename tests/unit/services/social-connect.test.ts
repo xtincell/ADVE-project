@@ -22,6 +22,7 @@ import {
   discoverSocialAccounts,
   providerReadiness,
   integrationKeyReady,
+  hasAllCurrentScopes,
   type DiscoveredSocialAccount,
 } from "@/server/services/anubis/social-connect";
 import {
@@ -99,6 +100,7 @@ describe("SOCIAL_SCOPES", () => {
       expect(SOCIAL_SCOPES.meta).toContain(s);
     }
     expect(SOCIAL_SCOPES.linkedin).toContain("w_member_social");
+    expect(SOCIAL_SCOPES.instagram).toContain("instagram_business_manage_insights");
     expect(SOCIAL_SCOPES.google.join(" ")).toContain("yt-analytics.readonly");
   });
 
@@ -106,6 +108,12 @@ describe("SOCIAL_SCOPES", () => {
     for (const provider of BRAND_SOCIAL_PROVIDERS) {
       expect(SOCIAL_SCOPES[provider].length).toBeGreaterThan(0);
     }
+  });
+
+  it("propose de reconnecter Instagram tant que la permission de mesure est absente", () => {
+    const previous = SOCIAL_SCOPES.instagram.filter((scope) => scope !== "instagram_business_manage_insights");
+    expect(hasAllCurrentScopes("instagram", previous)).toBe(false);
+    expect(hasAllCurrentScopes("instagram", [...previous, "instagram_business_manage_insights"])).toBe(true);
   });
 });
 
@@ -367,6 +375,7 @@ describe("Instagram Business Login (provider dédié)", () => {
     expect(config.clientId).toBe("1274394400786813");
     expect(config.defaultScopes).toContain("instagram_business_basic");
     expect(config.defaultScopes).toContain("instagram_business_content_publish");
+    expect(config.defaultScopes).toContain("instagram_business_manage_insights");
   });
 
   it("sans INSTAGRAM_OAUTH_CLIENT_SECRET → provider indisponible (null, UI « bientôt disponible »)", () => {
@@ -392,7 +401,7 @@ describe("Instagram Business Login (provider dédié)", () => {
     expect(url).toContain("client_id=1274394400786813");
     expect(url).toContain("enable_fb_login=0"); // login PUREMENT Instagram (pas d'interstitiel FB)
     expect(decodeURIComponent(url)).toContain(
-      "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments",
+      "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments,instagram_business_manage_insights",
     );
   });
 

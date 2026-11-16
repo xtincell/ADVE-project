@@ -29,7 +29,7 @@
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..", "..");
@@ -74,7 +74,7 @@ describe("KnowledgeEntry ne sort jamais brute d'un outil MCP", () => {
   it("toute lecture non projetée est explicitement justifiée", () => {
     const offenders: string[] = [];
     for (const file of FILES) {
-      const rel = file.slice(MCP_DIR.length + 1);
+      const rel = relative(MCP_DIR, file).replace(/\\/g, "/");
       if (INTERNAL_READ_ALLOWLIST.some((a) => rel === a.file)) continue;
       const raws = rawReads(readFileSync(file, "utf8"));
       for (const line of raws) offenders.push(`${rel}:${line}`);

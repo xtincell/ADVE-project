@@ -116,11 +116,12 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
         clientSecret,
         // Scopes « instagram_business_* » (les « business_* » nus sont dépréciés
         // depuis le 2025-01-27). Basic = profil/médias ; content_publish =
-        // publier ; manage_comments/messages = inbox (vague ultérieure).
+        // publier ; manage_comments = inbox ; manage_insights = mesures privées.
         defaultScopes: [
           "instagram_business_basic",
           "instagram_business_content_publish",
           "instagram_business_manage_comments",
+          "instagram_business_manage_insights",
         ],
         // Instagram délimite les scopes par VIRGULE dans l'URL d'autorisation.
         scopeDelimiter: ",",

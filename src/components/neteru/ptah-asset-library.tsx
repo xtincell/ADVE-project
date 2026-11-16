@@ -12,6 +12,12 @@ import Image from "next/image";
 import { trpc } from "@/lib/trpc/client";
 import type { ForgeKind } from "@/server/services/ptah/types";
 import { Hammer, Image as ImageIcon, Video, Music, Box } from "lucide-react";
+import { readAssetBrandObservation } from "@/domain/asset-brand-observation";
+import { cva } from "class-variance-authority";
+
+const filterChip = cva("min-h-11 rounded-full px-3 py-1 text-xs font-medium transition-colors", {
+  variants: { active: { true: "bg-accent-subtle text-accent", false: "bg-surface-raised text-foreground-secondary hover:bg-surface-elevated" } },
+});
 
 const FORGE_KINDS = [
   { value: "image", label: "Images", icon: ImageIcon },
@@ -42,10 +48,10 @@ export function PtahAssetLibrary({ strategyId }: PtahAssetLibraryProps) {
 
   if (!forges || forges.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
+      <div className="rounded-2xl border border-dashed border-border-subtle p-8 text-center">
         <Hammer className="mx-auto mb-3 h-8 w-8 text-foreground-tertiary" />
         <p className="text-sm text-foreground-secondary">
-          Aucun asset forgé. Lance une forge depuis le formulaire ci-dessus.
+          Votre bibliothèque est vide. Lancez une création depuis le formulaire ci-dessus.
         </p>
       </div>
     );
@@ -71,7 +77,7 @@ export function PtahAssetLibrary({ strategyId }: PtahAssetLibraryProps) {
         {forges
           .filter((f) => f.versions.length > 0)
           .map((f) => (
-            <ForgeCard key={f.id} forge={f} />
+            <ForgeCard key={f.id} forge={f} strategyId={strategyId} />
           ))}
       </div>
     </div>
@@ -82,11 +88,8 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   return (
     <button
       onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-        active
-          ? "bg-amber-500/15 text-amber-300"
-          : "bg-white/5 text-foreground-secondary hover:bg-white/10"
-      }`}
+      aria-pressed={active}
+      className={filterChip({ active })}
     >
       {label}
     </button>
@@ -110,21 +113,19 @@ interface Forge {
     url: string;
     cdnUrl: string | null;
     kind: string;
-    cultIndexDeltaObserved: number | null;
+    metadata: unknown;
   }>;
 }
 
-function ForgeCard({ forge }: { forge: Forge }) {
+function ForgeCard({ forge, strategyId }: { forge: Forge; strategyId: string }) {
   const v = forge.versions[0];
   if (!v) return null;
   const url = v.cdnUrl ?? v.url;
-  const cps = forge.realisedSuperfans
-    ? (forge.realisedCostUsd ?? forge.estimatedCostUsd) / forge.realisedSuperfans
-    : null;
+  const observation = readAssetBrandObservation(v.metadata, v.id, strategyId);
 
   return (
-    <div className="group overflow-hidden rounded-xl border border-white/5 bg-white/[0.02]">
-      <div className="relative aspect-square overflow-hidden bg-black/40">
+    <div className="group overflow-hidden rounded-xl border border-border-subtle bg-surface-raised">
+      <div className="relative aspect-square overflow-hidden bg-surface-elevated">
         {v.kind === "video" ? (
           <video src={url} className="h-full w-full object-cover" muted loop onMouseEnter={(e) => e.currentTarget.play()} onMouseLeave={(e) => e.currentTarget.pause()} />
         ) : v.kind === "audio" ? (
@@ -136,19 +137,25 @@ function ForgeCard({ forge }: { forge: Forge }) {
       <div className="p-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-foreground">{forge.forgeKind}</span>
-          <span className="text-[10px] uppercase tracking-wider text-foreground-tertiary">{forge.provider}</span>
+          <span className="text-xs uppercase tracking-wider text-foreground-tertiary">{forge.provider}</span>
         </div>
-        <div className="mt-1 flex items-center gap-1 text-[10px] text-foreground-secondary">
+        <div className="mt-1 flex items-center gap-1 text-xs text-foreground-secondary">
           <span>P-{forge.pillarSource}</span>
           <span>·</span>
           <span>{forge.manipulationMode}</span>
           <span>·</span>
           <span>${(forge.realisedCostUsd ?? forge.estimatedCostUsd).toFixed(2)}</span>
         </div>
-        {cps !== null && v.cultIndexDeltaObserved !== null && (
-          <div className="mt-1 text-[10px] text-emerald-400">
-            +{v.cultIndexDeltaObserved.toFixed(1)} cult · {forge.realisedSuperfans} sf · ${cps.toFixed(2)}/sf
-          </div>
+        {observation && (
+          <details className="mt-1 text-xs text-foreground-secondary">
+            <summary className="min-h-11 cursor-pointer">Évolution globale de la marque : {observation.delta > 0 ? "+" : ""}{observation.delta.toFixed(1)} points</summary>
+            <p className="mt-1">
+              Indice de marque : {observation.before.score.toFixed(1)} le {new Date(observation.before.measuredAt).toLocaleDateString("fr-FR")}
+              {" → "}{observation.after.score.toFixed(1)} le {new Date(observation.after.measuredAt).toLocaleDateString("fr-FR")}.
+              {" "}Publication reçue le {new Date(observation.publication.publishedAt).toLocaleDateString("fr-FR")}.
+              {" "}Comparaison de deux relevés de la marque ; d’autres actions peuvent y contribuer.
+            </p>
+          </details>
         )}
       </div>
     </div>

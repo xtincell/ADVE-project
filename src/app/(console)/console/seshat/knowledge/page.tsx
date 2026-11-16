@@ -150,7 +150,7 @@ export default function KnowledgeGraphPage() {
           title="Benchmarks sectoriels"
           value={sectorBenchmarks}
           icon={BarChart3}
-          trendValue={`Score moy: ${benchmarks?.avgComposite?.toFixed(0) ?? 0}`}
+          trendValue={`Score moy: ${benchmarks?.avgComposite?.toFixed(0) ?? "—"} · ${benchmarks?.coverage.observedCount ?? 0}/${benchmarks?.count ?? 0} renseignés`}
         />
         <StatCard
           title="Patterns de briefs"
@@ -199,7 +199,7 @@ export default function KnowledgeGraphPage() {
                         <p className="text-sm font-medium text-white">{r.name}</p>
                         <p className="text-xs text-foreground-secondary">{r.type} - {r.status}</p>
                       </div>
-                      <span className="text-sm font-bold text-white">{vec?.composite?.toFixed(0) ?? 0}/200</span>
+                      <span className="text-sm font-bold text-white">{vec?.composite?.toFixed(0) ?? "—"}/200</span>
                     </div>
                   );
                 })}

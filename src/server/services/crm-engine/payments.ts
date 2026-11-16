@@ -370,6 +370,7 @@ export async function requestCustomerSalesPayment(token: string, raw: CustomerPa
   // creator reaches this point; STARTED/UNKNOWN replays never POST again.
   try {
     const result = await cinetpayProvider.initPayment({ reference: reserved.payment.reference, amount: reserved.payment.amount,
+      expectedCredentialFingerprint: reserved.receipt.account.credentialFingerprint,
       currency: reserved.payment.currency, description: reserved.state.mandate!.offerName,
       returnUrl: `${base.origin}/api/sales/payment-return/${reserved.receipt.returnId}`,
       notifyUrl: `${base.origin}/api/payment/webhook/cinetpay`,

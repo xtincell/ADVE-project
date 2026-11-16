@@ -132,7 +132,7 @@ export const paymentRouter = createTRPCRouter({
       // ── Pick provider via registry ──
       let providerImpl;
       try {
-        providerImpl = pickProvider({
+        providerImpl = await pickProvider({
           countryCode: country,
           preferred: input.provider === "AUTO" ? undefined : input.provider as PaymentProviderId,
         });

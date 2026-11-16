@@ -1,11 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = join(__dirname, "../../..");
-const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
+const bash = process.env.PREFLIGHT_TEST_BASH ?? (process.platform === "win32"
+  ? "C:\\Program Files\\Git\\bin\\bash.exe" : "/bin/bash");
+const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8").replace(/\r\n/g, "\n");
 const job = workflow.split("  feedback-postgres:\n")[1]!.split("\n  prisma-validate:")[0]!;
 const digest = "sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d";
 const primary = `public.ecr.aws/docker/library/postgres:16@${digest}`;
@@ -57,16 +59,19 @@ return 0
 }
 sleep() { return 0; }
 `, { mode: 0o600 });
-    const result = spawnSync("/bin/bash", ["-c", '. "$1"\n' + startupScript(), "postgres-fixture", fixture], {
+    const result = spawnSync(bash, ["-c", '. "$1"\n' + startupScript(), "postgres-fixture", "./mock-commands.sh"], {
+      cwd: dir,
       encoding: "utf8",
       timeout: 10_000,
       env: {
         NODE_ENV: "test",
-        PATH: `${dir}:${dirname(process.execPath)}:/usr/bin:/bin`,
-        PG_FIXTURE_LOG: logPath,
+        PATH: "/usr/bin:/bin",
+        ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+        PG_FIXTURE_LOG: "./docker.argv",
         PG_FIXTURE_SCENARIO: scenario,
       },
     });
+    expect(result.error, `${result.stdout ?? ""}${result.stderr ?? ""}`).toBeUndefined();
     const framed = readFileSync(logPath, "utf8").split("\0");
     expect(framed.pop()).toBe("");
     const calls: string[][] = [];

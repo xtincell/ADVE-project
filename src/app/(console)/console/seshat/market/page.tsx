@@ -59,7 +59,7 @@ export default function MarketContextPage() {
 
   // Stats
   const totalStudies = studyItems.length;
-  const avgScore = benchmarkStats?.avgComposite ?? 0;
+  const avgScore = benchmarkStats?.avgComposite ?? null;
   const sectorsSet = new Set(studyItems.map((s) => s.sector).filter(Boolean));
   const latestDate = studyItems.length > 0
     ? new Date(studyItems[0]!.createdAt).toLocaleDateString("fr-FR")
@@ -140,10 +140,10 @@ export default function MarketContextPage() {
         />
         <StatCard
           title="Score marche moy."
-          value={avgScore > 0 ? avgScore.toFixed(0) : "0"}
+          value={avgScore?.toFixed(0) ?? "—"}
           icon={BarChart3}
-          trend={avgScore > 100 ? "up" : avgScore > 0 ? "flat" : "flat"}
-          trendValue="/200"
+          trend={avgScore !== null && avgScore > 100 ? "up" : "flat"}
+          trendValue={`/200 · ${benchmarkStats?.coverage.observedCount ?? 0}/${benchmarkStats?.count ?? 0} renseignés`}
         />
         <StatCard
           title="Secteurs couverts"
@@ -287,24 +287,24 @@ export default function MarketContextPage() {
                     <div className="flex items-center gap-3">
                       <span
                         className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                          i < 3
+                          r.composite !== null && i < 3
                             ? "bg-amber-400/20 text-amber-400"
                             : "bg-surface-raised text-foreground-secondary"
                         }`}
                       >
-                        {i + 1}
+                        {r.composite !== null ? i + 1 : "—"}
                       </span>
                       <span className="text-sm font-medium text-white">{r.name}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-24 h-2 rounded-full bg-background">
+                      {r.composite !== null && <div className="w-24 h-2 rounded-full bg-background">
                         <div
                           className="h-2 rounded-full bg-emerald-500"
                           style={{ width: `${Math.min(100, (r.composite / 200) * 100)}%` }}
                         />
-                      </div>
+                      </div>}
                       <span className="text-sm font-bold text-white w-14 text-right">
-                        {r.composite.toFixed(0)}/200
+                        {r.composite?.toFixed(0) ?? "—"}/200
                       </span>
                     </div>
                   </div>

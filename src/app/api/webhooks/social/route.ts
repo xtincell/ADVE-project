@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import * as feedbackLoop from "@/server/services/feedback-loop";
 import * as knowledgeCapture from "@/server/services/knowledge-capture";
+import { socialMetricEvidence } from "@/domain/social-metric-evidence";
 
 // ---------------------------------------------------------------------------
 // Webhook signature (fail-closed) — audit adversarial 2026-07-22
@@ -68,8 +69,6 @@ interface SocialWebhookPayload {
 // ---------------------------------------------------------------------------
 
 function extractMetrics(payload: SocialWebhookPayload) {
-  const d = payload.data;
-
   const base = {
     platform: payload.platform,
     postId: payload.postId,
@@ -77,59 +76,17 @@ function extractMetrics(payload: SocialWebhookPayload) {
     receivedAt: new Date().toISOString(),
   };
 
-  switch (payload.platform) {
-    case "facebook":
-      return {
-        ...base,
-        likes: d.likes ?? 0,
-        comments: d.comments ?? 0,
-        shares: d.shares ?? 0,
-        reach: d.reach ?? 0,
-        impressions: d.impressions ?? 0,
-        clicks: d.clicks ?? 0,
-      };
-    case "instagram":
-      return {
-        ...base,
-        likes: d.likes ?? 0,
-        comments: d.comments ?? 0,
-        shares: d.shares ?? 0,
-        reach: d.reach ?? 0,
-        impressions: d.impressions ?? 0,
-        saves: d.saves ?? 0,
-      };
-    case "tiktok":
-      return {
-        ...base,
-        likes: d.likes ?? 0,
-        comments: d.comments ?? 0,
-        shares: d.shares ?? 0,
-        views: d.views ?? 0,
-        reach: d.reach ?? 0,
-      };
-    case "youtube":
-      return {
-        ...base,
-        likes: d.likes ?? 0,
-        comments: d.comments ?? 0,
-        views: d.views ?? 0,
-        shares: d.shares ?? 0,
-        impressions: d.impressions ?? 0,
-      };
-    case "twitter":
-    case "linkedin":
-      return {
-        ...base,
-        likes: d.likes ?? 0,
-        comments: d.comments ?? 0,
-        shares: d.shares ?? 0,
-        impressions: d.impressions ?? 0,
-        clicks: d.clicks ?? 0,
-        reach: d.reach ?? 0,
-      };
-    default:
-      return { ...base, ...d };
-  }
+  const keys: Record<SocialWebhookPayload["platform"], string[]> = {
+    facebook: ["likes", "comments", "shares", "reach", "impressions", "clicks"],
+    instagram: ["likes", "comments", "shares", "reach", "impressions", "saves"],
+    tiktok: ["likes", "comments", "shares", "views", "reach"],
+    youtube: ["likes", "comments", "views", "shares", "impressions"],
+    twitter: ["likes", "comments", "shares", "impressions", "clicks", "reach"],
+    linkedin: ["likes", "comments", "shares", "impressions", "clicks", "reach"],
+  };
+  // The receipt is built after HMAC verification, never copied from the body.
+  const evidence = socialMetricEvidence(payload.data, keys[payload.platform] ?? [], "SIGNED_WEBHOOK");
+  return { ...base, ...evidence.values, ...evidence.receipt };
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +113,9 @@ export async function POST(request: Request) {
     }
 
     // Validate required fields
-    if (!payload.platform || !payload.event || !payload.accountId) {
+    if (!payload || !["facebook", "instagram", "tiktok", "youtube", "twitter", "linkedin"].includes(payload.platform)
+        || !payload.event || !payload.accountId
+        || !payload.data || typeof payload.data !== "object" || Array.isArray(payload.data)) {
       return NextResponse.json(
         { error: "Missing required fields: platform, event, accountId" },
         { status: 400 }

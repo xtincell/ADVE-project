@@ -99,11 +99,12 @@ export const SOCIAL_SCOPES: Record<BrandSocialProvider, readonly string[]> = {
   ],
   // Instagram Business Login — scopes « instagram_business_* » (les nus sont
   // dépréciés depuis 2025-01-27). Basic = profil/audience/médias ;
-  // content_publish = publier ; manage_comments = inbox (vague ultérieure).
+  // content_publish = publier ; manage_comments = inbox ; manage_insights = mesures privées.
   instagram: [
     "instagram_business_basic",
     "instagram_business_content_publish",
     "instagram_business_manage_comments",
+    "instagram_business_manage_insights",
   ],
   google: [
     "openid",

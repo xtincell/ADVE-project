@@ -33,7 +33,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..", "..");
-const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
+const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8").replace(/\r\n/g, "\n");
 
 const SOURCE_CONTEXT = "src/server/services/notoria/source-context.ts";
 const COMPOSE = "src/server/services/brand-bible/compose.ts";
@@ -206,7 +206,7 @@ describe("retirer un document retire son index", () => {
 
   it("aucun autre suppresseur de source n'existe hors scripts", () => {
     // Un nouveau site de suppression doit passer par cette revue.
-    const srcFiles = globSync("src/**/*.ts", { cwd: ROOT }) as unknown as string[];
+    const srcFiles = globSync("src/**/*.ts", { cwd: ROOT }).map((file) => file.replace(/\\/g, "/"));
     const deleters = srcFiles.filter((rel) =>
       /brandDataSource\.delete(Many)?\(/.test(readFileSync(join(ROOT, rel), "utf8")),
     );

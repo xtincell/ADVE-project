@@ -27,7 +27,7 @@
  */
 
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..", "..");
@@ -96,7 +96,7 @@ describe("HARD — attribution canonique des entrées du graphe de connaissances
     const DYNAMIC_TYPE = /entryType:\s*(?!")[A-Za-z_$]/;
     const offenders: string[] = [];
     for (const file of files) {
-      const rel = file.replace(`${SRC}/`, "");
+      const rel = relative(SRC, file).replace(/\\/g, "/");
       if (AGGREGATE_WRITERS[rel]) continue;
       const src = readFileSync(file, "utf8");
       for (const call of writeCalls(src)) {

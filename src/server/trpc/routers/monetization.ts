@@ -223,7 +223,7 @@ export const monetizationRouter = createTRPCRouter({
       //     UI shows "actif" but every payment fails.
       if (input.enabled) {
         const { listProviders } = await import("@/server/services/payment-providers");
-        const status = listProviders().find((p) => p.id === input.providerId);
+        const status = (await listProviders()).find((p) => p.id === input.providerId);
         if (!status || !status.configured) {
           throw new Error(
             `[PAYMENT-CONFIG] Cannot enable ${input.providerId}: env vars manquantes. Configure-les côté Vercel Dashboard d'abord (cf. /console/socle/pricing guide step 1), puis active.`,

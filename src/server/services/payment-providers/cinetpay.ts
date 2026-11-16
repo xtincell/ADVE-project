@@ -1,4 +1,4 @@
-/** CinetPay Aurore v1 adapter. Credentials remain in env (ADR-0075).
+/** CinetPay Aurore v1 adapter. Encrypted admin settings override env defaults.
  * Wire contract: cinetpay/cinetpay-js, src/types/payment.ts.
  * Sandbox remains the default; deployment must explicitly select production.
  */
@@ -6,27 +6,17 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { PaymentInitInput, PaymentInitResult, PaymentProvider } from "./types";
 import { PaymentProviderError } from "./types";
+import { resolveCinetpaySettings, cinetpayEnvironmentValid } from "@/server/services/anubis/delivery-settings";
 
-function baseUrl(): string {
-  return (process.env.CINETPAY_BASE_URL ?? "https://api.cinetpay.net").replace(/\/+$/, "");
-}
-
-function environmentValid(): boolean {
-  const base = baseUrl(), key = process.env.CINETPAY_API_KEY ?? "";
-  if (!["https://api.cinetpay.co", "https://api.cinetpay.net"].includes(base)) return false;
-  if (process.env.NODE_ENV === "production") return base === "https://api.cinetpay.co" && /^sk_live_/i.test(key);
-  return !(/^sk_live_/i.test(key) && base !== "https://api.cinetpay.co") && !(/^sk_test_/i.test(key) && base !== "https://api.cinetpay.net");
-}
+type CinetpaySettings = Awaited<ReturnType<typeof resolveCinetpaySettings>>;
 let tokenCache: { value: string; expiresAt: number; base: string; credentials: string } | null = null;
-async function getAccessToken(signal: AbortSignal): Promise<string> {
+async function getAccessToken(signal: AbortSignal, settings: CinetpaySettings): Promise<string> {
   const now = Date.now();
-  const base = baseUrl();
-  const apiKey = process.env.CINETPAY_API_KEY;
-  const apiPassword = process.env.CINETPAY_API_PASSWORD;
+  const { baseUrl: base, apiKey, apiPassword } = settings;
   if (!apiKey || !apiPassword) {
     throw new PaymentProviderError("CINETPAY", "oauth/login", "Payment credentials unavailable");
   }
-  if (!environmentValid()) throw new PaymentProviderError("CINETPAY", "oauth/login", "Payment environment unavailable; production requires the approved live endpoint and credentials");
+  if (!cinetpayEnvironmentValid(settings)) throw new PaymentProviderError("CINETPAY", "oauth/login", "Payment environment unavailable; production requires the approved live endpoint and credentials");
   const credentials = createHash("sha256").update(JSON.stringify([apiKey, apiPassword])).digest("hex");
   if (tokenCache?.base === base && tokenCache.credentials === credentials && tokenCache.expiresAt > now + 60_000) return tokenCache.value;
   const res = await fetch(`${base}/v1/oauth/login`, {
@@ -58,15 +48,25 @@ const paymentStatuses = new Set(["SUCCESS", "FAILED", "EXPIRED", "INITIATED", "P
 
 export const cinetpayProvider: PaymentProvider = {
   id: "CINETPAY",
-  isConfigured() { return Boolean(process.env.CINETPAY_API_KEY && process.env.CINETPAY_API_PASSWORD) && environmentValid(); },
+  async isConfigured() {
+    try { const settings = await resolveCinetpaySettings(); return Boolean(settings.apiKey && settings.apiPassword) && cinetpayEnvironmentValid(settings); }
+    catch { return false; }
+  },
 
   async initPayment(input: PaymentInitInput): Promise<PaymentInitResult> {
     const signal = AbortSignal.timeout(20_000);
-    const token = await getAccessToken(signal);
+    const settings = await resolveCinetpaySettings();
+    if (input.expectedCredentialFingerprint
+      && input.expectedCredentialFingerprint !== createHash("sha256").update(JSON.stringify([settings.apiKey ?? "", settings.apiPassword ?? ""])).digest("hex")) {
+      throw new PaymentProviderError("CINETPAY", input.reference, "Approved payment credentials changed; a new merchant approval is required");
+    }
+    // This same snapshot authenticates and initializes the checkout, even if
+    // another request rotates global settings while OAuth is in flight.
+    const token = await getAccessToken(signal, settings);
     const parts = (input.customer.name ?? "").trim().split(/\s+/).filter(Boolean);
     const first = parts[0] && parts[0].length >= 2 ? parts[0] : "Client";
     const last = parts.slice(1).join(" ") || "Client";
-    const res = await fetch(`${baseUrl()}/v1/payment`, {
+    const res = await fetch(`${settings.baseUrl}/v1/payment`, {
       method: "POST", signal,
       headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -89,8 +89,9 @@ export const cinetpayProvider: PaymentProvider = {
   async verifyPayment(reference: string) {
     // One deadline shared by authentication and status, no retry or fallback to the notification.
     const signal = AbortSignal.timeout(8_000);
-    const token = await getAccessToken(signal);
-    const res = await fetch(`${baseUrl()}/v1/payment/${encodeURIComponent(reference)}`, {
+    const settings = await resolveCinetpaySettings();
+    const token = await getAccessToken(signal, settings);
+    const res = await fetch(`${settings.baseUrl}/v1/payment/${encodeURIComponent(reference)}`, {
       method: "GET", signal, headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     });
     const data = statusReceipt.safeParse(await res.json().catch(() => null));

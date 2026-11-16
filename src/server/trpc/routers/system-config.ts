@@ -2,6 +2,10 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import type { Prisma } from "@prisma/client";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { TRPCError } from "@trpc/server";
+import { openEmission, closeEmission } from "@/server/governance/emission-spine";
+import { deliverySettingsInputSchema } from "@/domain/delivery-settings";
+import { DELIVERY_SETTINGS_KEY, getDeliverySettings, saveDeliverySettings } from "@/server/services/anubis/delivery-settings";
 /* lafusee:governed-active */
 
 /**
@@ -12,14 +16,14 @@ export const systemConfigRouter = createTRPCRouter({
   /**
    * Get a config by serverName key. `protectedProcedure` (tout compte
    * authentifié) : ces `config` sont des RÉGLAGES SYSTÈME non-secrets (les
-   * secrets vivent en env vars, ADR-0075), pas des données de marque — et le
+   * réglages de livraison chiffrés sont exclus par clé), pas des données de marque — et le
    * portail créateur `/creator/earnings/qc` en lit légitimement le taux de
    * compensation QC (`qcCompensationPerReview`). Round-4 avait gaté à
    * `operatorProcedure` par excès → régression (403 sur la page créateur).
    * Gating fin par-clé si une clé s'avère sensible = refinement tracé.
    */
   get: protectedProcedure
-    .input(z.object({ key: z.string() }))
+    .input(z.object({ key: z.string().refine(key => key !== DELIVERY_SETTINGS_KEY, "Utiliser la configuration de livraison administrateur.") }))
     .query(async ({ ctx, input }) => {
       const record = await ctx.db.mcpServerConfig.findUnique({
         where: { serverName: input.key },
@@ -33,7 +37,7 @@ export const systemConfigRouter = createTRPCRouter({
     kind: "LEGACY_SYSTEM_CONFIG_UPSERT",
     requireOperator: true,
 
-    inputSchema: z.object({ key: z.string(), config: z.record(z.string(), z.unknown()) }),
+    inputSchema: z.object({ key: z.string().refine(key => key !== DELIVERY_SETTINGS_KEY, "Utiliser la configuration de livraison administrateur."), config: z.record(z.string(), z.unknown()) }),
 
     caller: "system-config:upsert",
 
@@ -52,6 +56,29 @@ export const systemConfigRouter = createTRPCRouter({
       });
       return record;
     }),
+
+  getDeliverySettings: adminProcedure.query(({ ctx }) => getDeliverySettings(ctx.db)),
+
+  // Manual spine, as accounts.resetPassword: the secret-bearing input never
+  // reaches governedProcedure's automatic input/result serialization.
+  saveDeliverySettings: adminProcedure.input(deliverySettingsInputSchema).mutation(async ({ ctx, input }) => {
+    const actor = ctx.session.user;
+    if (actor.role !== "ADMIN") throw new TRPCError({ code: "FORBIDDEN" });
+    const intentId = await openEmission({ kind: "LEGACY_SYSTEM_CONFIG_UPSERT", caller: "system-config:saveDeliverySettings",
+      payload: { key: DELIVERY_SETTINGS_KEY, actor: actor.id, sections: Object.keys(input),
+        operations: { email: input.email?.apiKey?.action ?? "KEEP", cinetpayKey: input.cinetpay?.apiKey?.action ?? "KEEP", cinetpayCredential: input.cinetpay?.apiPassword?.action ?? "KEEP" } } });
+    try {
+      const result = await saveDeliverySettings(input, ctx.db);
+      await closeEmission({ intentId, status: "OK", result: { saved: true, emailStatus: result.email.status, paymentStatus: result.cinetpay.status } });
+      return result;
+    } catch {
+      // Driver/upstream errors can echo arguments. Never serialize their text.
+      await closeEmission({ intentId, status: "FAILED", result: { code: "DELIVERY_SETTINGS_SAVE_FAILED" } }).catch(() => undefined);
+      // A failed audit acknowledgement can follow a committed configuration.
+      // Do not claim rollback or echo the driver's possibly sensitive error.
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’enregistrement n’a pas pu être confirmé. Rechargez les paramètres pour vérifier leur état. Si nécessaire, vérifiez le fournisseur choisi et la disponibilité du coffre de chiffrement." });
+    }
+  }),
 
   /** Get system health metrics */
   health: protectedProcedure.query(async ({ ctx }) => {

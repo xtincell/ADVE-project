@@ -1,5 +1,6 @@
 /**
- * ADR-0075 — Payment provider secrets STAY in env vars (never in DB)
+ * ADR-0075 — PaymentProviderConfig remains non-secret. The admin delivery
+ * settings exception permits encrypted CinetPay overrides with env fallback.
  *
  * Le model Prisma `PaymentProviderConfig` a un commentaire explicite :
  *
@@ -7,8 +8,8 @@
  *
  * Ce test verrouille deux invariants :
  *
- * 1. Les providers paiement (`cinetpay.ts` / `stripe.ts` / `paypal.ts`)
- *    lisent leurs secrets depuis `process.env.*` UNIQUEMENT.
+ * 1. Stripe/PayPal keep env credentials; CinetPay goes through the encrypted
+ *    resolver, never through cleartext PaymentProviderConfig JSON.
  * 2. La mutation `adminUpdateProviderConfig` rejette les keys secrets-like
  *    dans le payload `config` (api_key, secret, password, token, etc.).
  *
@@ -36,17 +37,21 @@ const FORBIDDEN_DB_PATTERNS = [
   ".config.token",
 ];
 
-describe("ADR-0075 — Payment provider secrets stay in env vars", () => {
+describe("ADR-0075 — provider secrets never enter non-secret payment config", () => {
   it("Prisma model PaymentProviderConfig has the explicit safety comment", () => {
     const src = fs.readFileSync(PRISMA_SCHEMA, "utf8");
     expect(src).toMatch(/Secrets STAY in env vars[\s\S]{0,40}never in DB/i);
   });
 
-  it("cinetpay provider reads secrets from process.env.* only", () => {
+  it("cinetpay provider uses the encrypted settings resolver with existing environment fallback", () => {
     const file = path.join(PROVIDERS_DIR, "cinetpay.ts");
     const src = fs.readFileSync(file, "utf8");
-    expect(src).toContain("process.env.CINETPAY_API_KEY");
-    expect(src).toContain("process.env.CINETPAY_API_PASSWORD");
+    expect(src).toContain("resolveCinetpaySettings");
+    const settings = fs.readFileSync(path.resolve(PROVIDERS_DIR, "../anubis/delivery-settings.ts"), "utf8");
+    expect(settings).toContain("process.env.CINETPAY_API_KEY");
+    expect(settings).toContain("process.env.CINETPAY_API_PASSWORD");
+    expect(settings).toContain("encryptTokenPayload");
+    expect(settings).toContain("decryptTokenPayload");
     // Aucun lookup DB pour les secrets dans le provider.
     for (const pattern of FORBIDDEN_DB_PATTERNS) {
       expect(src, `Pattern interdit dans cinetpay.ts: ${pattern}`).not.toContain(pattern);

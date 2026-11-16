@@ -21,7 +21,7 @@
 
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
@@ -34,7 +34,7 @@ describe("CODE-MAP — la roue anti-réinvention", () => {
     // Le générateur est déterministe : le régénérer ne doit RIEN changer.
     // S'il change quelque chose, soit la carte a été éditée à la main, soit le
     // code a bougé sans regen — dans les deux cas, la carte mentait.
-    execFileSync("npx", ["tsx", "scripts/gen-code-map.ts"], { cwd: ROOT, stdio: "pipe" });
+    execFileSync(process.execPath, ["--import", "tsx", "scripts/gen-code-map.ts"], { cwd: ROOT, stdio: "pipe" });
     const regenerated = readFileSync(MAP, "utf-8");
     expect(
       regenerated === map,
@@ -78,8 +78,7 @@ describe("CODE-MAP — la roue anti-réinvention", () => {
   it("indexe chaque module du domaine (rien d'ungoverné sous src/domain)", () => {
     // Un module de domaine absent de la carte est une machine que personne ne
     // trouvera — l'étape zéro de la prochaine réinvention.
-    const domainFiles = execFileSync("ls", [join(ROOT, "src/domain")], { encoding: "utf-8" })
-      .split("\n")
+    const domainFiles = readdirSync(join(ROOT, "src/domain"))
       .filter((f) => f.endsWith(".ts") && f !== "index.ts");
     const missing = domainFiles.filter((f) => !map.includes(f.replace(".ts", "")));
     expect(

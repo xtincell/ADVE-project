@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import type { SalesState } from "./commercial";
+import { resolveCinetpaySettings } from "../anubis/delivery-settings";
 
 const text = z.string().trim().min(1).max(4000);
 export const salesMerchantAccountSchema = z.object({
@@ -21,13 +22,14 @@ type ConfigClient = Pick<Prisma.TransactionClient, "paymentProviderConfig" | "us
 type Collection = NonNullable<NonNullable<SalesState["mandate"]>["collection"]>;
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 function fail(message: string): never { throw new TRPCError({ code: "PRECONDITION_FAILED", message }); }
-export function cinetpayCredentialFingerprint(): string {
-  return hash(JSON.stringify([process.env.CINETPAY_API_KEY ?? "", process.env.CINETPAY_API_PASSWORD ?? ""]));
+export async function cinetpayCredentialFingerprint(): Promise<string> {
+  const settings = await resolveCinetpaySettings();
+  return hash(JSON.stringify([settings.apiKey ?? "", settings.apiPassword ?? ""]));
 }
 /** No network call: an unavailable or mismatched account cannot initialize a checkout. */
 export async function approvedSalesMerchantIn(client: ConfigClient, strategyId: string, beneficiary: string, destinationRef: string) {
-  const origin = (process.env.CINETPAY_BASE_URL ?? "https://api.cinetpay.net").replace(/\/+$/, "");
-  if (origin !== "https://api.cinetpay.co" || !/^sk_live_/i.test(process.env.CINETPAY_API_KEY ?? "") || !process.env.CINETPAY_API_PASSWORD) {
+  const settings = await resolveCinetpaySettings();
+  if (settings.baseUrl !== "https://api.cinetpay.co" || !/^sk_live_/i.test(settings.apiKey ?? "") || !settings.apiPassword) {
     fail("Le paiement en ligne de cette marque n’est pas disponible : le compte de production doit être confirmé.");
   }
   const row = await client.paymentProviderConfig.findUnique({ where: { providerId: "CINETPAY" } });
@@ -37,7 +39,7 @@ export async function approvedSalesMerchantIn(client: ConfigClient, strategyId: 
   const approver = await client.user.findUnique({ where: { id: row.updatedBy }, select: { role: true, email: true } });
   if (!approver || (approver.role !== "ADMIN" && !isGodModeEmail(approver.email)) ||
       Date.parse(account.attestedAt) > Date.now() + 30000 || Date.parse(account.expiresAt) <= Date.now() ||
-      account.credentialFingerprint !== cinetpayCredentialFingerprint() || !account.authorizedStrategyIds.includes(strategyId) ||
+      account.credentialFingerprint !== hash(JSON.stringify([settings.apiKey ?? "", settings.apiPassword ?? ""])) || !account.authorizedStrategyIds.includes(strategyId) ||
       account.beneficiary !== beneficiary || account.destinationRef !== destinationRef) {
     fail("Le compte d’encaissement approuvé ne correspond plus à cette marque ou à son bénéficiaire.");
   }
