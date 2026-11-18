@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "UPgraders industrialise la production de marques en Afrique francophone : conseil stratégique (ADVE/RTIS), réseau de talents curatés (La Guilde) et l'Industry OS La Fusée. Depuis 2017 — Douala · Abidjan.",
+    "UPgraders fait de votre marque la référence de son marché, en Afrique francophone : stratégie, création et mesure, avec La Guilde et la plateforme La Fusée. Depuis 2017 — Douala · Abidjan.",
 };
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

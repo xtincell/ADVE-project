@@ -93,7 +93,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           <h1 className="text-2xl font-bold text-foreground">La Fusée<span className="text-accent">.</span></h1>
         </div>
         <p className="text-sm text-foreground-muted">
-          Industry OS — De la poussière à l&apos;étoile
+          Votre espace de marque, par UPgraders
         </p>
       </div>
 
@@ -148,7 +148,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
                 Mot de passe
               </label>
               <Link href="/forgot-password" className="text-xs text-accent hover:text-accent-hover">
-                Mot de passe oublie ?
+                Mot de passe oublié ?
               </Link>
             </div>
             <input
@@ -215,7 +215,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         <p className="text-sm text-foreground-secondary">
           Pas encore de compte ?{" "}
           <Link href="/register" className="font-medium text-accent hover:text-accent-hover">
-            Creer un compte
+            Créer un compte
           </Link>
         </p>
       </div>

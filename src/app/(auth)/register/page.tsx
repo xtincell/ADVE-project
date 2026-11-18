@@ -84,12 +84,12 @@ function RegisterForm() {
           <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-9 w-auto" />
           <h1 className="text-2xl font-bold text-foreground">La Fusée<span className="text-accent">.</span></h1>
         </div>
-        <p className="text-sm text-foreground-muted">Industry OS — De la poussière à l&apos;étoile</p>
+        <p className="text-sm text-foreground-muted">Votre espace de marque, par UPgraders</p>
       </div>
 
       {/* Register Form */}
       <div className="w-full rounded-xl border border-border-subtle bg-surface-raised/50 p-6 shadow-xl">
-        <h2 className="mb-6 text-center text-lg font-semibold text-foreground">Creer un compte</h2>
+        <h2 className="mb-6 text-center text-lg font-semibold text-foreground">Créer un compte</h2>
 
         <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-4">
           {error && (
@@ -182,7 +182,7 @@ function RegisterForm() {
             disabled={loading}
             className="mt-2 w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Creation en cours..." : "Creer mon compte"}
+            {loading ? "Création en cours…" : "Créer mon compte"}
           </button>
         </form>
       </div>

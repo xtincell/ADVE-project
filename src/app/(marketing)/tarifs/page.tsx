@@ -14,9 +14,9 @@ import { ProductCatalog } from "@/components/upgraders/product-catalog";
 import { LaFuseeTierPrices } from "@/components/upgraders/lafusee-tier-prices";
 
 export const metadata: Metadata = {
-  title: "Tarifs — UPgraders · La Fusée, Audit ADVE, Mandat RTIS, Marque blanche",
+  title: "Tarifs — UPgraders · La Fusée, Audit ADVE, Mandat de croissance, Marque blanche",
   description:
-    "La gamme UPgraders : le produit self-serve La Fusée (prix dédiés, localisés par zone) et les prestations agence sur devis — Audit ADVE, Mandat RTIS, Marque blanche.",
+    "La gamme UPgraders : le produit en ligne La Fusée (prix dédiés, localisés par zone) et les prestations agence sur devis — Audit ADVE, Mandat de croissance, Marque blanche.",
 };
 
 export default function TarifsPage() {
@@ -28,7 +28,7 @@ export default function TarifsPage() {
         eyebrow="Tarifs"
         title="Une gamme,"
         emphasis="deux logiques."
-        lede="UPgraders vend un produit et un menu de prestations, coordonnés par La Fusée. Le produit — l'Industry OS self-serve — a son propre univers de prix, localisé par zone. Les prestations (stratégie marketing, production graphique & audiovisuelle, chartes, études & rapports, audit financier) s'opèrent en marque blanche via La Guilde, sur devis : on ne vend pas des moyens, on gèle un état final mesuré."
+        lede="UPgraders vend un produit et un menu de prestations, coordonnés par La Fusée. Le produit — la plateforme La Fusée, en ligne — a son propre univers de prix, localisé par zone. Les prestations (stratégie marketing, production graphique & audiovisuelle, chartes, études & rapports, audit financier) s'opèrent en marque blanche via La Guilde, sur devis : on ne vend pas des moyens, on gèle un état final mesuré."
       >
         <PrimaryCta href="/pricing">Tarifs La Fusée</PrimaryCta>
         <GhostCta href="/contact">Parler à l&apos;agence</GhostCta>

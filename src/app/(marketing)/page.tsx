@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "UPgraders — Cabinet de conseil & stratégie · La passion pour propulseur",
   description:
-    "UPgraders industrialise la production de marques en Afrique francophone. Conseil stratégique (ADVE/RTIS), réseau de talents curatés (La Guilde) et l'Industry OS La Fusée. Depuis 2017, Douala · Abidjan.",
+    "UPgraders fait de votre marque la référence de son marché, en Afrique francophone : stratégie, création et mesure, avec La Guilde et la plateforme La Fusée. Depuis 2017, Douala · Abidjan.",
 };
 
 /* ── Hero — official logo chrome + framed brand photo + floating brand-stats ── */
@@ -51,19 +51,19 @@ function Hero({ salesPath }: { salesPath?: string }) {
       />
 
       <Shell className="relative">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-subtle pb-4 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
+        <div className="hidden flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-subtle pb-4 font-mono text-2xs uppercase tracking-widest text-foreground-muted md:flex">
           <span><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-success" />Cabinet de conseil &amp; stratégie</span>
           <span className="text-accent">·</span>
           <span>Depuis 2017</span>
           <span className="text-accent">·</span>
           <span>Douala · Abidjan</span>
           <span className="text-accent">·</span>
-          <span>IP — Méthode ADVE/RTIS</span>
+          <span>Méthode ADVE/RTIS</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-12 pt-12 lg:grid-cols-[1.5fr_1fr] lg:gap-16 lg:pt-16">
+        <div className="grid grid-cols-1 gap-12 pt-2 md:pt-12 lg:grid-cols-[1.5fr_1fr] lg:gap-16 lg:pt-16">
           <div>
-            <Eyebrow>UPgraders — l&apos;agence</Eyebrow>
+            <Eyebrow>UPgraders — cabinet de conseil &amp; stratégie</Eyebrow>
             <h1 className="font-display font-semibold tracking-tighter" style={{ fontSize: "var(--text-mega)", lineHeight: 0.95 }}>
               La passion<br />
               pour{" "}
@@ -73,30 +73,39 @@ function Hero({ salesPath }: { salesPath?: string }) {
               </span>
               .
             </h1>
-            <Lede className="mt-8">
-              UPgraders <strong className="text-foreground">industrialise la production de marques</strong> en Afrique
-              francophone. Un cabinet de conseil &amp; stratégie qui orchestre un réseau de freelances et d&apos;agences
-              partenaires pour transformer des marques en <strong className="text-foreground">phénomènes culturels</strong>.
+            {/* Premier écran (18 novembre 2026) : une promesse, une preuve, une action. */}
+            <Lede className="mt-6 md:mt-8">
+              On fait de votre marque <strong className="text-foreground">la référence de son marché</strong>, en Afrique
+              francophone : stratégie, création et mesure, avec un réseau de talents choisis pour chaque mission.
             </Lede>
+            {/* Preuve */}
+            <p className="mt-4 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
+              <span className="text-accent">{STATS[2]?.value}</span> {STATS[2]?.label.toLowerCase()} depuis {STATS[0]?.value} · Douala · Abidjan
+            </p>
 
-            <div className="mt-9 flex flex-wrap gap-3">
-              <PrimaryCta href={salesPath ?? "/contact"}>{salesPath ? "Parler au commercial" : "Démarrer un projet"}</PrimaryCta>
-              <GhostCta href="/methode">Découvrir la méthode</GhostCta>
-              <Link
-                href="/services"
-                className="inline-flex items-center gap-2 border border-border-subtle px-5 py-3.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border-strong hover:text-foreground"
-              >
-                Nos services
-              </Link>
+            {/* Action — une seule au premier écran : le diagnostic gratuit. */}
+            <div className="mt-7 flex flex-wrap gap-3 md:mt-9">
+              <PrimaryCta href="/intake">Faire le diagnostic gratuit — 4 min</PrimaryCta>
+              <span className="hidden md:contents">
+                <GhostCta href="/methode">Découvrir la méthode</GhostCta>
+                <Link
+                  href="/services"
+                  className="inline-flex items-center gap-2 border border-border-subtle px-5 py-3.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border-strong hover:text-foreground"
+                >
+                  Nos services
+                </Link>
+              </span>
             </div>
-            <p className="mt-3 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
-              ↳ réponse sous 24 h · WhatsApp · Douala · Abidjan
+            <p className="mt-3 text-sm text-foreground-secondary">
+              Note sur 100, palier de votre marque et trois constats, sans engagement.{" "}
+              <Link href={salesPath ?? "/contact"} className="text-accent underline-offset-4 hover:underline">
+                {salesPath ? "Ou parler au commercial →" : "Ou démarrer un projet →"}
+              </Link>
             </p>
             <p className="mt-4 border-t border-dashed border-border-subtle pt-4 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
-              La Fusée — notre OS produit
-              <Link href="/scorer" className="ml-2 text-accent transition-colors hover:underline">→ Scorer ma marque · ~1 min</Link>
-              <Link href="/intake" className="ml-2 text-foreground-secondary transition-colors hover:text-accent">→ Diagnostic gratuit</Link>
-              <Link href="/lafusee" className="ml-2 text-foreground-secondary transition-colors hover:text-accent">→ Découvrir l&apos;OS</Link>
+              La Fusée — notre plateforme
+              <Link href="/scorer" className="ml-2 text-accent transition-colors hover:underline">→ Scorer ma présence en ligne</Link>
+              <Link href="/lafusee" className="ml-2 text-foreground-secondary transition-colors hover:text-accent">→ Découvrir La Fusée</Link>
             </p>
           </div>
 
@@ -183,7 +192,7 @@ export default async function UpgradersHomePage() {
         <SectionHeading emphasis="piliers">Cinq</SectionHeading>
         <Lede className="mt-4 mb-10">
           UPgraders n&apos;est pas une agence créative de plus. C&apos;est une mécanique en cinq piliers — du conseil à la
-          conciergerie financière — orchestrée par un Industry OS propriétaire.
+          conciergerie financière — orchestrée par notre propre plateforme, La Fusée.
         </Lede>
         <PillarsGrid />
       </Section>

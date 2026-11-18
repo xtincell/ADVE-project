@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 // OG image par défaut — générée (1200×630), aux couleurs UPgraders DS (panda
 // noir/bone + corail #E56458 + or #FACC15). Sert openGraph + twitter card sitewide.
 // Polices système (sans-serif) pour rester robuste en serverless (pas de fetch font).
-export const alt = "La Fusée — Industry OS du marché créatif africain";
+export const alt = "La Fusée — La plateforme des marques d'Afrique francophone";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -29,7 +29,7 @@ export default function OpengraphImage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
           <span style={{ color: "#ffffff", fontSize: 68, fontWeight: 800, lineHeight: 1.05, maxWidth: 920 }}>
-            L&apos;Industry OS du marché créatif africain
+            La plateforme des marques d&apos;Afrique francophone
           </span>
           <span style={{ color: "#E56458", fontSize: 30, fontWeight: 600 }}>
             Transformer les marques en icônes culturelles

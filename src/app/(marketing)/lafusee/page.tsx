@@ -16,7 +16,7 @@ import { MarketingFinale } from "@/components/landing/marketing-finale";
 import { MarketingFooter } from "@/components/landing/marketing-footer";
 
 export const metadata: Metadata = {
-  title: "La Fusée — Industry OS du marché créatif africain | UPgraders",
+  title: "La Fusée — La plateforme des marques d'Afrique francophone | UPgraders",
   description:
     "La Fusée, le produit d'UPgraders : diagnostic ADVE gratuit (questionnaire ou import de documents) · complétude du socle /100 · force publique /200 quand une mesure existe · puis stratégie sur les 8 piliers dans votre espace. Sans engagement.",
   openGraph: {
