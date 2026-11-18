@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.590", date: "2026-11-18", headline: "Une conversation commerciale plus vive",
+    highlights: [
+      { emoji: "💬", title: "Votre message s’affiche aussitôt", body: "Dans la conversation avec l’assistant commercial, le message envoyé apparaît tout de suite. Tant que la réponse se prépare, des points animés le montrent, puis elle s’affiche dès qu’elle est écrite." },
+      { emoji: "⚡", title: "Un message pris en charge en quelques secondes", body: "L’assistant commercial n’attend plus son tour de lecture pour prendre un nouveau message : il s’y met dans les secondes qui suivent." },
+    ],
+  },
+  {
     version: "6.27.589", date: "2026-11-16", headline: "Des espaces mieux cloisonnés",
     highlights: [
       { emoji: "🔒", title: "Des accès limités aux bonnes marques", body: "Le portefeuille et les dossiers clients suivent vos droits sur les marques. Un rattachement à une agence ne remplace plus la propriété du dossier ou une autorisation de collaboration." },

@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 86 modules (src/domain, cœur métier pur)
+## Domain — 87 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
@@ -125,6 +125,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **production-sources**
 - **public-brand**
 - **recommendation-comparison**
+- **sales-run-claimability** — Prise d'une mission par un vendeur : la règle commune à `claimRun`, qui prend,
 - **schema-normalizer** — schema-normalizer.ts — normalisation déterministe vers le schéma STRICT (ADR-0172).
 - **scoreur/anchors** — ADR-0149 — ancres-étalons + jauge de ligue (canon, θ fixé — la seule main
 - **scoreur/bradley-terry** — ADR-0149 — estimateur Bradley-Terry / Rasch (pur TS, déterministe, zéro-LLM).
