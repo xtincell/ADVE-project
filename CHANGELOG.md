@@ -1,3 +1,13 @@
+## v6.27.590 — fix(vendeur): réponse prise en quelques secondes et attente visible (2026-11-18)
+
+**Demande d’Alexandre : la conversation du vendeur IA semblait figée ; un client attendait 32 s sans signe de vie (18 s avant prise du message, 14 s de modèle).**
+
+- `GET /api/internal/sales-fleet/pending` (même jeton que le roster) : identifiants des vendeurs IA actifs dont une mission attend et que `claimRun` prendrait (aucune mission en cours ou incertaine, plafonds du jour). Lecture seule, sans clé ni donnée client ; le roster garde seul le réveil des relances et des paiements. Le moteur galahad 0.1.20 le lit toutes les 3 s entre deux tours complets.
+- La règle de prise (statuts bloquants, compteurs du jour UTC, budget et limite) vit une seule fois dans `src/domain/sales-run-claimability.ts`, lue par `claimRun` et par la route : le signal ne peut pas réveiller un vendeur que la prise refuserait. La route lit la base comme le roster ; aucune exception de couche ajoutée.
+- Contrôle du jeton du superviseur partagé par les deux routes (`worker-auth.ts`), comparaison en temps constant inchangée.
+- Page du client : son message apparaît dès l’envoi (« envoi… », puis remplacé par la copie du serveur) ; trois points animés tant que la réponse IA est `QUEUED` ou `PROCESSING`, coupés si l’appareil demande moins de mouvement ; aucun indicateur pendant une revue d’équipe. Lecture toutes les 1,5 s pendant l’attente, 5 s sinon.
+- Aucun schéma Prisma, migration, fournisseur ou rôle modifié ; arbre de vente, mandats et offres inchangés.
+
 ## v6.27.589 — fix(seshat): cloisonner les portefeuilles et qualifier les références (2026-11-16)
 
 **Finition demandée par Alexandre : les comptes liés à une agence ne reçoivent pas automatiquement les droits d’un opérateur ou les dossiers voisins.**

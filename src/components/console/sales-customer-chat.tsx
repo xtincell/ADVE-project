@@ -105,46 +105,69 @@ export function SalesCustomerChat({ token }: { token: string }) {
   const [checkoutError, setCheckoutError] = useState("");
   const [pendingCheckout, setPendingCheckout] = useState<CheckoutRequest | null>(null);
   const [checkoutLink, setCheckoutLink] = useState<{ url: string; reference: string; proposalId: string } | null>(null);
+  // The customer's own message, shown at once until the server returns it.
+  const [echo, setEcho] = useState<{ body: string; at: number } | null>(null);
   const followLatest = useRef(true);
   const latest = useRef<HTMLDivElement>(null);
   const lastMessageId = data?.messages.at(-1)?.id;
+  const replyInPreparation = Boolean(data && !data.stopped && (data.replyStatus === "QUEUED" || data.replyStatus === "PROCESSING"));
+  const echoShown = echo && !data?.messages.some(message => message.role === "customer" && message.body.trim() === echo.body && new Date(message.at).getTime() >= echo.at - 300_000) ? echo : null;
+  const awaitingReply = replyInPreparation || (busy && Boolean(echo));
+  const fastPolling = useRef(false);
+  const reschedule = useRef<() => void>(() => {});
   const load = useCallback(async () => {
     const response = await fetch(`/api/sales/${token}`, { cache: "no-store" });
     if (!response.ok) throw Error("Cette conversation est indisponible.");
     setData(await response.json() as Conversation);
   }, [token]);
   useEffect(() => {
+    // While a reply is being prepared the page reads every 1.5 s, otherwise every 5 s.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let active = true;
+    const schedule = () => {
+      clearTimeout(timer);
+      if (!active) return;
+      timer = setTimeout(() => { void load().catch(() => {}).finally(schedule); }, fastPolling.current ? 1500 : 5000);
+    };
+    reschedule.current = schedule;
     void load().catch(cause => setError(cause.message));
-    const timer = setInterval(() => { void load().catch(() => {}); }, 5000);
-    return () => clearInterval(timer);
+    schedule();
+    return () => { active = false; clearTimeout(timer); };
   }, [load]);
+  useEffect(() => {
+    fastPolling.current = awaitingReply;
+    if (awaitingReply) reschedule.current();
+  }, [awaitingReply]);
   useEffect(() => {
     const trackPosition = () => { followLatest.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160; };
     window.addEventListener("scroll", trackPosition, { passive: true });
     return () => window.removeEventListener("scroll", trackPosition);
   }, []);
+  const echoVisible = Boolean(echoShown);
   useEffect(() => {
-    if (!lastMessageId || !followLatest.current) return;
+    if (!followLatest.current || (!lastMessageId && !echoVisible && !replyInPreparation)) return;
     const frame = requestAnimationFrame(() => latest.current?.scrollIntoView?.({ block: "end", behavior: "auto" }));
     return () => cancelAnimationFrame(frame);
-  }, [lastMessageId]);
+  }, [lastMessageId, echoVisible, replyInPreparation]);
 
   async function send(confirmation?: CustomerMessage) {
     const message = pending ?? confirmation ?? { body: body.trim(), requestId: crypto.randomUUID() };
     if (!message.body || busy) return;
     setBusy(true); setError(""); setPending(message);
+    if (!message.proposalId && !message.deliveryActivityId) { setEcho({ body: message.body.trim(), at: Date.now() }); followLatest.current = true; }
     try {
       const response = await fetch(`/api/sales/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
       if (!response.ok) {
         if ([400, 403, 404, 409, 413, 415].includes(response.status)) {
-          setPending(null); void load().catch(() => {});
+          setPending(null); setEcho(null); void load().catch(() => {});
           throw Error(message.deliveryActivityId ? "Ce document ne peut plus être confirmé. Relisez la conversation avant de poursuivre." : message.proposalId ? "Cette proposition ne peut pas être confirmée. Relisez la conversation avant de poursuivre." : "Ce message n’a pas pu être envoyé. Vérifiez-le avant de réessayer.");
         }
         throw Error("Envoi non confirmé. Réessayez pour vérifier le même message.");
       }
       if (message.proposalId) setConfirmedProposalId(message.proposalId);
       if (message.deliveryActivityId) setConfirmedDeliveryId(message.deliveryActivityId);
-      setPending(null); if (!message.proposalId && !message.deliveryActivityId) setBody(""); followLatest.current = true; await load();
+      setPending(null); if (!message.proposalId && !message.deliveryActivityId) setBody(""); followLatest.current = true;
+      try { await load(); } finally { setEcho(null); }
     } catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
@@ -222,13 +245,24 @@ export function SalesCustomerChat({ token }: { token: string }) {
         {data?.stopped && <p role="status" className="rounded-lg border border-border p-4 text-sm text-foreground-muted">Votre demande d’arrêt est enregistrée. L’équipe ne vous relance plus.</p>}
         <section aria-label="Conversation" aria-live="polite" className="space-y-4">
           {!data && !error && <p role="status" className="text-sm text-foreground-muted">Chargement de votre conversation…</p>}
-          {data?.messages.length === 0 && <p className="max-w-prose rounded-xl rounded-tl-sm border border-border bg-surface-raised p-5 text-sm text-foreground-muted">Vous pouvez poser votre première question ici.</p>}
+          {data?.messages.length === 0 && !echoShown && <p className="max-w-prose rounded-xl rounded-tl-sm border border-border bg-surface-raised p-5 text-sm text-foreground-muted">Vous pouvez poser votre première question ici.</p>}
           {data?.messages.map(message => <article key={message.id} className={messageClass({ role: message.role })}>
             <p className="mb-3 text-xs text-foreground-muted">{message.role === "customer" ? "Vous" : data.brand} · {new Date(message.at).toLocaleString("fr-FR")}</p>
             <MarkdownContent className="break-words text-sm leading-relaxed">{message.body}</MarkdownContent>
           </article>)}
+          {echoShown && <article className={messageClass({ role: "customer" })} aria-busy={busy}>
+            <p className="mb-3 text-xs text-foreground-muted">Vous · {busy ? "envoi…" : pending ? "envoi non confirmé" : "envoyé"}</p>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{echoShown.body}</p>
+          </article>}
+          {replyInPreparation && data?.replyStatus && <div className={messageClass({ role: "seller" })} data-reply-indicator="">
+            <p className="mb-3 text-xs text-foreground-muted">{data.brand}</p>
+            <span className="flex items-center gap-1.5" aria-hidden>
+              {[0, 150, 300].map(delay => <span key={delay} className="h-2 w-2 rounded-full bg-foreground-muted motion-safe:animate-bounce" style={{ animationDelay: `${delay}ms` }} />)}
+            </span>
+            <p className="mt-3 text-sm leading-relaxed text-foreground-muted">{replyStatusText[data.replyStatus as "QUEUED" | "PROCESSING"]}</p>
+          </div>}
         </section>
-        {!data?.stopped && data?.replyStatus && data.replyStatus !== "UP_TO_DATE" && <p role="status" className="text-sm leading-relaxed text-foreground-muted">{replyStatusText[data.replyStatus]}</p>}
+        {!data?.stopped && !replyInPreparation && data?.replyStatus && data.replyStatus !== "UP_TO_DATE" && <p role="status" className="text-sm leading-relaxed text-foreground-muted">{replyStatusText[data.replyStatus]}</p>}
         <div ref={latest} className="scroll-mb-64" aria-hidden />
       </div>
       <form onSubmit={event => { event.preventDefault(); void send(); }} className="sticky bottom-0 space-y-3 border-t border-border bg-background pb-5 pt-4 sm:pb-6">

@@ -127,6 +127,31 @@ describe("sales holders, dispatch receipts and incoming customer messages", () =
     expect((await db.salesRepresentative.findUniqueOrThrow({ where: { id: profile.id } })).dailyTokensReserved).toBe(profile.maxTokens);
     expect((await fleet.claimRun(profile.mcpKeyId!, randomUUID())).run).toBeNull();
   });
+  it("signals only work a claim would take, by identifier, without claiming or exposing a key", async () => {
+    const waiting = await createAI(), capped = await createAI({ dailyRunLimit: 1 }), idle = await createAI(), paused = await createAI();
+    await queue(waiting.id); await queue(capped.id); await queue(capped.id); await queue(paused.id);
+    await fleet.setSalesRepresentativeStatus(actor, paused.id, "PAUSED");
+    const { GET } = await import("@/app/api/internal/sales-fleet/pending/route");
+    process.env.SALES_WORKER_TOKEN = "owned-fleet-wake-signal-token";
+    const url = "http://fleet.invalid/api/internal/sales-fleet/pending";
+    expect((await GET(new Request(url))).status).toBe(401);
+    expect((await GET(new Request(url, { headers: { authorization: "Bearer owned-fleet-wake-signal-tokeX" } }))).status).toBe(401);
+    const signal = async () => {
+      const response = await GET(new Request(url, { headers: { authorization: "Bearer owned-fleet-wake-signal-token" } }));
+      expect(response.status).toBe(200);
+      const body = await response.json() as { pending: string[] };
+      expect(Object.keys(body)).toEqual(["pending"]);
+      expect(JSON.stringify(body)).not.toMatch(/apiKey|encrypted/i);
+      return body.pending.filter(id => [waiting.id, capped.id, idle.id, paused.id].includes(id));
+    };
+    expect(await signal()).toEqual([waiting.id, capped.id].sort());
+    const taken = await fleet.claimRun(capped.mcpKeyId!, randomUUID());
+    expect(await signal()).toEqual([waiting.id]); // a run in progress blocks the next claim
+    await fleet.completeRun(capped.mcpKeyId!, taken.run!.id, taken.run!.leaseToken, { status: "DONE", result: "Done once.", tokensUsed: 10 });
+    expect(await signal()).toEqual([waiting.id]); // daily run limit reached: claimRun would refuse too
+    expect((await fleet.claimRun(capped.mcpKeyId!, randomUUID())).run).toBeNull();
+    expect(await db.salesRun.count({ where: { representativeId: waiting.id, status: "QUEUED" } })).toBe(1); // the signal took nothing
+  });
   it("requires a received post-payment buyer confirmation before an AI can attest delivery through HTTP MCP", async () => {
     const profile = await createAI();
     const row = await deal(brandId, profile.principalId!);

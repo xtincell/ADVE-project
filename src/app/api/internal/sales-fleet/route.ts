@@ -1,12 +1,11 @@
 export const dynamic='force-dynamic';
-import {timingSafeEqual} from 'node:crypto';
 import {NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {decryptTokenPayload} from '@/server/services/oauth-integrations';
 import {wakeConfirmedSalesPayments,wakeDueSalesActions} from '@/server/services/crm-engine/events';
+import {isSalesWorkerRequest} from './worker-auth';
 export async function GET(request:Request){
- const secret=process.env.SALES_WORKER_TOKEN;const provided=request.headers.get('authorization')??'';
- if(!secret||Buffer.byteLength(provided)!==Buffer.byteLength(`Bearer ${secret}`)||!timingSafeEqual(Buffer.from(provided),Buffer.from(`Bearer ${secret}`)))return NextResponse.json({error:'Unauthorized'},{status:401});
+ if(!isSalesWorkerRequest(request))return NextResponse.json({error:'Unauthorized'},{status:401});
  const profiles=await db.salesRepresentative.findMany({where:{status:'ACTIVE'}});
  const ready=[];
  for(const profile of profiles){

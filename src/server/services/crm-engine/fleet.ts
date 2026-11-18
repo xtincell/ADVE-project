@@ -5,6 +5,7 @@ import type { Prisma, SalesRepresentative, SalesRun } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { encryptTokenPayload } from "@/server/services/oauth-integrations";
+import { SALES_RUN_BLOCKING_STATUSES, salesBudgetDay, salesDailyUsage, salesRunAllowedToday } from "@/domain/sales-run-claimability";
 import { salesStateSchema } from "./commercial";
 
 export const representativeInput = z.object({
@@ -160,10 +161,9 @@ export async function claimRun(keyId: string, requestId: string) {
       if (replay.representativeId !== profile.id) throw new TRPCError({ code: "CONFLICT", message: "Cette référence a déjà servi à confier une tâche." });
       return replay.status === "RUNNING" ? shape(replay) : { run: null };
     }
-    if (await tx.salesRun.count({ where: { representativeId: profile.id, status: { in: ["RUNNING", "AMBIGUOUS"] } } })) return { run: null };
-    const today = new Date().toISOString().slice(0, 10);
-    const tokens = profile.budgetDay === today ? profile.dailyTokensReserved : 0;
-    const count = profile.budgetDay === today ? profile.dailyRunsClaimed : 0;
+    if (await tx.salesRun.count({ where: { representativeId: profile.id, status: { in: [...SALES_RUN_BLOCKING_STATUSES] } } })) return { run: null };
+    const today = salesBudgetDay(new Date());
+    const { tokens, runs: count } = salesDailyUsage(profile, today);
     const { validateDatedSalesRunIn } = await import("./scheduling");
     // Stale deadlines are terminal receipts, so they neither send nor block the next valid job.
     let next: SalesRun | null = null;
@@ -176,7 +176,7 @@ export async function claimRun(keyId: string, requestId: string) {
       } });
     }
     if (!next) return { run: null };
-    if (tokens + profile.maxTokens > profile.dailyTokenBudget || count >= profile.dailyRunLimit) return { run: null };
+    if (!salesRunAllowedToday(profile, today)) return { run: null };
     const claimed = await tx.salesRun.updateMany({ where: { id: next.id, status: "QUEUED" }, data: { status: "RUNNING", leaseToken: randomUUID(), claimRequestId: requestId, claimedAt: new Date(), reservedTokens: profile.maxTokens } });
     if (claimed.count !== 1) return { run: null };
     await tx.salesRepresentative.update({ where: { id: profile.id }, data: { budgetDay: today, dailyTokensReserved: tokens + profile.maxTokens, dailyRunsClaimed: count + 1 } });

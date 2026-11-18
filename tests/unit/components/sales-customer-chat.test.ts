@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { SalesCustomerChat, salesCheckoutUrl } from "@/components/console/sales-customer-chat";
 
 vi.mock("@/components/shared/markdown-content", () => ({ MarkdownContent: ({ children }: { children: React.ReactNode }) => React.createElement("div", {}, children) }));
@@ -44,6 +44,53 @@ describe("the private dossier continues the public sales conversation", () => {
     await screen.findByText("Votre message est reçu. L’équipe peut reprendre cet échange.");
     expect(screen.queryByText("Votre interlocuteur prépare sa réponse.")).toBeNull();
     expect(screen.queryByText(/répondra|sous 24|dans quelques/)).toBeNull();
+    expect(document.querySelector("[data-reply-indicator]")).toBeNull();
+  });
+
+  it("animates the seller's turn only while the AI reply is queued or being written", async () => {
+    serve({ ...conversation, replyStatus: "PROCESSING" }); render(React.createElement(SalesCustomerChat, { token: "d1".padEnd(64, "1") }));
+    await screen.findByText("Votre interlocuteur prépare sa réponse.");
+    expect(document.querySelector("[data-reply-indicator]")).toBeTruthy();
+    cleanup();
+    serve({ ...conversation, replyStatus: "PROCESSING", stopped: true }); render(React.createElement(SalesCustomerChat, { token: "d2".padEnd(64, "2") }));
+    await screen.findByText("Votre demande d’arrêt est enregistrée. L’équipe ne vous relance plus.");
+    expect(document.querySelector("[data-reply-indicator]")).toBeNull();
+  });
+
+  it("shows the customer's message at once, then only the server's copy once it is received", async () => {
+    const sent = "Combien coûte une place Gold à Cocody ?";
+    let answer!: (value: unknown) => void;
+    let stored = false;
+    const fetcher = vi.fn(async (_url: string, options?: RequestInit) => {
+      if (options?.method === "POST") { await new Promise(resolve => { answer = resolve; }); stored = true; return { ok: true, json: async () => ({ received: true }) }; }
+      return { ok: true, json: async () => stored ? { ...conversation, replyStatus: "QUEUED", messages: [...conversation.messages, { id: "sent", role: "customer", body: sent, at: new Date().toISOString() }] } : conversation };
+    });
+    vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token: "d3".padEnd(64, "3") }));
+    await screen.findByText("Je voudrais connaître vos possibilités.");
+    fireEvent.change(screen.getByLabelText("Votre message"), { target: { value: sent } });
+    fireEvent.submit(screen.getByLabelText("Votre message").closest("form")!);
+    const thread = screen.getByRole("region", { name: "Conversation" });
+    await within(thread).findByText(sent);
+    expect(within(thread).getByText("Vous · envoi…")).toBeTruthy();
+    answer(undefined);
+    await screen.findByText("Votre message est reçu et attend une réponse.");
+    expect(within(thread).getAllByText(sent)).toHaveLength(1);
+    expect(screen.queryByText("Vous · envoi…")).toBeNull();
+    expect(document.querySelector("[data-reply-indicator]")).toBeTruthy();
+  });
+
+  it("reads the conversation again within 1.5 s while a reply is prepared", async () => {
+    const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ ...conversation, replyStatus: "QUEUED" }) }));
+    vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token: "d4".padEnd(64, "4") }));
+    await waitFor(() => expect(fetcher.mock.calls.length).toBeGreaterThanOrEqual(2), { timeout: 2600 });
+  });
+
+  it("keeps the 5 s rhythm when no reply is awaited", async () => {
+    const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ ...conversation, replyStatus: "UP_TO_DATE" }) }));
+    vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token: "d5".padEnd(64, "5") }));
+    await screen.findByText("Je voudrais connaître vos possibilités.");
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    expect(fetcher.mock.calls.length).toBe(1);
   });
 
   it("keeps a questions-only conversation free of an offer price and payment card even if unused offer fields are present", async () => {
