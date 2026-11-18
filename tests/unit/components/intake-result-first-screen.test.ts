@@ -98,7 +98,7 @@ describe("clientText — aucune mention de fabrication devant le client", () => 
 
 describe("ResultFold — replié à l'écran, toujours imprimé", () => {
   it("s'ouvre et se ferme au clic, et garde son contenu dans le PDF", () => {
-    render(React.createElement(ResultFold, { title: "La synthèse" }, React.createElement("p", null, "Contenu imprimé")));
+    render(React.createElement(ResultFold, { title: "La synthèse", children: React.createElement("p", null, "Contenu imprimé") }));
     const button = screen.getByRole("button", { name: "La synthèse" });
     const content = screen.getByText("Contenu imprimé").parentElement!;
     expect(button.getAttribute("aria-expanded")).toBe("false");
