@@ -34,10 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: "6.27.590", date: "2026-11-18", headline: "Une conversation commerciale plus vive",
+    version: "6.27.590", date: "2026-11-18", headline: "Un diagnostic gratuit plus clair, une conversation plus vive",
     highlights: [
       { emoji: "💬", title: "Votre message s’affiche aussitôt", body: "Dans la conversation avec l’assistant commercial, le message envoyé apparaît tout de suite. Tant que la réponse se prépare, des points animés le montrent, puis elle s’affiche dès qu’elle est écrite." },
       { emoji: "⚡", title: "Un message pris en charge en quelques secondes", body: "L’assistant commercial n’attend plus son tour de lecture pour prendre un nouveau message : il s’y met dans les secondes qui suivent." },
+      { emoji: "🎯", title: "Votre résultat en un coup d’œil", body: "Le diagnostic gratuit montre d’abord l’essentiel : une note sur 100, le palier de votre marque, trois constats et une action à mener. Le détail reste disponible, section par section." },
+      { emoji: "⏱️", title: "Un diagnostic de 4 minutes environ", body: "Le formulaire ne demande d’abord que votre nom, votre e-mail et votre marque. Les informations facultatives se complètent si vous le souhaitez." },
+      { emoji: "💳", title: "Le rapport complet au prix de votre zone", body: "Le rapport en PDF s’affiche au prix de votre zone ; sans pays indiqué, il est proposé en francs CFA." },
     ],
   },
   {

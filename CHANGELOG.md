@@ -1,4 +1,4 @@
-## v6.27.590 — fix(vendeur): réponse prise en quelques secondes et attente visible (2026-11-18)
+## v6.27.590 — fix(vendeur, intake): réponse du vendeur en quelques secondes, diagnostic gratuit resserré (2026-11-18)
 
 **Demande d’Alexandre : la conversation du vendeur IA semblait figée ; un client attendait 32 s sans signe de vie (18 s avant prise du message, 14 s de modèle).**
 
@@ -7,6 +7,17 @@
 - Contrôle du jeton du superviseur partagé par les deux routes (`worker-auth.ts`), comparaison en temps constant inchangée.
 - Page du client : son message apparaît dès l’envoi (« envoi… », puis remplacé par la copie du serveur) ; trois points animés tant que la réponse IA est `QUEUED` ou `PROCESSING`, coupés si l’appareil demande moins de mouvement ; aucun indicateur pendant une revue d’équipe. Lecture toutes les 1,5 s pendant l’attente, 5 s sinon.
 - Aucun schéma Prisma, migration, fournisseur ou rôle modifié ; arbre de vente, mandats et offres inchangés.
+
+**Même livraison, lot 3 (PR #1207) : le diagnostic gratuit récompense et dit une seule chose.**
+
+- Une durée : « 4 minutes environ », médiane mesurée le 18 novembre en lecture seule sur `QuickIntake` terminés (235 s sur 12 passages, hors script GoldenPath et fiches opérateur ; essais internes, à remesurer sur les premiers vrais prospects). Plus de durée par méthode ; FR/EN/ZH alignés.
+- Une échelle : /100. Piliers affichés sur 100, note arrondie partout, générateur de constats sur 100 ; la force /200 (`ForceSection`, conservée dans le dépôt) n'est plus rendue sur le résultat gratuit et n'y figure qu'en une phrase (`intakeResult.next200`).
+- Formulaire `/intake` : 3 champs obligatoires, les 11 facultatifs (dont le cadrage Overton) sous « Affiner mon diagnostic (facultatif) ».
+- Résultat : premier écran note/palier/trois constats/une action (`first-screen.ts`, fonctions pures), offre PDF juste après, huit sections repliées (`ResultFold`, toujours imprimées) ; barre collante retirée. 13 317 → 1 978 px sur mobile. PDF payant identique (mêmes sections, même ordre, 11 pages).
+- Prix : sans pays déclaré, l'affichage et `payment.initIntakeReport` retombaient sur FR (49 €) ; règle unique `intakePricingCountry()` → CM (10 000 FCFA, CinetPay).
+- `mobile.css` : la règle `img, svg { height: auto }` passe en `@layer base` ; hors couche, elle annulait les hauteurs Tailwind (logo de 366 px sur `/intake` et `/login`).
+- Bandeau de cookies sur une ligne en mobile (57 px au lieu de 181). Accueil : une promesse, une preuve, une action (diagnostic gratuit). Jargon retiré des pages publiques et de la connexion (« Industry OS », « self-serve », « Mandat RTIS » → « Mandat de croissance ») ; pages légales inchangées.
+- Tests : garde durée/échelle/prix, premier écran, section repliée, bandeau. Aucun schéma, migration, fournisseur ni route ajouté.
 
 ## v6.27.589 — fix(seshat): cloisonner les portefeuilles et qualifier les références (2026-11-16)
 
