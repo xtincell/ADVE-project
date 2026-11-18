@@ -33,7 +33,9 @@ import {
 import { PricingTiers, OracleTeaser, RapportPdfPreview } from "@/components/neteru";
 import { Modal } from "@/components/shared/modal";
 import { FootprintSection } from "./footprint-section";
-import { ForceSection } from "./force-section";
+import { ResultFold } from "./result-fold";
+import { buildFirstScreen, clientText, pillarOn100 } from "./first-screen";
+import { intakePricingCountry } from "@/lib/constants/intake-options";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
@@ -335,13 +337,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   );
 
   const { data: pricing } = trpc.payment.getPricing.useQuery(
-    { country: intake?.country ?? undefined },
+    { country: intakePricingCountry(intake?.country) },
     { enabled: !!intake },
   );
 
   // ── Tiered pricing grid (monetization service) ──
   const { data: tierGrid } = trpc.monetization.getTierGrid.useQuery(
-    { countryCode: intake?.country ?? "FR" },
+    { countryCode: intakePricingCountry(intake?.country) },
     { enabled: !!intake },
   );
 
@@ -461,7 +463,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             "0": {
               json: {
                 tierKey,
-                countryCode: intake.country ?? "FR",
+                countryCode: intakePricingCountry(intake.country),
                 email: intake.contactEmail,
                 name: intake.contactName,
                 returnUrl: `${baseUrl}/cockpit/new`,
@@ -621,8 +623,14 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const verbatim = formatVerbatim(intake, t);
   const reportDate = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 
+  // Premier écran (lot 3) : note /100, palier, trois constats, une action.
+  const firstScreen = buildFirstScreen(vector, diagnostic);
+  const scoreOn100 = Math.round(composite);
+  const levelJustification = clientText(brandLevel?.justification);
+  const unlockPriceLabel = isFree ? t("intakeResult.paywall.free") : (pricing?.localized?.display ?? "…");
+
   return (
-    <main className="min-h-screen bg-background pb-24 print:bg-white print:pb-0"
+    <main className="min-h-screen bg-background pb-12 print:bg-white print:pb-0"
       data-intake-report-ready={isPaid && pillarsData && !pillarsFetching ? "true" : undefined}>
       <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8 sm:py-12 print:px-6 print:py-0">
 
@@ -647,7 +655,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             })()}
             <p className="mt-2 text-lg text-foreground-secondary">{intake.companyName}</p>
             <p className="mt-1 text-sm text-foreground-muted">
-              {classification} · {t("intakeResult.cover.score")} {composite}/100 · {reportDate}
+              {classification} · {t("intakeResult.cover.score")} {scoreOn100}/100 · {reportDate}
             </p>
           </div>
           <div className="mt-12 grid grid-cols-2 gap-4 text-xs text-foreground-secondary">
@@ -668,7 +676,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             HEADER + LEVEL (page only — the LEVEL is the headline)
         ════════════════════════════════════════════════════════════ */}
-        <header className="mb-10 print:hidden">
+        <header className="mb-4 print:hidden">
           <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
             {t("intakeResult.header.kicker")}
           </p>
@@ -691,135 +699,155 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               {intake.companyName}
             </h1>
           </div>
+        </header>
 
-          {/* Level placement — the headline */}
-          {classification !== "NON_CLASSIFIE" && (
-            <div className="mt-6 rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary-subtle/30 to-card p-5 sm:p-6">
-              <p className="text-2xs font-bold uppercase tracking-widest text-primary">
-                {t("intakeResult.header.levelKicker")}
+        {/* ════════════════════════════════════════════════════════════
+            PREMIER ÉCRAN (lot 3, 18 novembre 2026) — la récompense du
+            gratuit : une note /100, un palier, trois constats, une action.
+            Tout le reste est replié plus bas, section par section.
+        ════════════════════════════════════════════════════════════ */}
+        <section aria-labelledby="first-screen-title" className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary-subtle/30 to-card p-5 sm:p-6 print:hidden">
+          <h2 id="first-screen-title" className="sr-only">{t("intakeResult.first.title")}</h2>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-2xs font-bold uppercase tracking-widest text-primary">{t("intakeResult.first.scoreKicker")}</p>
+              <p className="mt-1 flex items-baseline gap-1">
+                <span className="text-5xl font-bold leading-none tabular-nums text-foreground">{scoreOn100}</span>
+                <span className="text-lg text-foreground-muted">/100</span>
               </p>
-              <div className="mt-1 flex flex-wrap items-baseline gap-3">
-                <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
-                  {classification}
-                </h2>
-                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${LEVEL_COLOR[classification as BrandLevel]}`}>
+            </div>
+            {classification !== "NON_CLASSIFIE" && (
+              <div className="min-w-0 text-right">
+                <p className="text-2xs font-bold uppercase tracking-widest text-primary">{t("intakeResult.first.tierKicker")}</p>
+                <p className="mt-1 text-2xl font-bold leading-none text-foreground">{classification}</p>
+                <span className={`mt-2 inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${LEVEL_COLOR[classification as BrandLevel]}`}>
                   {t(LEVEL_TAGLINE[classification as BrandLevel])}
                 </span>
               </div>
-              {brandLevel?.justification && (
-                <p className="mt-3 text-sm leading-relaxed text-foreground">
-                  {brandLevel.justification}
-                </p>
-              )}
+            )}
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-foreground-muted">{t("intakeResult.first.scoreNote")}</p>
 
-              {/* Ladder progress */}
-              <div className="mt-5">
-                <div className="mb-1.5 flex items-center justify-between text-2xs font-semibold uppercase tracking-widest text-foreground-muted">
-                  <span>{t("intakeResult.header.ladder")}</span>
-                  <span>{t("intakeResult.header.ladderTarget")}</span>
-                </div>
-                <div className="grid grid-cols-6 gap-1">
-                  {LEVEL_ORDER.map((lvl, i) => {
-                    const reached = levelIdx >= i;
-                    const isCurrent = levelIdx === i;
-                    return (
-                      <div
-                        key={lvl}
-                        className={`flex flex-col items-center rounded-md border px-1 py-1.5 ${
-                          isCurrent
-                            ? "border-primary bg-primary/15"
-                            : reached
-                              ? "border-primary/50 bg-primary/5"
-                              : "border-border-subtle bg-background"
-                        }`}
-                      >
-                        <span
-                          className={`text-[9px] font-bold uppercase tracking-wider ${
-                            isCurrent ? "text-primary" : reached ? "text-foreground" : "text-foreground-muted"
-                          }`}
-                        >
-                          {lvl}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+          <h3 className="mt-5 text-2xs font-bold uppercase tracking-widest text-foreground-muted">{t("intakeResult.first.findingsTitle")}</h3>
+          <ol className="mt-3 space-y-3">
+            {firstScreen.findings.map((finding) => {
+              const pillarMeta = ADVE_PILLARS.find((m) => m.key === finding.pillar);
+              const isStrength = finding.kind === "strength";
+              return (
+                <li key={finding.pillar} className="flex gap-3">
+                  <span
+                    aria-hidden
+                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isStrength ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}
+                  >
+                    {finding.pillar.toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {t(isStrength ? "intakeResult.first.strength" : "intakeResult.first.gap")}{" "}
+                      {pillarMeta ? t(pillarMeta.name) : finding.pillar.toUpperCase()} · {finding.score100}/100
+                    </p>
+                    <p className="mt-0.5 text-sm leading-relaxed text-foreground-secondary">
+                      {finding.text ?? t(isStrength ? "intakeResult.first.strengthFallback" : "intakeResult.first.gapFallback")}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
 
-              {/* Next milestone — the immediate promise */}
-              {brandLevel?.nextMilestone && classification !== "ICONE" && (
-                <div className="mt-5 rounded-lg border border-primary/40 bg-card p-4">
-                  <p className="text-2xs font-bold uppercase tracking-widest text-primary">
-                    {t("intakeResult.header.nextStep")} {brandLevel.nextMilestone.targetLevel}
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-foreground">
-                    {brandLevel.nextMilestone.headline}
-                  </p>
-                  {brandLevel.nextMilestone.moves.length > 0 && (
-                    <ul className="mt-3 space-y-1.5 text-sm text-foreground-secondary">
-                      {brandLevel.nextMilestone.moves.map((m, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                          {m}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
+          {firstScreen.action && (
+            <div className="mt-5 rounded-lg border border-primary/40 bg-card p-4">
+              <p className="text-2xs font-bold uppercase tracking-widest text-primary">{t("intakeResult.first.actionKicker")}</p>
+              <p className="mt-1 flex items-start gap-2 text-sm font-medium text-foreground">
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                {firstScreen.action}
+              </p>
             </div>
           )}
+        </section>
 
-          {/* ORACLE_FULL payé : le lien vers la stratégie complète activée
-              (audit 2026-07-16 — le payeur ne voyait RIEN de ce qu'il avait payé). */}
-          {paymentData?.oracleShareUrl ? (
-            <div className="mt-6 rounded-2xl border-2 border-success/40 bg-success/10 p-5">
-              <p className="text-2xs font-bold uppercase tracking-widest text-success">
-                {t("intakeResult.oracle.activated")}
-              </p>
-              <p className="mt-2 text-sm text-foreground">
-                {t("intakeResult.oracle.body")}
-              </p>
-              <a
-                href={paymentData.oracleShareUrl}
-                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
-              >
-                {t("intakeResult.oracle.open")} <ArrowRight className="h-4 w-4" />
-              </a>
+        {/* Offre PDF — juste après la première récompense, au prix de la zone
+            (FCFA par défaut quand la fiche n'a pas de pays : intakePricingCountry). */}
+        {!isPaid && (
+          <section className="mt-4 rounded-2xl border border-border bg-card p-5 sm:p-6 print:hidden">
+            <p className="text-2xs font-bold uppercase tracking-widest text-primary">{t("intakeResult.offer.kicker")}</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">{t("intakeResult.offer.title")}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-foreground-secondary">{t("intakeResult.offer.body")}</p>
+            <button
+              type="button"
+              onClick={handleUnlockClick}
+              disabled={paywallLoading || !pricing}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {paywallLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> {t("intakeResult.offer.loading")}</>
+              ) : (
+                <><Lock className="h-4 w-4" /> {t("intakeResult.offer.cta")} — {unlockPriceLabel}</>
+              )}
+            </button>
+            {/* Copy client, jamais le message technique (audit 2026-07-16). */}
+            {initPaymentMutation.error && (
+              <p className="mt-3 text-xs text-destructive">{t("intakeResult.paywall.paymentDown")}</p>
+            )}
+            <p className="mt-4 border-t border-border-subtle pt-3 text-xs leading-relaxed text-foreground-muted">{t("intakeResult.next200")}</p>
+          </section>
+        )}
+
+        {isPaid && (
+          <section className="mt-4 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary-subtle/40 to-card p-6 sm:p-8 print:hidden">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-primary/10 p-2">
+                <Check className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.download.title")}</h2>
+                <p className="mt-1 text-sm text-foreground-muted">{t("intakeResult.download.ready")}</p>
+              </div>
             </div>
-          ) : null}
+            <button
+              type="button"
+              onClick={handlePdfDownload}
+              disabled={pdfGenerating}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pdfGenerating ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> {t("intakeResult.download.opening")}</>
+              ) : (
+                <><Download className="h-4 w-4" /> {t("intakeResult.download.cta")}</>
+              )}
+            </button>
+            {pdfError && <p className="mt-3 text-xs text-destructive">{pdfError}</p>}
+            <p className="mt-4 border-t border-border-subtle pt-3 text-xs leading-relaxed text-foreground-muted">{t("intakeResult.next200")}</p>
+          </section>
+        )}
 
-          {/* Radar 4 piliers — la promesse « radar » enfin livrée (audit
-              2026-07-16 : le composant existait partout sauf ici). */}
-          <div className="mt-6 flex flex-col items-center gap-2">
-            <AdvertisRadar
-              scores={{ a: cap(vector.a ?? 0), d: cap(vector.d ?? 0), v: cap(vector.v ?? 0), e: cap(vector.e ?? 0) }}
-              pillarKeys={PILLAR_KEYS.filter((k) => k === "a" || k === "d" || k === "v" || k === "e")}
-              maxScore={25}
-              size="md"
-              interactive={false}
-            />
-            <p className="max-w-[52ch] text-center text-xs text-foreground-muted">
-              {t("intakeResult.radar.before")} {composite}{t("intakeResult.radar.after")}
+        {/* ORACLE_FULL payé : le lien vers la stratégie complète activée
+            (audit 2026-07-16 — le payeur ne voyait RIEN de ce qu'il avait payé). */}
+        {paymentData?.oracleShareUrl ? (
+          <div className="mt-4 rounded-2xl border-2 border-success/40 bg-success/10 p-5 print:hidden">
+            <p className="text-2xs font-bold uppercase tracking-widest text-success">
+              {t("intakeResult.oracle.activated")}
             </p>
+            <p className="mt-2 text-sm text-foreground">
+              {t("intakeResult.oracle.body")}
+            </p>
+            <a
+              href={paymentData.oracleShareUrl}
+              className="mt-2 inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
+            >
+              {t("intakeResult.oracle.open")} <ArrowRight className="h-4 w-4" />
+            </a>
           </div>
+        ) : null}
 
-          {/* P1-2 (audit UX 2026-07-19) — le MÊME composite était affiché deux
-              fois sous deux noms (« score socle » puis « complétude du
-              dossier ») : double sens supprimé, un seul chiffre, un seul nom.
-              P1-3 — une ligne relie les deux paliers qui coexistent : le
-              niveau ESTIMÉ (déclaratif, ce questionnaire) vs le palier RÉVÉLÉ
-              (preuve publique, section Force ci-dessous). */}
-          <p className="mt-3 max-w-[58ch] text-xs text-foreground-muted">
-            {t("intakeResult.estRev.p1")} <strong>{t("intakeResult.estRev.estimated")}</strong>{" "}
-            {t("intakeResult.estRev.p2")} <strong>{t("intakeResult.estRev.revealed")}</strong>{" "}
-            {t("intakeResult.estRev.p3")}
-          </p>
-        </header>
+        {/* Guide de lecture et avertissement d'ancienne version : imprimés à
+            leur place d'origine dans le PDF ; à l'écran, ils vivent dans
+            « Le détail de votre note ». */}
+        <p className="mb-6 hidden rounded-lg border border-border-subtle bg-card p-4 text-sm leading-relaxed text-foreground-secondary print:block">{t("intakeResult.report.readingGuide")}</p>
+        {diagnostic?.reportEvidenceVersion !== 1 && <p className="mb-6 hidden rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning print:block">{t("intakeResult.report.legacy")}</p>}
 
-        <div className="print:hidden"><ReceivedIntakeDocuments documents={intake.documents} /></div>
-        <p className="mb-6 rounded-lg border border-border-subtle bg-card p-4 text-sm leading-relaxed text-foreground-secondary">{t("intakeResult.report.readingGuide")}</p>
-        {diagnostic?.reportEvidenceVersion !== 1 && <p className="mb-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">{t("intakeResult.report.legacy")}</p>}
+        {/* Sections repliées : le bouton ouvre ou ferme à l'écran, le PDF imprime tout. */}
+        <div className="mt-8 print:hidden" />
 
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Intro + Contexte business
@@ -913,7 +941,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             EXECUTIVE SUMMARY (page + print)
         ════════════════════════════════════════════════════════════ */}
         {(report?.executiveSummary || fallbackSummary) && (
-          <section className="mb-8 rounded-2xl border border-primary/20 bg-primary-subtle/20 p-6 print:rounded-none print:border-0 print:bg-transparent print:p-0 print:mb-8">
+          <ResultFold title={t("intakeResult.fold.summary")}>
+          <section className="rounded-2xl border border-primary/20 bg-primary-subtle/20 p-6 print:rounded-none print:border-0 print:bg-transparent print:p-0 print:mb-8">
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-primary print:text-2xl print:text-foreground print:normal-case print:tracking-normal">
               <Sparkles className="h-4 w-4 print:hidden" />
               <span className="print:hidden">{t("intakeResult.exec.title")}</span>
@@ -923,6 +952,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               {report?.executiveSummary ?? fallbackSummary}
             </p>
           </section>
+          </ResultFold>
         )}
 
         {/* ════════════════════════════════════════════════════════════
@@ -932,7 +962,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         {/* P1-2 (audit UX) — phrases-ponts : les scores se LISENT dans un ordre
             (présence publique → socle déclaré → force révélée), pas en pile. */}
-        <p className="mx-auto mt-10 max-w-[60ch] text-center text-sm text-foreground-secondary">
+        <ResultFold title={t("intakeResult.fold.footprint")}>
+        <p className="mb-6 max-w-[60ch] text-sm text-foreground-secondary print:hidden">
           {t("intakeResult.bridge.footprintBefore")} {intake.companyName} {t("intakeResult.bridge.footprintAfter")}
         </p>
         <FootprintSection
@@ -950,22 +981,98 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           }}
         />
 
-        {/* ════════════════════════════════════════════════════════════
-            FORCE DE MARQUE (nouveau scoreur, ADR-0149) — note révélée sur
-            la preuve publique captée. Lecture seule, honnête (couverture +
-            palier suivant). Le classement public reste un choix (payant/opérateur).
-        ════════════════════════════════════════════════════════════ */}
-        {/* La phrase-pont vers la force /200 est rendue par ForceSection,
-            seulement quand une force est affichée (recette F16). */}
-        <div className="mt-10" />
-        <ForceSection token={token} />
+        </ResultFold>
+
+        {/* Force de marque /200 (ForceSection, ADR-0149) : retirée du résultat
+            gratuit le 18 novembre 2026 — une seule échelle (/100) dans le
+            parcours gratuit ; le /200 n'y figure qu'en une phrase, comme ce
+            que débloque la suite (intakeResult.next200). Le composant reste. */}
 
 
         {/* ════════════════════════════════════════════════════════════
             PATH TO ICONE — visible on page (the promise)
         ════════════════════════════════════════════════════════════ */}
+        {(classification !== "NON_CLASSIFIE" || (brandLevel?.pathToIcone?.length ?? 0) > 0) && (
+          <ResultFold title={t("intakeResult.fold.level")}>
+          {/* Level placement — the headline */}
+          {classification !== "NON_CLASSIFIE" && (
+            <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary-subtle/30 to-card p-5 sm:p-6 print:hidden">
+              <p className="text-2xs font-bold uppercase tracking-widest text-primary">
+                {t("intakeResult.header.levelKicker")}
+              </p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-3">
+                <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
+                  {classification}
+                </h2>
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${LEVEL_COLOR[classification as BrandLevel]}`}>
+                  {t(LEVEL_TAGLINE[classification as BrandLevel])}
+                </span>
+              </div>
+              {levelJustification && (
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {levelJustification}
+                </p>
+              )}
+
+              {/* Ladder progress */}
+              <div className="mt-5">
+                <div className="mb-1.5 flex items-center justify-between text-2xs font-semibold uppercase tracking-widest text-foreground-muted">
+                  <span>{t("intakeResult.header.ladder")}</span>
+                  <span>{t("intakeResult.header.ladderTarget")}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 sm:grid-cols-6">
+                  {LEVEL_ORDER.map((lvl, i) => {
+                    const reached = levelIdx >= i;
+                    const isCurrent = levelIdx === i;
+                    return (
+                      <div
+                        key={lvl}
+                        className={`flex flex-col items-center rounded-md border px-1 py-1.5 ${
+                          isCurrent
+                            ? "border-primary bg-primary/15"
+                            : reached
+                              ? "border-primary/50 bg-primary/5"
+                              : "border-border-subtle bg-background"
+                        }`}
+                      >
+                        <span
+                          className={`text-[9px] font-bold uppercase tracking-wider ${
+                            isCurrent ? "text-primary" : reached ? "text-foreground" : "text-foreground-muted"
+                          }`}
+                        >
+                          {lvl}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Next milestone — the immediate promise */}
+              {brandLevel?.nextMilestone && classification !== "ICONE" && (
+                <div className="mt-5 rounded-lg border border-primary/40 bg-card p-4">
+                  <p className="text-2xs font-bold uppercase tracking-widest text-primary">
+                    {t("intakeResult.header.nextStep")} {brandLevel.nextMilestone.targetLevel}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {brandLevel.nextMilestone.headline}
+                  </p>
+                  {brandLevel.nextMilestone.moves.length > 0 && (
+                    <ul className="mt-3 space-y-1.5 text-sm text-foreground-secondary">
+                      {brandLevel.nextMilestone.moves.map((m, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          {m}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         {brandLevel?.pathToIcone && brandLevel.pathToIcone.length > 0 && (
-          <section className="mb-10 print:hidden">
+          <section className="mt-6 print:hidden">
             <header className="mb-2 flex items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-foreground">{t("intakeResult.path.title")}</h2>
               <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
@@ -1028,11 +1135,31 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             )}
           </section>
         )}
+          </ResultFold>
+        )}
 
         {/* ════════════════════════════════════════════════════════════
             ADVE — page (PARTIAL: 2 values + preview only)
         ════════════════════════════════════════════════════════════ */}
-        <section className="mb-10 print:hidden">
+        <ResultFold title={t("intakeResult.fold.detail")}>
+          {/* Radar 4 piliers — la promesse « radar » enfin livrée (audit
+              2026-07-16 : le composant existait partout sauf ici). */}
+          <div className="flex flex-col items-center gap-2 print:hidden">
+            <AdvertisRadar
+              scores={{ a: cap(vector.a ?? 0), d: cap(vector.d ?? 0), v: cap(vector.v ?? 0), e: cap(vector.e ?? 0) }}
+              pillarKeys={PILLAR_KEYS.filter((k) => k === "a" || k === "d" || k === "v" || k === "e")}
+              maxScore={25}
+              size={260}
+              interactive={false}
+            />
+            <p className="max-w-[52ch] text-center text-xs text-foreground-muted">
+              {t("intakeResult.radar.before")} {scoreOn100}{t("intakeResult.radar.after")}
+            </p>
+          </div>
+        <p className="mt-6 mb-6 rounded-lg border border-border-subtle bg-card p-4 text-sm leading-relaxed text-foreground-secondary print:hidden">{t("intakeResult.report.readingGuide")}</p>
+        {diagnostic?.reportEvidenceVersion !== 1 && <p className="mb-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning print:hidden">{t("intakeResult.report.legacy")}</p>}
+        <div className="print:hidden"><ReceivedIntakeDocuments documents={intake.documents} /></div>
+        <section className="mt-6 print:hidden">
           <header className="mb-2 flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-foreground">{t("intakeResult.adve.title")}</h2>
             <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
@@ -1061,8 +1188,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       <h3 className="mt-0.5 text-lg font-semibold text-foreground">{t(meta.name)}</h3>
                     </div>
                     <div className="flex shrink-0 items-baseline gap-1 rounded-md bg-background px-2.5 py-1">
-                      <span className="text-base font-semibold tabular-nums text-foreground">{score.toFixed(1)}</span>
-                      <span className="text-xs text-foreground-muted">/25</span>
+                      <span className="text-base font-semibold tabular-nums text-foreground">{pillarOn100(score)}</span>
+                      <span className="text-xs text-foreground-muted">/100</span>
                     </div>
                   </header>
 
@@ -1126,6 +1253,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             })}
           </div>
         </section>
+        </ResultFold>
 
         {/* ════════════════════════════════════════════════════════════
             ADVE — print (FULL: all values + full narrative)
@@ -1143,7 +1271,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     <h3 className="text-xl font-bold text-foreground">
                       {meta.key.toUpperCase()} · {t(meta.name)}
                     </h3>
-                    <span className="text-sm tabular-nums text-foreground-muted">{score.toFixed(1)} / 25</span>
+                    <span className="text-sm tabular-nums text-foreground-muted">{pillarOn100(score)} / 100</span>
                   </header>
                   <p className="mb-3 text-sm italic text-foreground-muted">{t(meta.tagline)}</p>
 
@@ -1181,7 +1309,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             RTIS — page (1 pilier preview, others teased)
         ════════════════════════════════════════════════════════════ */}
         {report?.rtis && (
-          <section className="mb-10 print:hidden">
+          <ResultFold title={t("intakeResult.fold.rtis")}>
+          <section className="print:hidden">
             <header className="mb-2 flex items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-foreground">{t("intakeResult.rtis.title")}</h2>
               <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
@@ -1224,6 +1353,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               ))}
             </div>
           </section>
+          </ResultFold>
         )}
 
         {/* ════════════════════════════════════════════════════════════
@@ -1256,13 +1386,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </section>
         )}
 
+        {(report?.recommendation || (diagnostic?.recommendations?.length ?? 0) > 0) && (
+          <ResultFold title={t("intakeResult.fold.plan")}>
         {/* ════════════════════════════════════════════════════════════
             RECOMMANDATION STRATÉGIQUE — V3 only (Opus, autonomous block)
             Renders both on-screen AND in PDF. The diagnostic above answers
             "what is true"; this block answers "what to do".
         ════════════════════════════════════════════════════════════ */}
         {report?.recommendation && (
-          <section className="mt-10 rounded-2xl border border-amber-700/50 bg-gradient-to-br from-amber-950/15 via-card to-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:bg-transparent print:break-before-page">
+          <section className="rounded-2xl border border-amber-700/50 bg-gradient-to-br from-amber-950/15 via-card to-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:bg-transparent print:break-before-page">
             <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
                 <p className="text-2xs font-bold uppercase tracking-[0.25em] text-amber-400 print:text-foreground-muted">
@@ -1384,7 +1516,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             Rendu écran ET PDF.
         ════════════════════════════════════════════════════════════ */}
         {!report?.recommendation && (diagnostic?.recommendations?.length ?? 0) > 0 && (
-          <section className="mt-10 rounded-2xl border border-primary/40 bg-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:break-before-page">
+          <section className="rounded-2xl border border-primary/40 bg-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:break-before-page">
             <header className="mb-6">
               <p className="text-2xs font-bold uppercase tracking-[0.25em] text-primary">
                 {t("intakeResult.plan.kicker")}
@@ -1398,7 +1530,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 <div key={rec.key} className="rounded-xl border border-border p-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className="text-base font-bold text-foreground">{rec.pillar}</h3>
-                    <span className="text-xs font-mono text-foreground-muted">{Math.round(rec.score * 10) / 10}/25</span>
+                    <span className="text-xs font-mono text-foreground-muted">{pillarOn100(rec.score)}/100</span>
                   </div>
                   <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{rec.diagnostic}</p>
                   {rec.actions.length > 0 && (
@@ -1415,6 +1547,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               ))}
             </div>
           </section>
+        )}
+
+          </ResultFold>
         )}
 
         {/* ════════════════════════════════════════════════════════════
@@ -1479,46 +1614,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </section>
         )}
 
-        {/* ════════════════════════════════════════════════════════════
-            PAGE-ONLY: Contact / paywall / activation (print:hidden)
-        ════════════════════════════════════════════════════════════ */}
-        <section className="mt-10 rounded-2xl border border-border bg-card p-6 print:hidden">
-          <h2 className="mb-1 text-lg font-bold text-foreground">{t("intakeResult.contact.title")}</h2>
-          <p className="mb-5 text-sm text-foreground-muted">
-            {t("intakeResult.contact.sub")}
-          </p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Rapport ADVE — ${intake.companyName}`)}`}
-              className="flex items-center gap-3 rounded-lg border border-border-subtle bg-background p-4 transition hover:border-primary/40 hover:bg-primary-subtle/10"
-            >
-              <div className="rounded-full bg-primary/10 p-2"><Mail className="h-4 w-4 text-primary" /></div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{t("intakeResult.contact.email")}</p>
-                <p className="truncate text-sm font-medium text-foreground">{CONTACT_EMAIL}</p>
-              </div>
-            </a>
-            <a
-              href={`https://wa.me/${CONTACT_WHATSAPP_NUMBER}?text=${encodeURIComponent(`Bonjour, je viens de finaliser mon diagnostic ADVE pour ${intake.companyName}.`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-lg border border-border-subtle bg-background p-4 transition hover:border-primary/40 hover:bg-primary-subtle/10"
-            >
-              <div className="rounded-full bg-primary/10 p-2"><MessageCircle className="h-4 w-4 text-primary" /></div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{t("intakeResult.contact.whatsapp")}</p>
-                <p className="truncate text-sm font-medium text-foreground">{CONTACT_WHATSAPP_DISPLAY}</p>
-              </div>
-            </a>
-          </div>
-        </section>
-
         {/* Rapport PDF preview — paywall FOMO. Shows the structure of the
             paid PDF (page thumbnails + ADVE/RTIS/recommandation) with the
             founder's verbatim voice surfaced on page 1 to anchor authenticity,
             and the strategic content redacted to drive conversion. */}
         {!isPaid && (
-          <div className="mt-10">
+          <ResultFold title={t("intakeResult.fold.pdf")}>
+          <div className="print:hidden">
             {/* ADR-0164 — bandeau de preuves RÉELLES au-dessus du paywall :
                 on vend sur ce qui a déjà été mesuré/produit, jamais sur du
                 vent. Chaque compteur vient des données de CE rapport. */}
@@ -1556,15 +1658,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               centralTension={report?.centralTension}
               hasRecommendation={Boolean(report?.recommendation)}
               authVerbatimSample={intake.rawText ?? undefined}
-              unlockPriceLabel={
-                isFree
-                  ? t("intakeResult.paywall.free")
-                  : pricing?.localized?.display ?? (pricing?.recommended === "CINETPAY"
-                    ? `${pricing?.prices.fcfa ?? 0} FCFA`
-                    : `${pricing?.prices.eur ?? 0} EUR`)
-              }
+              unlockPriceLabel={unlockPriceLabel}
               onUnlock={handleUnlockClick}
-              unlockDisabled={paywallLoading}
+              unlockDisabled={paywallLoading || !pricing}
             />
             {/* Copy client, jamais le message technique (audit 2026-07-16 :
                 le lead lisait des noms de variables d'environnement). */}
@@ -1574,40 +1670,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               </p>
             )}
           </div>
-        )}
-
-        {isPaid && (
-          <section className="mt-10 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary-subtle/40 to-card p-6 sm:p-8 print:hidden">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Check className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.download.title")}</h2>
-                <p className="mt-1 text-sm text-foreground-muted">{t("intakeResult.download.ready")}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handlePdfDownload}
-              disabled={pdfGenerating}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pdfGenerating ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> {t("intakeResult.download.opening")}</>
-              ) : (
-                <><Download className="h-4 w-4" /> {t("intakeResult.download.cta")}</>
-              )}
-            </button>
-            {pdfError && <p className="mt-3 text-xs text-destructive">{pdfError}</p>}
-          </section>
+          </ResultFold>
         )}
 
         {/* Oracle teaser — placed AFTER the rapport-PDF flow on purpose. The
             Oracle is a separate, deeper deliverable (21 structured sections)
             with its own paywall. Mirrors the real Oracle layout from
             /shared/strategy/[token] so the FOMO is faithful, not generic. */}
-        <div className="mt-10 print:hidden">
+        <ResultFold title={t("intakeResult.fold.more")}>
+        <div className="print:hidden">
           <OracleTeaser
             brandName={intake.companyName}
             unlockPriceLabel={
@@ -1620,12 +1691,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             Inline rendering of the 5-tier grid was overloading the page in
             landscape (cf. PRIX LOCAL badge bleed). Per "fais le plus robuste",
             we surface a single CTA card that opens a modal with focus trap +
-            scroll containment + matching sticky CTA bar (below). */}
+            scroll containment. (La barre collante du bas a été retirée le
+            18 novembre 2026 : l'offre PDF suit désormais le premier écran.) */}
         {tierGrid && tierGrid.length > 0 && (() => {
           const recommendedTile = tierGrid.find((t) => t.definition.key === "ORACLE_FULL");
           const recommendedPrice = recommendedTile?.price.display ?? "";
           return (
-            <div className="mt-10 print:hidden">
+            <div className="mt-6 print:hidden">
               <div className="rounded-2xl border border-amber-700/40 bg-gradient-to-br from-amber-950/20 via-zinc-950 to-zinc-900 p-5 sm:p-7">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
@@ -1659,6 +1731,43 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             </div>
           );
         })()}
+
+        </ResultFold>
+        <div className="border-t border-border-subtle print:hidden" />
+
+        {/* ════════════════════════════════════════════════════════════
+            PAGE-ONLY: Contact / paywall / activation (print:hidden)
+        ════════════════════════════════════════════════════════════ */}
+        <section className="mt-10 rounded-2xl border border-border bg-card p-6 print:hidden">
+          <h2 className="mb-1 text-lg font-bold text-foreground">{t("intakeResult.contact.title")}</h2>
+          <p className="mb-5 text-sm text-foreground-muted">
+            {t("intakeResult.contact.sub")}
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <a
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Rapport ADVE — ${intake.companyName}`)}`}
+              className="flex items-center gap-3 rounded-lg border border-border-subtle bg-background p-4 transition hover:border-primary/40 hover:bg-primary-subtle/10"
+            >
+              <div className="rounded-full bg-primary/10 p-2"><Mail className="h-4 w-4 text-primary" /></div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{t("intakeResult.contact.email")}</p>
+                <p className="truncate text-sm font-medium text-foreground">{CONTACT_EMAIL}</p>
+              </div>
+            </a>
+            <a
+              href={`https://wa.me/${CONTACT_WHATSAPP_NUMBER}?text=${encodeURIComponent(`Bonjour, je viens de finaliser mon diagnostic ADVE pour ${intake.companyName}.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-lg border border-border-subtle bg-background p-4 transition hover:border-primary/40 hover:bg-primary-subtle/10"
+            >
+              <div className="rounded-full bg-primary/10 p-2"><MessageCircle className="h-4 w-4 text-primary" /></div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{t("intakeResult.contact.whatsapp")}</p>
+                <p className="truncate text-sm font-medium text-foreground">{CONTACT_WHATSAPP_DISPLAY}</p>
+              </div>
+            </a>
+          </div>
+        </section>
 
         {isPaid && !activeAccount && (
           <section className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/5 to-card p-6 sm:p-8 print:hidden">
@@ -1761,47 +1870,6 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         </Modal>
       )}
 
-      {/* Sticky CTA — present on every viewport size, hidden when the user
-          has already unlocked or activated. Pushes itself above mobile
-          home-indicator via env(safe-area-inset-bottom). Hidden in print. */}
-      {!isPaid && !activeAccount && tierGrid && tierGrid.length > 0 && (() => {
-        const recommended = tierGrid.find((t) => t.definition.key === "ORACLE_FULL");
-        const cheapest = tierGrid.find((t) => t.definition.key === "INTAKE_PDF");
-        return (
-          <div
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm print:hidden"
-            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-          >
-            <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-              <div className="min-w-0">
-                <p className="truncate text-2xs uppercase tracking-wider text-zinc-500">
-                  {t("intakeResult.sticky.kicker")}
-                </p>
-                <p className="truncate text-sm text-zinc-200">
-                  {t("intakeResult.sticky.from")}{" "}
-                  <span className="font-semibold text-amber-400">
-                    {cheapest?.price.display ?? "—"}
-                  </span>
-                  {recommended && (
-                    <span className="hidden sm:inline text-zinc-500">
-                      {" "}{t("intakeResult.sticky.recommended")}{" "}
-                      <span className="text-zinc-300">{recommended.price.display}</span>
-                    </span>
-                  )}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPricingModalOpen(true)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-500"
-              >
-                {t("intakeResult.tiers.cta")}
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        );
-      })()}
     </main>
   );
 }
