@@ -9,7 +9,7 @@ const QUESTIONS = [
   },
   {
     q: "Combien de temps prend le diagnostic ?",
-    a: "Le questionnaire guidé prend environ 10 minutes, l'import de documents quelques minutes de plus ou de moins : ce sont des durées indicatives, pas des garanties. La génération du rapport vient ensuite et peut prendre plusieurs minutes. Le rapport web est gratuit ; le PDF brandé exportable est en option payante. La suite — stratégie, missions, livrables — se cadre avec ton équipe ; aucun délai n'est garanti sur cette page.",
+    a: "Le diagnostic prend 4 minutes environ, du premier champ au résultat : c'est la durée médiane des diagnostics terminés, pas une garantie. Le rapport web est gratuit ; le PDF brandé exportable est en option payante. La suite — stratégie, missions, livrables — se cadre avec ton équipe ; aucun délai n'est garanti sur cette page.",
   },
   {
     q: "Qu'est-ce qui empêche l'IA de raconter n'importe quoi ?",

@@ -277,7 +277,7 @@ export const en = {
   "landing.nav.championnat": "The championship",
   "landing.nav.paris": "The pledges",
   "landing.nav.login": "Sign in",
-  "landing.nav.cta": "Free diagnostic — 15 min",
+  "landing.nav.cta": "Free diagnostic — 4 min",
   "landing.nav.space": "My space",
 
   // ── Settings — language (international toggle) ────────────────────────

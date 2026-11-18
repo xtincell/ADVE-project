@@ -7,7 +7,7 @@ const PLANS = [
     price: "Gratuit", per: "— rapport web",
     feats: ["Complétude du socle de marque /100 (méthode ADVE) — force publique /200 quand une mesure existe", "Radar des 4 piliers ADVE", "Aperçu des recommandations prioritaires, à valider", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
     cta: "Diagnostiquer ma marque →", href: "#intake", featured: false,
-    timeline: "↳ Questionnaire ~10 min · durée indicative",
+    timeline: "↳ 4 min environ · note sur 100 et trois constats",
   },
   {
     name: "RAMPE 02", title: "Propulsion", lead: "L'OS complet pour aller de FORTE à CULTE.",

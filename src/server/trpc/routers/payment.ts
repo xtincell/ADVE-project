@@ -17,7 +17,7 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from "../init";
 import { assertRawStrategyScope } from "../middleware/strategy-scope";
-import { isCinetPayCountry } from "@/lib/constants/intake-options";
+import { intakePricingCountry, isCinetPayCountry } from "@/lib/constants/intake-options";
 import crypto from "crypto";
 import { resolvePrice } from "@/server/services/monetization";
 import { pickProvider, PaymentProviderError, type PaymentProviderId } from "@/server/services/payment-providers";
@@ -94,7 +94,8 @@ export const paymentRouter = createTRPCRouter({
       }
 
       // ── Resolve real localized price via monetization service ──
-      const country = intake.country ?? "FR";
+      // Même règle que l'affichage de la page de résultat (prix affiché = prix demandé).
+      const country = intakePricingCountry(intake.country);
       const resolved = await resolvePrice(input.tierKey, country);
 
       // ── Zero-amount bypass ──

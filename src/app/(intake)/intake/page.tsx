@@ -5,11 +5,15 @@
 // ============================================================================
 //
 // CdC REQUIREMENTS (V1):
-// [x] REQ-1  Landing: "Mesurez la force de votre marque en 15 minutes" + CTA
+// [x] REQ-1  Landing: "Mesurez la force de votre marque en 4 minutes environ" + CTA
+//            (durée médiane mesurée le 18 novembre 2026 sur les diagnostics
+//            terminés en base, hors script automatique : 235 s)
 // [x] REQ-2  Collect contact info (name, email, company — required)
 // [x] REQ-3  Collect optional context (sector, country, business model, positioning)
+//            — replié sous « Affiner mon diagnostic (facultatif) » : les 3 champs
+//            obligatoires d'abord, les 11 facultatifs ensuite.
 // [x] REQ-4  Start mutation creates QuickIntake → redirects to /intake/[token]
-// [x] REQ-5  Trust badges (gratuit, confidentiel, 15 min, actionnable)
+// [x] REQ-5  Trust badges (gratuit, confidentiel, 4 min, actionnable)
 // [x] REQ-6  Mobile-first responsive design
 // [x] REQ-7  UTM tracking (source parameter captured from URL query params)
 // [x] REQ-8  Social proof (# of diagnostics completed)
@@ -43,7 +47,6 @@ const METHOD_OPTIONS: Array<{
   id: IntakeMethod;
   titleKey: string;
   subtitleKey: string;
-  durationKey: string;
   descriptionKey: string;
   icon: typeof ClipboardList;
   recommended?: boolean;
@@ -52,7 +55,6 @@ const METHOD_OPTIONS: Array<{
     id: "GUIDED",
     titleKey: "intake.method.guided.title",
     subtitleKey: "intake.method.guided.subtitle",
-    durationKey: "intake.method.guided.duration",
     descriptionKey: "intake.method.guided.description",
     icon: ClipboardList,
     recommended: true,
@@ -61,7 +63,6 @@ const METHOD_OPTIONS: Array<{
     id: "IMPORT",
     titleKey: "intake.method.import.title",
     subtitleKey: "intake.method.import.subtitle",
-    durationKey: "intake.method.import.duration",
     descriptionKey: "intake.method.import.description",
     icon: FileText,
   },
@@ -96,6 +97,7 @@ function IntakeLandingContent() {
   const [error, setError] = useState("");
   const [incomingOverton, setIncomingOverton] = useState<EntryOvertonClaim | null>(null);
   const [overtonClaim, setOvertonClaim] = useState<EntryOvertonClaim | null>(null);
+  const [refineOpen, setRefineOpen] = useState(false);
 
   // Attribution funnel (vague E) : UTM structurés + referrer + click ids —
   // d'où vient CHAQUE prospect. `source` reste la synthèse lisible (compat).
@@ -130,6 +132,7 @@ function IntakeLandingContent() {
       const claim = EntryOvertonClaimSchema.safeParse(overtonRaw && overtonRaw.length <= 3000 ? JSON.parse(overtonRaw) : null);
       setOvertonClaim(claim.success ? claim.data : null);
       setIncomingOverton(claim.success ? claim.data : null);
+      if (claim.success) setRefineOpen(true);
     } catch { setOvertonClaim(null); }
     const company = searchParams.get("company") ?? searchParams.get("brand");
     const email = searchParams.get("email");
@@ -148,6 +151,7 @@ function IntakeLandingContent() {
         socialLinksRaw: social?.slice(0, 1000) ?? f.socialLinksRaw,
         referralCode: referral?.slice(0, 24) ?? f.referralCode,
       }));
+      if (website || social || referral) setRefineOpen(true);
       // P1-1 (audit UX 2026-07-19) — la modale landing collecte déjà
       // nom/email/marque : re-présenter le step contact entier était une
       // double-saisie. Querystring complet → on saute directement au choix
@@ -191,6 +195,7 @@ function IntakeLandingContent() {
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIncomingOverton(overtonClaim);
     setStep("method");
   };
 
@@ -217,6 +222,7 @@ function IntakeLandingContent() {
     const website = OptionalIntakeWebUrlSchema.safeParse(form.websiteUrl);
     if (!website.success) {
       setError(intakeErrorMessage(website.error));
+      setRefineOpen(true);
       setStep("contact");
       return;
     }
@@ -246,7 +252,7 @@ function IntakeLandingContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background">
-      <div className="flex flex-1 flex-col items-center justify-center px-5 py-12 sm:px-8">
+      <div className="flex flex-1 flex-col items-center justify-center px-5 py-8 sm:px-8 sm:py-12">
         {/* Logo — official La Fusée mark */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logos/lafusee-logo.png" alt={t("intake.brand.alt")} className="mb-8 h-12 w-auto" />
@@ -286,8 +292,6 @@ function IntakeLandingContent() {
             </span>
           )}
         </div>
-
-        <div className="w-full max-w-lg"><OvertonEntry brand={form.companyName} initialValue={incomingOverton} onChange={setOvertonClaim} hidePreview /></div>
 
         {/* Step indicator */}
         <div className="mt-8 flex items-center gap-2 text-xs text-foreground-muted">
@@ -353,129 +357,147 @@ function IntakeLandingContent() {
               />
             </div>
 
-            {/* ADR-0157 — parrainage : optionnel, le filleul obtient -20 % sur
-                son premier cycle et le parrain 1 mois offert (appliqués à la
-                validation — rien d'automatique). */}
-            <div>
-              <label htmlFor="referralCode" className="mb-1.5 block text-sm font-medium text-foreground">
-                {t("intake.contact.referral.label")}
-              </label>
-              <input
-                id="referralCode"
-                type="text"
-                value={form.referralCode}
-                onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })}
-                className={inputClass}
-                placeholder={t("intake.contact.referral.placeholder")}
-              />
-              <p className="mt-1 text-xs text-foreground-muted">
-                {t("intake.contact.referral.hint")}
-              </p>
-            </div>
+            {/* Les 11 champs facultatifs (parrainage, site, réseaux, secteur, pays,
+                modèle, positionnement, et les 4 du cadrage Overton) sont repliés :
+                le formulaire ne demande d'abord que les 3 champs obligatoires. */}
+            <details
+              open={refineOpen}
+              onToggle={(e) => setRefineOpen(e.currentTarget.open)}
+              className="rounded-xl border border-border bg-background-raised/40 px-4"
+            >
+              <summary className="cursor-pointer py-3 text-sm font-semibold text-foreground">
+                {t("intake.contact.refine.summary")}
+              </summary>
+              <div className="space-y-4 pb-4">
+                <p className="text-xs leading-relaxed text-foreground-muted">{t("intake.contact.refine.hint")}</p>
 
-            <div>
-              <label htmlFor="websiteUrl" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                {t("intake.contact.website.label")} <span className="text-foreground-muted">{t("intake.contact.website.hint")}</span>
-              </label>
-              <input
-                id="websiteUrl"
-                type="text"
-                inputMode="url"
-                autoCapitalize="none"
-                autoCorrect="off"
-                value={form.websiteUrl}
-                onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
-                className={inputClass}
-                placeholder={t("intake.contact.website.placeholder")}
-              />
-            </div>
+                {/* ADR-0157 — parrainage : optionnel, le filleul obtient -20 % sur
+                    son premier cycle et le parrain 1 mois offert (appliqués à la
+                    validation — rien d'automatique). */}
+                <div>
+                  <label htmlFor="referralCode" className="mb-1.5 block text-sm font-medium text-foreground">
+                    {t("intake.contact.referral.label")}
+                  </label>
+                  <input
+                    id="referralCode"
+                    type="text"
+                    value={form.referralCode}
+                    onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })}
+                    className={inputClass}
+                    placeholder={t("intake.contact.referral.placeholder")}
+                  />
+                  <p className="mt-1 text-xs text-foreground-muted">
+                    {t("intake.contact.referral.hint")}
+                  </p>
+                </div>
 
-            <div>
-              <label htmlFor="socialLinksRaw" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                {t("intake.contact.social.label")} <span className="text-foreground-muted">{t("intake.contact.social.hint")}</span>
-              </label>
-              <textarea
-                id="socialLinksRaw"
-                rows={3}
-                value={form.socialLinksRaw}
-                onChange={(e) => setForm({ ...form, socialLinksRaw: e.target.value })}
-                className={inputClass}
-                placeholder={t("intake.contact.social.placeholder")}
-              />
-              <p className="mt-1 text-xs text-foreground-muted">
-                {t("intake.contact.social.note")}
-              </p>
-            </div>
+                <div>
+                  <label htmlFor="websiteUrl" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                    {t("intake.contact.website.label")} <span className="text-foreground-muted">{t("intake.contact.website.hint")}</span>
+                  </label>
+                  <input
+                    id="websiteUrl"
+                    type="text"
+                    inputMode="url"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    value={form.websiteUrl}
+                    onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
+                    className={inputClass}
+                    placeholder={t("intake.contact.website.placeholder")}
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="sector" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                  {t("intake.contact.sector.label")}
-                </label>
-                <select
-                  id="sector"
-                  value={form.sector}
-                  onChange={(e) => setForm({ ...form, sector: e.target.value })}
-                  className={selectClass}
-                >
-                  <option value="">{t("intake.contact.optional")}</option>
-                  {INTAKE_SECTORS.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
+                <div>
+                  <label htmlFor="socialLinksRaw" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                    {t("intake.contact.social.label")} <span className="text-foreground-muted">{t("intake.contact.social.hint")}</span>
+                  </label>
+                  <textarea
+                    id="socialLinksRaw"
+                    rows={3}
+                    value={form.socialLinksRaw}
+                    onChange={(e) => setForm({ ...form, socialLinksRaw: e.target.value })}
+                    className={inputClass}
+                    placeholder={t("intake.contact.social.placeholder")}
+                  />
+                  <p className="mt-1 text-xs text-foreground-muted">
+                    {t("intake.contact.social.note")}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="sector" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                      {t("intake.contact.sector.label")}
+                    </label>
+                    <select
+                      id="sector"
+                      value={form.sector}
+                      onChange={(e) => setForm({ ...form, sector: e.target.value })}
+                      className={selectClass}
+                    >
+                      <option value="">{t("intake.contact.optional")}</option>
+                      {INTAKE_SECTORS.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="country" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                      {t("intake.contact.country.label")}
+                    </label>
+                    <select
+                      id="country"
+                      value={form.country}
+                      onChange={(e) => setForm({ ...form, country: e.target.value })}
+                      className={selectClass}
+                    >
+                      <option value="">{t("intake.contact.optional")}</option>
+                      {INTAKE_COUNTRIES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="businessModel" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                    {t("intake.contact.businessModel.label")}
+                  </label>
+                  <select
+                    id="businessModel"
+                    value={form.businessModel}
+                    onChange={(e) => setForm({ ...form, businessModel: e.target.value })}
+                    className={selectClass}
+                  >
+                    <option value="">{t("intake.contact.optional")}</option>
+                    {Object.entries(BUSINESS_MODELS).map(([key, model]) => (
+                      <option key={key} value={key}>{model.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="positioning" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                    {t("intake.contact.positioning.label")}
+                  </label>
+                  <select
+                    id="positioning"
+                    value={form.positioning}
+                    onChange={(e) => setForm({ ...form, positioning: e.target.value })}
+                    className={selectClass}
+                  >
+                    <option value="">{t("intake.contact.optional")}</option>
+                    {Object.entries(POSITIONING_ARCHETYPES).map(([key, arch]) => (
+                      <option key={key} value={key}>{arch.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <OvertonEntry brand={form.companyName} initialValue={incomingOverton} onChange={setOvertonClaim} hidePreview />
               </div>
-
-              <div>
-                <label htmlFor="country" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                  {t("intake.contact.country.label")}
-                </label>
-                <select
-                  id="country"
-                  value={form.country}
-                  onChange={(e) => setForm({ ...form, country: e.target.value })}
-                  className={selectClass}
-                >
-                  <option value="">{t("intake.contact.optional")}</option>
-                  {INTAKE_COUNTRIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="businessModel" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                {t("intake.contact.businessModel.label")}
-              </label>
-              <select
-                id="businessModel"
-                value={form.businessModel}
-                onChange={(e) => setForm({ ...form, businessModel: e.target.value })}
-                className={selectClass}
-              >
-                <option value="">{t("intake.contact.optional")}</option>
-                {Object.entries(BUSINESS_MODELS).map(([key, model]) => (
-                  <option key={key} value={key}>{model.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="positioning" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                {t("intake.contact.positioning.label")}
-              </label>
-              <select
-                id="positioning"
-                value={form.positioning}
-                onChange={(e) => setForm({ ...form, positioning: e.target.value })}
-                className={selectClass}
-              >
-                <option value="">{t("intake.contact.optional")}</option>
-                {Object.entries(POSITIONING_ARCHETYPES).map(([key, arch]) => (
-                  <option key={key} value={key}>{arch.label}</option>
-                ))}
-              </select>
-            </div>
+            </details>
 
             {error && (
               <div className="rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
@@ -543,7 +565,6 @@ function IntakeLandingContent() {
                             {t(method.titleKey)}
                             <AiBadge />
                           </p>
-                          <span className="ml-2 text-xs text-foreground-muted">{t(method.durationKey)}</span>
                         </div>
                         <p className="mt-0.5 text-xs font-medium text-primary">{t(method.subtitleKey)}</p>
                         <p className="mt-1.5 text-sm leading-relaxed text-foreground-secondary">

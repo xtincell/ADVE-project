@@ -1960,7 +1960,8 @@ function analyzePillarResponses(
     e: ["Renseigner vos canaux existants", "Distinguer audience, clients et recommandations réellement mesurés", "Choisir un indicateur d’engagement à suivre"],
   };
   return { pillar: name, key, score,
-    diagnostic: `${name} est parmi les volets les moins renseignés du dossier (${score.toFixed(1)}/25 de complétude structurelle). ${answers.length} réponse(s) reçue(s) ; les manques du dossier ne démontrent pas une faiblesse de votre entreprise.`,
+    // Échelle unique du parcours gratuit (/100) : le pilier, noté sur 25 dans le vecteur, est dit sur 100.
+    diagnostic: `${name} est parmi les volets les moins renseignés du dossier (${Math.round(Math.min(Math.max(score, 0), 25) * 4)}/100 de complétude structurelle). ${answers.length} réponse(s) reçue(s) ; les manques du dossier ne démontrent pas une faiblesse de votre entreprise.`,
     actions: actions[key] ?? ["Compléter et confirmer les données de ce volet"],
   };
 }

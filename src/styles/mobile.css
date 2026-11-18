@@ -129,8 +129,14 @@
 html, body { max-width: 100%; overflow-x: hidden; }
 
 @media (max-width: 767.98px) {
-  /* Un média sans dimension explicite ne déborde jamais de son parent. */
-  img, svg, video, canvas { max-width: 100%; height: auto; }
+  /* Un média sans dimension explicite ne déborde jamais de son parent.
+     Rangé dans la couche `base` (18 novembre 2026) : hors couche, cette règle
+     battait les utilitaires Tailwind (`h-12`, `h-14`…) et annulait toute
+     hauteur explicite sur mobile — le logo de /intake et de /login montait à
+     366 px. Dans `base`, elle ne s'applique plus qu'aux médias SANS dimension. */
+  @layer base {
+    img, svg, video, canvas { max-width: 100%; height: auto; }
+  }
 
   /* Les mots interminables (URL, identifiants, e-mails) se coupent au lieu
      d'élargir leur colonne. */

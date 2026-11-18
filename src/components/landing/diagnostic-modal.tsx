@@ -112,7 +112,7 @@ function DiagnosticModal({ onClose }: { onClose: () => void }) {
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", margin: "4px 0 9px" }}>Méthode</label>
               <div className="method-row">
                 <button type="button" className={"method" + (method === "GUIDED" ? " on" : "")} onClick={() => setMethod("GUIDED")}>
-                  <b><ClipboardList /> Questionnaire</b><small>Guidé · ~10 min</small>
+                  <b><ClipboardList /> Questionnaire</b><small>Guidé · 4 min environ</small>
                 </button>
                 <button type="button" className={"method" + (method === "IMPORT" ? " on" : "")} onClick={() => setMethod("IMPORT")}>
                   <b><FileText /> Import</b><small>Documents · ~3 min</small>

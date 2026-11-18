@@ -16,12 +16,12 @@ export const intakeEntryFr = {
 
   // ── Landing /intake — hero + badges ──────────────────────────────────
   "intake.hero.title.before": "Mesurez la force de votre marque en",
-  "intake.hero.title.highlight": "15 minutes environ",
+  "intake.hero.title.highlight": "4 minutes environ",
   "intake.hero.subtitle":
-    "Le protocole ADVE analyse 4 dimensions fondamentales et vous donne votre socle de marque sur 100 — le premier pas vers le score complet sur 200, mesuré sur épreuves.",
+    "Vous repartez avec une note sur 100, le palier de votre marque et trois constats : ce qui tient, ce qui manque, par où commencer.",
   "intake.badge.free": "Gratuit",
   "intake.badge.confidential": "Confidentiel",
-  "intake.badge.duration": "~15 min (indicatif)",
+  "intake.badge.duration": "4 min environ",
   "intake.badge.actionable": "Actionnable",
   "intake.badge.diagnostics": "{count}+ diagnostics",
   "intake.steps.contact": "Vos infos",
@@ -53,6 +53,9 @@ export const intakeEntryFr = {
   "intake.contact.businessModel.label": "Modèle d'affaires",
   "intake.contact.positioning.label": "Positionnement prix",
   "intake.contact.continue": "Continuer — choisir la méthode",
+  "intake.contact.refine.summary": "Affiner mon diagnostic (facultatif)",
+  "intake.contact.refine.hint":
+    "Site, réseaux, secteur, pays… Plus vous en dites, plus les constats sont précis. Le pays fixe aussi la devise du rapport.",
   "intake.contact.error.invalidEmail": "Adresse email invalide. Vérifiez et réessayez.",
   "intake.contact.error.requiredFields": "Veuillez remplir tous les champs obligatoires.",
   "intake.contact.error.nameRequired": "Le nom est requis.",
@@ -66,14 +69,12 @@ export const intakeEntryFr = {
   "intake.method.recommended": "Recommandé",
   "intake.method.guided.title": "Questionnaire",
   "intake.method.guided.subtitle": "Méthode guidée",
-  "intake.method.guided.duration": "~10 min",
   "intake.method.guided.description":
-    "Répondez à des questions sur les 4 piliers ADVE (Authenticité, Distinction, Valeur, Engagement). Activez l'IA pour des questions personnalisées.",
+    "Répondez à des questions sur les 4 piliers de votre marque : Authenticité, Distinction, Valeur, Engagement. Activez l'IA pour des questions personnalisées.",
   "intake.method.import.title": "Import intelligent",
   "intake.method.import.subtitle": "Méthode rapide",
-  "intake.method.import.duration": "~3-5 min",
   "intake.method.import.description":
-    "Fournissez un texte, des documents (PDF, Word) et/ou l'URL de votre site. L'IA analyse vos sources et extrait les données ADVE.",
+    "Fournissez un texte, des documents (PDF, Word) et/ou l'adresse de votre site. L'IA lit vos sources et en tire le profil de votre marque.",
   "intake.method.start": "Commencer le diagnostic",
   "intake.method.starting": "Démarrage...",
   "intake.footer.privacy":
@@ -160,12 +161,12 @@ export const intakeEntryEn: Record<keyof typeof intakeEntryFr, string> = {
   "intake.notFound.body": "This link is invalid or has expired.",
 
   "intake.hero.title.before": "Measure your brand's strength in",
-  "intake.hero.title.highlight": "about 15 minutes",
+  "intake.hero.title.highlight": "about 4 minutes",
   "intake.hero.subtitle":
-    "The ADVE protocol analyzes 4 fundamental dimensions and gives you your brand foundation score out of 100 — the first step toward the full score out of 200, measured through real-world trials.",
+    "You leave with a score out of 100, your brand's tier and three findings: what holds, what is missing, where to start.",
   "intake.badge.free": "Free",
   "intake.badge.confidential": "Confidential",
-  "intake.badge.duration": "~15 min (indicative)",
+  "intake.badge.duration": "about 4 min",
   "intake.badge.actionable": "Actionable",
   "intake.badge.diagnostics": "{count}+ diagnostics",
   "intake.steps.contact": "Your details",
@@ -196,6 +197,9 @@ export const intakeEntryEn: Record<keyof typeof intakeEntryFr, string> = {
   "intake.contact.businessModel.label": "Business model",
   "intake.contact.positioning.label": "Price positioning",
   "intake.contact.continue": "Continue — choose a method",
+  "intake.contact.refine.summary": "Refine my diagnostic (optional)",
+  "intake.contact.refine.hint":
+    "Website, social links, sector, country… The more you share, the sharper the findings. The country also sets the report currency.",
   "intake.contact.error.invalidEmail": "Invalid email address. Please check and try again.",
   "intake.contact.error.requiredFields": "Please fill in all required fields.",
   "intake.contact.error.nameRequired": "Name is required.",
@@ -208,14 +212,12 @@ export const intakeEntryEn: Record<keyof typeof intakeEntryFr, string> = {
   "intake.method.recommended": "Recommended",
   "intake.method.guided.title": "Questionnaire",
   "intake.method.guided.subtitle": "Guided method",
-  "intake.method.guided.duration": "~10 min",
   "intake.method.guided.description":
-    "Answer questions across the 4 ADVE pillars (Authenticity, Distinction, Value, Engagement). Enable AI for personalized questions.",
+    "Answer questions across your brand's 4 pillars: Authenticity, Distinction, Value, Engagement. Enable AI for personalized questions.",
   "intake.method.import.title": "Smart import",
   "intake.method.import.subtitle": "Fast method",
-  "intake.method.import.duration": "~3-5 min",
   "intake.method.import.description":
-    "Provide text, documents (PDF, Word) and/or your website URL. The AI analyzes your sources and extracts the ADVE data.",
+    "Provide text, documents (PDF, Word) and/or your website address. The AI reads your sources and builds your brand profile from them.",
   "intake.method.start": "Start the diagnostic",
   "intake.method.starting": "Starting...",
   "intake.footer.privacy":
@@ -299,12 +301,12 @@ export const intakeEntryZh: Record<keyof typeof intakeEntryFr, string> = {
   "intake.notFound.body": "此链接无效或已过期。",
 
   "intake.hero.title.before": "测量您品牌的力量，只需",
-  "intake.hero.title.highlight": "约 15 分钟",
+  "intake.hero.title.highlight": "约 4 分钟",
   "intake.hero.subtitle":
-    "ADVE 协议分析 4 个基本维度，为您给出满分 100 的品牌根基分——这是迈向满分 200、经实战检验的完整评分的第一步。",
+    "您将获得满分 100 的评分、品牌所处的层级，以及三条结论：哪些稳固、哪些欠缺、从哪里开始。",
   "intake.badge.free": "免费",
   "intake.badge.confidential": "保密",
-  "intake.badge.duration": "约 15 分钟（参考）",
+  "intake.badge.duration": "约 4 分钟",
   "intake.badge.actionable": "可执行",
   "intake.badge.diagnostics": "{count}+ 次诊断",
   "intake.steps.contact": "您的信息",
@@ -335,6 +337,9 @@ export const intakeEntryZh: Record<keyof typeof intakeEntryFr, string> = {
   "intake.contact.businessModel.label": "商业模式",
   "intake.contact.positioning.label": "价格定位",
   "intake.contact.continue": "继续——选择方式",
+  "intake.contact.refine.summary": "完善我的诊断（选填）",
+  "intake.contact.refine.hint":
+    "网站、社交账号、行业、国家……信息越多，结论越精准。国家也决定报告的币种。",
   "intake.contact.error.invalidEmail": "邮箱地址无效。请检查后重试。",
   "intake.contact.error.requiredFields": "请填写所有必填项。",
   "intake.contact.error.nameRequired": "姓名为必填项。",
@@ -347,12 +352,10 @@ export const intakeEntryZh: Record<keyof typeof intakeEntryFr, string> = {
   "intake.method.recommended": "推荐",
   "intake.method.guided.title": "问卷",
   "intake.method.guided.subtitle": "引导式方法",
-  "intake.method.guided.duration": "约 10 分钟",
   "intake.method.guided.description":
     "回答关于 ADVE 四大支柱（真实性、差异化、价值、参与）的问题。开启 AI 可获得个性化问题。",
   "intake.method.import.title": "智能导入",
   "intake.method.import.subtitle": "快速方法",
-  "intake.method.import.duration": "约 3-5 分钟",
   "intake.method.import.description":
     "提供文本、文档（PDF、Word）和/或您的网站链接。AI 会分析您的资料并提取 ADVE 数据。",
   "intake.method.start": "开始诊断",

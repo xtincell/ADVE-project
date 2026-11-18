@@ -59,7 +59,7 @@ export function MarketingHero() {
       <div className="relative z-10 mx-auto max-w-[var(--maxw-content)] w-full px-[var(--pad-page)] flex-1 flex flex-col pt-12 md:pt-20">
         <div className="inline-flex items-center gap-2.5 mb-7 text-2xs font-mono uppercase tracking-widest text-foreground-muted">
           <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-          Industry OS — marché créatif africain
+          La plateforme des marques d&apos;Afrique francophone
         </div>
 
         <h1 className="font-display font-semibold tracking-tighter mb-12" style={{ fontSize: "var(--text-mega)", lineHeight: 0.92 }}>
@@ -83,7 +83,7 @@ export function MarketingHero() {
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                 </DiagnosticCta>
                 <a href="/scorer" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-accent text-accent hover:bg-accent/10 transition-colors">
-                  Scorer ma marque — ~1 min
+                  Scorer ma présence en ligne
                 </a>
                 <a href="#manifesto" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-border-strong text-foreground hover:bg-surface-elevated transition-colors">
                   Lire le manifeste
@@ -92,7 +92,7 @@ export function MarketingHero() {
                   Voir les offres
                 </a>
               </div>
-              <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · questionnaire ~10 min, durée indicative · sans engagement · PDF en option payante</p>
+              <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · 4 min environ · sans engagement · PDF en option payante</p>
               <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted pt-3 mt-1 border-t border-dashed border-border-subtle">
                 Pas founder ?
                 <a href="#portails" className="ml-2 text-foreground-secondary hover:text-accent transition-colors">→ Agence</a>
