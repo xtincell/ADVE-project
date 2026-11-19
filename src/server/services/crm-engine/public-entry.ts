@@ -5,13 +5,13 @@ import type { Prisma, SalesPublicEntry } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { createDealIn } from "./index";
-import { advanceSale, mandateSchema, type SalesState } from "./commercial";
+import { advanceSale, mandateSchema, salesStateSchema, type SalesState } from "./commercial";
 import { assertFleetBrand, recordInboundSalesMessageIn, ensureSalesOfferToolsIn, type FleetActor } from "./fleet";
 import { issueCustomerAccessIn } from "./customer";
 import { serialSalesTransaction } from "./transaction";
 import { assertSalesCatalogueOfferIn, assertSalesPrincipalIn } from "./portfolio";
 import { freezeSalesCollectionIn } from "./collection-provider";
-import { saveSalesPublicEntryInput, startPublicSalesConversationInput, projectPublicSalesHumanContact,
+import { saveSalesPublicEntryInput, startPublicSalesConversationInput, projectPublicSalesHumanContact, publicSalesObjective,
   type SaveSalesPublicEntryInput, type StartPublicSalesConversationInput } from "./public-entry-contract";
 
 type Tx = Prisma.TransactionClient;
@@ -21,6 +21,9 @@ const sameDigest = (a: string, b: string) => a.length === b.length && timingSafe
 const unavailable = () => new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette équipe ne reçoit pas de nouvelles conversations pour le moment." });
 const conflict = () => new TRPCError({ code: "CONFLICT", message: "Cette demande ne correspond pas à la conversation initiale. Reprenez le lien conservé dans ce navigateur." });
 const publicPath = (id: string) => `/talk/${id}`;
+export const PUBLIC_SALES_CONVERSATIONS_PER_ADDRESS_PER_HOUR = 3;
+export const PUBLIC_SALES_TEAM_FULL = "Cette équipe a atteint sa capacité de nouvelles conversations. Réessayez plus tard.";
+export const PUBLIC_SALES_ADDRESS_LIMIT = "Plusieurs conversations ont déjà été ouvertes depuis cette connexion. Reprenez votre conversation en cours ou réessayez dans une heure.";
 /** Match the existing effective-admin policy using the freshly read DB email. */
 const approvedPublisher = (ownerId: string, author: { id: string; role: string; email: string | null } | null) =>
   !!author && (author.id === ownerId || author.role === "ADMIN" || isGodModeEmail(author.email));
@@ -91,6 +94,23 @@ async function readyEntryIn(tx: Tx, entry: SalesPublicEntry) {
   return { config, ...await assertConfigIn(tx, config, entry.authorizedBy) };
 }
 
+const PROPOSED_NODES = new Set(["PROPOSAL", "OBJECTION", "ACCEPTED", "PAID", "DELIVERED"]);
+const PAID_NODES = new Set(["PAID", "DELIVERED"]);
+/** The entry's objective, counted from its own conversations: no estimate, only recorded steps. */
+export async function publicEntryStats(entryId: string) {
+  const sessions = await db.salesPublicSession.findMany({ where: { entryId }, select: { dealId: true }, orderBy: { createdAt: "desc" }, take: 2000 });
+  const deals = sessions.length ? await db.deal.findMany({ where: { id: { in: sessions.map(session => session.dealId) } }, select: { contactPhone: true, commercial: true } }) : [];
+  let contacts = 0, proposals = 0, payments = 0;
+  for (const deal of deals) {
+    const state = salesStateSchema.safeParse(deal.commercial ?? {});
+    const node = state.success ? state.data.node : "DISCOVERY";
+    if (deal.contactPhone) contacts++;
+    if (PROPOSED_NODES.has(node)) proposals++;
+    if (PAID_NODES.has(node)) payments++;
+  }
+  return { conversations: sessions.length, contacts, proposals, payments };
+}
+
 /** Only the owner/admin sees private templates and financial instructions. */
 export async function getSalesPublicEntry(actor: FleetActor, input: { strategyId: string }) {
   await ownerBrand(db, actor, input.strategyId);
@@ -102,7 +122,8 @@ export async function getSalesPublicEntry(actor: FleetActor, input: { strategyId
   }
   return { entry: entry ? { publicId: entry.publicId, revision: entry.revision,
     ...saveSalesPublicEntryInput.parse(entry.config), expectedRevision: entry.revision, enabled: entry.enabled } : null,
-    path: entry ? publicPath(entry.publicId) : null, available, readinessReason };
+    path: entry ? publicPath(entry.publicId) : null, available, readinessReason,
+    stats: entry ? await publicEntryStats(entry.id) : null };
 }
 
 export async function saveSalesPublicEntry(actor: FleetActor, raw: SaveSalesPublicEntryInput, intentId: string) {
@@ -218,8 +239,12 @@ export async function startPublicSalesConversation(publicId: string, raw: StartP
       tx.salesPublicSession.count({ where: { entryId: current.id, createdAt: { gte: hour } } }),
       tx.salesPublicSession.count({ where: { entryId: current.id, ipHash, createdAt: { gte: hour } } }),
     ]);
-    if (daily >= config.maxConversationsPerDay || hourly >= config.maxConversationsPerHour || ipCount >= 3) {
-      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Cette équipe a atteint sa capacité de nouvelles conversations. Réessayez plus tard." });
+    if (daily >= config.maxConversationsPerDay || hourly >= config.maxConversationsPerHour) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: PUBLIC_SALES_TEAM_FULL });
+    }
+    // Same guard as before, with its own words: the team is not full, this connection opened several conversations.
+    if (ipCount >= PUBLIC_SALES_CONVERSATIONS_PER_ADDRESS_PER_HOUR) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: PUBLIC_SALES_ADDRESS_LIMIT });
     }
     const dealId = `sales-public-${hash(JSON.stringify([current.id, input.requestId]))}`;
     const notApplicable = "Non applicable — conversation d’information, aucun paiement autorisé.";
@@ -229,7 +254,7 @@ export async function startPublicSalesConversation(publicId: string, raw: StartP
       beneficiary: config.informationOnly ? notApplicable : offer.beneficiary,
       paymentInstructions: config.informationOnly ? notApplicable : offer.paymentInstructions,
       informationOnly: config.informationOnly,
-      sellerId, channels: ["WEB" as const], outboundEmailEnabled: false,
+      sellerId, channels: ["WEB" as const], outboundEmailEnabled: false, objective: publicSalesObjective(config),
       collection: !config.informationOnly && offer.collection ? { ...offer.collection, attestedBy: current.authorizedBy, attestedAt: current.updatedAt.toISOString() } : undefined }));
     const mandate = approvedOffers.find(offer => offer.offerId === selected.offerId)!;
     const state: SalesState = advanceSale({ node: "DISCOVERY" }, { requestId: input.requestId, expectedRevision: 0,

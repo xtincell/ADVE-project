@@ -15,7 +15,10 @@ export const conversationTreeSchema = z.object({
   start: text,
   nodes: z.array(z.object({
     id: text, prompt: text,
-    choices: z.array(z.object({ id: text, label: text, next: text, decision: branchDecision.optional() })).max(20),
+    // customerLabel: owner-written button text shown to the customer for this answer.
+    // label stays the seller's observation and is never shown to the customer.
+    choices: z.array(z.object({ id: text, label: text, next: text, decision: branchDecision.optional(),
+      customerLabel: z.string().trim().min(1).max(80).optional() })).max(20),
   })).min(1).max(100),
 }).superRefine((tree, ctx) => {
   const ids = new Set(tree.nodes.map(node => node.id));
@@ -41,6 +44,10 @@ export const collectionSchema = z.object({
   /** Derived and checked server-side from the approved non-secret provider configuration. */
   providerAccountHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 });
+/** What the seller works toward: the brand's first payment, or a qualified and oriented contact. */
+export const salesObjectiveSchema = z.enum(["FIRST_PAYMENT", "QUALIFIED_CONTACT"]);
+/** A contact number as the customer wrote it, reduced to its international digits. */
+export const salesContactPhoneSchema = z.string().regex(/^[1-9][0-9]{7,14}$/);
 export const salesPlanSchema = z.object({
   id: z.string().min(1).max(200),
   basis: z.enum(["OWNER", "CUSTOMER_REQUEST", "APPROVED_CADENCE"]),
@@ -69,6 +76,7 @@ export const mandateSchema = z.object({
   portfolioMemberId: text.optional(),
   outreachPolicy: outreachPolicySchema.optional(),
   collection: collectionSchema.optional(),
+  objective: salesObjectiveSchema.optional(),
 });
 /** Uncalculated formula prices are explicitly pending, never a free offer. */
 const mandateInputSchema = mandateSchema.partial({ amount: true, currency: true }).extend({
@@ -96,6 +104,11 @@ export const salesCommandSchema = z.discriminatedUnion("type", [
     basis: z.enum(["OWNER", "CUSTOMER_REQUEST", "APPROVED_CADENCE"]),
     purpose: z.enum(["FOLLOW_UP", "VALUE_REVIEW"]), customerMessageId: text.optional() }),
   z.object({ type: z.literal("BRANCH"), choiceId: text, evidence: text, customerMessageId: text.optional() }),
+  // The contact the customer gave in this conversation. An agent must cite the received message.
+  z.object({ type: z.literal("CONTACT"), customerMessageId: text.optional(),
+    name: z.string().trim().min(1).max(120).optional(), phone: salesContactPhoneSchema.optional(),
+    profile: z.string().trim().min(1).max(80).optional() })
+    .refine(value => Boolean(value.name || value.phone), "Renseignez au moins le nom ou le numéro donné par le client."),
 ]);
 export const salesStepSchema = z.object({
   requestId: z.string().uuid(), expectedRevision: z.number().int().nonnegative(),
@@ -111,6 +124,8 @@ export const salesStateSchema = z.object({
   nextPlan: salesPlanSchema.optional(),
   cadenceSuspended: z.boolean().optional(),
   proposal: salesProposalSchema.optional(),
+  contact: z.object({ capturedAt: z.string().datetime(), profile: z.string().trim().min(1).max(80).optional(),
+    customerMessageId: text.optional() }).optional(),
 });
 export type SalesState = z.infer<typeof salesStateSchema>;
 export type SalesStep = z.infer<typeof salesStepSchema>;
@@ -186,6 +201,10 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
   switch (command.type) {
     case "SELECT_OFFER":
       throw new Error("Choisissez une offre parmi celles approuvées pour cette conversation.");
+    case "CONTACT":
+      // Recording a contact changes no commercial step: it is allowed in an enquiry too.
+      return { ...previous, contact: { capturedAt: now.toISOString(), customerMessageId: command.customerMessageId,
+        profile: command.profile ?? previous.contact?.profile } };
     case "PLAN_NEXT_ACTION": {
       requireCondition(command.nextDeadline && new Date(command.nextDeadline) > now, "Une prochaine action exige une date future explicite.");
       requireCondition(new Date(command.nextDeadline) < new Date(mandate.expiresAt), "La prochaine action doit avoir lieu avant l’expiration des conditions de vente.");

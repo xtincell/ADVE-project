@@ -20,10 +20,14 @@ type Props = {
 const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const button = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
 const date = (value: string) => new Date(value).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+const objectiveLabel = { FIRST_PAYMENT: "Obtenir le premier paiement", QUALIFIED_CONTACT: "Recueillir un contact qualifié et l’orienter" } as const;
+type Objective = keyof typeof objectiveLabel;
+const defaultObjective = (informationOnly: boolean): Objective => informationOnly ? "QUALIFIED_CONTACT" : "FIRST_PAYMENT";
 
 function PublicEntryForm({ strategyId, brandName, representative, catalogue, offerVersion, principals, defaultPrincipalId, initial, onClose, save }: Props & { initial: Entry | null; onClose: () => void; save: (input: SaveSalesPublicEntryInput) => Promise<void> }) {
   const [offers, setOffers] = useState(initial?.offers.map((offer, index) => ({ key: index, id: offer.offerId, collect: Boolean(offer.collection) })) ?? [{ key: 0, id: "", collect: false }]);
   const [informationOnly, setInformationOnly] = useState(initial?.informationOnly ?? false);
+  const [objective, setObjective] = useState<Objective>(initial?.objective ?? defaultObjective(initial?.informationOnly ?? false));
   const [nextKey, setNextKey] = useState(offers.length);
   const [review, setReview] = useState<SaveSalesPublicEntryInput | null>(null);
   const [pending, setPending] = useState(false);
@@ -41,7 +45,7 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
         if (contactNumber && !/^\+?[\d ()-]+$/.test(contactNumber)) throw new Error("Renseignez le numéro WhatsApp avec son indicatif pays, sans lien ni texte.");
         const parsed = saveSalesPublicEntryInput.parse({
           strategyId, expectedRevision: initial?.revision ?? 0, representativeId: representative.id, enabled: form.get("enabled") === "on",
-          informationOnly,
+          informationOnly, objective: informationOnly ? "QUALIFIED_CONTACT" : objective,
           publicBrandName: read(form, "publicBrandName"), welcome: read(form, "welcome"), market: read(form, "market"),
           maxConversationsPerDay: Number(read(form, "daily")), maxConversationsPerHour: Number(read(form, "hourly")),
           collectionAttested: !informationOnly && form.get("collectionAttested") === "on",
@@ -70,6 +74,10 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
         <label className="flex items-start gap-2 text-sm"><input type="radio" name="public-purpose" checked={informationOnly} onChange={() => setInformationOnly(true)} />Répondre aux questions</label>
         <label className="flex items-start gap-2 text-sm"><input type="radio" name="public-purpose" checked={!informationOnly} onChange={() => setInformationOnly(false)} />Proposer des offres</label>
         {informationOnly && <p className="text-sm text-foreground-muted">Le vendeur renseigne les visiteurs. L’équipe doit confirmer les prestations et les conditions avant toute souscription.</p>}
+        <label className="block text-sm">But du vendeur<select className={field} value={informationOnly ? "QUALIFIED_CONTACT" : objective} disabled={informationOnly} onChange={event => setObjective(event.target.value as Objective)}>
+          {(Object.keys(objectiveLabel) as Objective[]).map(key => <option key={key} value={key}>{objectiveLabel[key]}</option>)}
+        </select></label>
+        <p className="text-xs text-foreground-muted">{(informationOnly ? "QUALIFIED_CONTACT" : objective) === "FIRST_PAYMENT" ? "Chaque réponse rapproche le client d’un premier achat : besoin, proposition, accord, paiement." : "Le vendeur recueille le nom, le numéro et le profil du visiteur, l’enregistre dans l’affaire, puis l’oriente vers le bon lien."}</p>
       </fieldset>
       <fieldset className="grid gap-3 sm:grid-cols-2"><legend className="mb-3 font-medium">Accueil des visiteurs</legend>
         <label>Nom affiché publiquement<input className={field} name="publicBrandName" required maxLength={120} defaultValue={initial?.publicBrandName ?? brandName} /></label>
@@ -113,6 +121,7 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
       <h4 className="font-medium">Vérifier l’accueil public de {review.publicBrandName}</h4>
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div className="sm:col-span-2"><dt className="text-foreground-muted">Ce que le vendeur peut faire</dt><dd>{review.informationOnly ? "Répondre aux questions" : "Proposer des offres"}</dd></div>
+        <div className="sm:col-span-2"><dt className="text-foreground-muted">But du vendeur</dt><dd>{objectiveLabel[review.objective ?? defaultObjective(Boolean(review.informationOnly))]}</dd></div>
         <div><dt className="text-foreground-muted">Vendeur</dt><dd>{representative.name}</dd></div><div><dt className="text-foreground-muted">Marché</dt><dd>{review.market}</dd></div>
         {review.humanContact && <div className="sm:col-span-2"><dt className="text-foreground-muted">Contact WhatsApp publié</dt><dd>{review.humanContact.name} · +{review.humanContact.whatsapp}</dd></div>}
         <div className="sm:col-span-2"><dt className="text-foreground-muted">Accueil publié</dt><dd className="whitespace-pre-wrap break-words">{review.welcome}</dd></div>
@@ -159,6 +168,8 @@ export function CrmSalesPublicEntry(props: Props) {
     {entry && !editing && <div className="space-y-3 rounded-lg border border-border p-4 text-sm">
       <p className="font-medium">{entry.publicBrandName} · {entry.enabled && available ? "Ouvert aux nouveaux visiteurs" : "Fermé aux nouveaux visiteurs"}</p>
       <p>{entry.informationOnly ? "Répondre aux questions" : "Proposer des offres"}</p>
+      <p>But du vendeur : {objectiveLabel[entry.objective ?? defaultObjective(Boolean(entry.informationOnly))].toLowerCase()}</p>
+      {query.data?.stats && <p data-entry-stats="">Depuis l’ouverture : {query.data.stats.conversations} conversation{query.data.stats.conversations > 1 ? "s" : ""} · {query.data.stats.contacts} contact{query.data.stats.contacts > 1 ? "s" : ""} recueilli{query.data.stats.contacts > 1 ? "s" : ""} · {query.data.stats.proposals} proposition{query.data.stats.proposals > 1 ? "s" : ""} · {query.data.stats.payments} paiement{query.data.stats.payments > 1 ? "s" : ""}</p>}
       {entry.enabled && !available && <p role="status" className="text-foreground-muted">{query.data?.readinessReason ?? "Vérifiez le vendeur et la validité des offres avant d’accueillir de nouveaux visiteurs."}</p>}
       {!belongsToSelected && <p className="text-foreground-muted">L’entrée actuelle est affectée à un autre vendeur de cette marque. Une nouvelle publication peut la confier à {representative.name}.</p>}
       <p className="whitespace-pre-wrap break-words">{entry.welcome}</p>
@@ -166,7 +177,7 @@ export function CrmSalesPublicEntry(props: Props) {
       <p className="text-foreground-muted">{entry.offers.length} {entry.informationOnly ? "sujet" : "offre"}{entry.offers.length > 1 ? "s" : ""} · {entry.maxConversationsPerHour} nouvelles conversations par heure, {entry.maxConversationsPerDay} par jour</p>
       {!entry.informationOnly && entry.offers.some(offer => !offer.collection) && <p className="text-foreground-muted">Paiement à configurer pour {entry.offers.filter(offer => !offer.collection).map(offer => offer.offerName).join(", ")}. Les conversations et propositions restent possibles.</p>}
       {path && <div className="flex flex-wrap gap-2"><button type="button" className={button} onClick={async () => { try { await navigator.clipboard.writeText(new URL(path, window.location.origin).href); setCopied(true); } catch { setError("Ouvrez l’accueil pour copier son adresse depuis votre navigateur."); } }}><Copy aria-hidden className="h-4 w-4" />{copied ? "Lien copié" : "Copier le lien public"}</button><a className={button} href={path} target="_blank" rel="noreferrer"><ExternalLink aria-hidden className="h-4 w-4" />Ouvrir l’accueil</a>
-        {canManage && <button type="button" className={button} disabled={mutation.isPending} onClick={async () => { setError(""); try { await save(saveSalesPublicEntryInput.parse({ strategyId, expectedRevision: entry.revision, representativeId: entry.representativeId, enabled: !entry.enabled, informationOnly: entry.informationOnly ?? false, publicBrandName: entry.publicBrandName, welcome: entry.welcome, market: entry.market, maxConversationsPerDay: entry.maxConversationsPerDay, maxConversationsPerHour: entry.maxConversationsPerHour, offers: entry.offers, humanContact: entry.humanContact, collectionAttested: Boolean(entry.offers.some(offer => offer.collection)) })); } catch (cause) { setError((cause as Error).message); } }}>{entry.enabled ? "Fermer aux nouveaux visiteurs" : "Rouvrir l’accueil"}</button>}
+        {canManage && <button type="button" className={button} disabled={mutation.isPending} onClick={async () => { setError(""); try { await save(saveSalesPublicEntryInput.parse({ strategyId, expectedRevision: entry.revision, representativeId: entry.representativeId, enabled: !entry.enabled, informationOnly: entry.informationOnly ?? false, objective: entry.objective, publicBrandName: entry.publicBrandName, welcome: entry.welcome, market: entry.market, maxConversationsPerDay: entry.maxConversationsPerDay, maxConversationsPerHour: entry.maxConversationsPerHour, offers: entry.offers, humanContact: entry.humanContact, collectionAttested: Boolean(entry.offers.some(offer => offer.collection)) })); } catch (cause) { setError((cause as Error).message); } }}>{entry.enabled ? "Fermer aux nouveaux visiteurs" : "Rouvrir l’accueil"}</button>}
       </div>}
     </div>}
     {!entry && !editing && !query.isLoading && <p className="text-sm text-foreground-muted">Aucune entrée publique configurée pour cette marque.</p>}

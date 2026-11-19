@@ -47,4 +47,15 @@ describe("sales tree authoring", () => {
     expect(branch(proposed, "accepted").node).toBe("ACCEPTED");
     expect(branch(proposed, "stop").contactStopped).toBe(true);
   });
+  it("lets the manager write the customer's button apart from the seller's observation, and clear it", () => {
+    const { container } = render(React.createElement(CrmSalesTreeEditor));
+    fireEvent.click(screen.getByRole("button", { name: "Adapter les questions de vente" }));
+    const buttons = screen.getAllByLabelText(/Bouton proposé au client/);
+    fireEvent.change(buttons[0]!, { target: { value: "J’achète pour mon entreprise" } });
+    let choice = readTree(container)!.nodes[0]!.choices[0]!;
+    expect(choice).toMatchObject({ label: "Il achète pour son entreprise", customerLabel: "J’achète pour mon entreprise" });
+    fireEvent.change(buttons[0]!, { target: { value: "" } });
+    choice = readTree(container)!.nodes[0]!.choices[0]!;
+    expect(choice.customerLabel).toBeUndefined();
+  });
 });

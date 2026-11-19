@@ -703,6 +703,17 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’accord doit être reçu après la présentation de cette proposition au client." });
       }
     }
+    if (command.type === "CONTACT" && actor.id.startsWith("mcp:")) {
+      // An agent records only what this customer wrote in this conversation.
+      const message = command.customerMessageId ? await tx.crmMessage.findUnique({ where: { id: command.customerMessageId } }) : null;
+      const plain = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+      const digits = (message?.body ?? "").replace(/\D/g, "");
+      if (!message || message.salesDealId !== deal.id || message.direction !== "IN" || message.status !== "RECEIVED" ||
+          (command.phone && !digits.includes(command.phone.slice(-8))) ||
+          (command.name && !plain(message.body).includes(plain(command.name)) && plain(deal.contactName) !== plain(command.name))) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le contact doit reprendre le nom ou le numéro écrits par ce client dans un message reçu." });
+      }
+    }
     if(previous.mandate?.collection && ["PAYMENT","DELIVER"].includes(command.type)) {
       const payment=deal.paymentReference?await tx.intakePayment.findUnique({where:{reference:deal.paymentReference}}):null;
       const {paymentMajorAmount}=await import("./payments");
@@ -759,6 +770,7 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
         wonAt: stage === "WON" ? (deal.wonAt ?? new Date()) : deal.wonAt,
         value: next.mandate?.informationOnly || ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : next.mandate?.pricingRule && !next.proposal ? null : (next.mandate?.amount ?? deal.value),
         currency: next.mandate?.currency ?? deal.currency,
+        ...(command.type === "CONTACT" ? { ...(command.name ? { contactName: command.name } : {}), ...(command.phone ? { contactPhone: command.phone } : {}) } : {}),
       },
     });
     if (changed.count !== 1) throw new TRPCError({ code: "CONFLICT", message: "Une autre décision vient d’être enregistrée." });

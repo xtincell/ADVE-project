@@ -19,7 +19,7 @@ import { POST as customerPost } from "@/app/api/sales/[token]/route";
 import { POST as mcpPost } from "@/app/api/mcp/operations/route";
 import { decryptTokenPayload } from "@/server/services/oauth-integrations";
 import {
-  getSalesPublicEntry, saveSalesPublicEntry, publicSalesEntry, startPublicSalesConversation,
+  getSalesPublicEntry, saveSalesPublicEntry, publicSalesEntry, startPublicSalesConversation, PUBLIC_SALES_ADDRESS_LIMIT,
 } from "@/server/services/crm-engine/public-entry";
 import {
   saveSalesPublicEntryInput, startPublicSalesConversationInput,
@@ -623,5 +623,59 @@ describe("brand public sales entry on owned PostgreSQL", () => {
     expect(state.node).toBe("DELIVERED"); expect(state.nextDeadline).toBeUndefined(); expect(state.nextPlan).toBeUndefined();
     expect(final.paymentReference).toBe(payment.reference); expect((await customerConversation(token)).state).toBe("DELIVERED");
     expect((await db.intakePayment.findUniqueOrThrow({ where: { reference: payment.reference } })).paidAt).not.toBeNull();
+  });
+
+  it("hands the entry objective to each conversation, records only the contact the visitor wrote and counts it for the team", async () => {
+    const f = await fixture();
+    const { deal, token } = await start(f, received({ displayName: "Awa" }));
+    expect(salesStateSchema.parse(deal.commercial).mandate?.objective).toBe("FIRST_PAYMENT");
+    const requestId = randomUUID();
+    await receiveCustomerMessage(token, { requestId, body: "Je suis Awa Koné, restauratrice. Mon WhatsApp : +225 07 08 09 10 11." });
+    const message = await db.crmMessage.findFirstOrThrow({ where: { salesDealId: deal.id, providerRef: `web:${requestId}` } });
+    const actor = { id: f.ai.principalId!, admin: false };
+    const contact = async (command: SalesStep["command"]) => {
+      const current = await db.deal.findUniqueOrThrow({ where: { id: deal.id } });
+      return applySalesStep(deal.id, { requestId: randomUUID(), expectedRevision: current.revision, channel: "WEB", command }, actor);
+    };
+    await expect(contact({ type: "CONTACT", customerMessageId: message.id, phone: "2250102030405" })).rejects.toThrow(/numéro/);
+    await expect(contact({ type: "CONTACT", phone: "2250708091011" })).rejects.toThrow(/numéro/);
+    await expect(contact({ type: "CONTACT", customerMessageId: message.id, name: "Mariam Traoré" })).rejects.toThrow(/nom/);
+    await contact({ type: "CONTACT", customerMessageId: message.id, name: "Awa Koné", phone: "2250708091011", profile: "Restaurant" });
+    const stored = await db.deal.findUniqueOrThrow({ where: { id: deal.id } });
+    expect(stored.contactPhone).toBe("2250708091011"); expect(stored.contactName).toBe("Awa Koné");
+    const state = salesStateSchema.parse(stored.commercial);
+    expect(state.node).toBe("DISCOVERY"); expect(state.contact).toMatchObject({ profile: "Restaurant", customerMessageId: message.id });
+    expect((await getSalesPublicEntry(owner, { strategyId: f.brand.id })).stats).toEqual({ conversations: 1, contacts: 1, proposals: 0, payments: 0 });
+    const enquiry = await fixture({ informationOnly: true }, true, true);
+    expect(salesStateSchema.parse((await start(enquiry)).deal.commercial).mandate?.objective).toBe("QUALIFIED_CONTACT");
+  });
+
+  it("tells a visitor whose connection opened several conversations what happened, instead of calling the team full", async () => {
+    const f = await fixture(); const params = { params: Promise.resolve({ publicId: f.entry.publicId }) };
+    const url = `http://localhost/api/sales-entry/${f.entry.publicId}`;
+    const post = () => publicPost(new Request(url, { method: "POST", headers: { "content-type": "application/json", origin: "http://localhost" }, body: JSON.stringify(received()) }), params);
+    for (let i = 0; i < 3; i++) expect((await post()).status).toBe(200);
+    const refused = await post();
+    expect(refused.status).toBe(429);
+    expect((await refused.json()).error).toBe(PUBLIC_SALES_ADDRESS_LIMIT);
+    expect((await startPublicSalesConversation(f.entry.publicId, received(), { ipHash: cap() })).path).toMatch(/^\/sales\//);
+  });
+
+  it("offers the owner-written answers of the current step as buttons once the seller has spoken", async () => {
+    const f = await fixture();
+    const tree = { version: "owned-buttons-v1", start: "welcome", nodes: [
+      { id: "welcome", prompt: "Pour qui achetez-vous ?", choices: [
+        { id: "buyer", label: "Il achète pour son entreprise", customerLabel: "J’achète pour mon entreprise", next: "offer", decision: { type: "QUALIFY" as const, role: "BUYER" as const } },
+        { id: "partner", label: "Il propose un partenariat", customerLabel: "Je propose un partenariat", next: "partner", decision: { type: "QUALIFY" as const, role: "PARTNER" as const } },
+        { id: "other", label: "Autre réponse observée", next: "welcome" }] },
+      { id: "offer", prompt: "Présenter l’offre.", choices: [] },
+      { id: "partner", prompt: "Examiner le partenariat.", choices: [] }] };
+    await save({ ...f.input, expectedRevision: f.entry.revision, offers: f.input.offers.map(offer => ({ ...offer, conversationTree: tree })) });
+    const { deal, token } = await start(f);
+    expect((await customerConversation(token)).suggestedReplies).toEqual([]);
+    await sendSalesWebMessage(deal.id, { id: f.ai.principalId!, admin: false }, { requestId: randomUUID(), text: "Pour qui souhaitez-vous ce service ?" });
+    expect((await customerConversation(token)).suggestedReplies).toEqual(["J’achète pour mon entreprise", "Je propose un partenariat"]);
+    await receiveCustomerMessage(token, { requestId: randomUUID(), body: "J’achète pour mon entreprise" });
+    expect((await customerConversation(token)).suggestedReplies).toEqual([]);
   });
 });

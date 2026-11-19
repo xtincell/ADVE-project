@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.591", date: "2026-11-19", headline: "Un assistant commercial qui sait où il vous mène",
+    highlights: [
+      { emoji: "👆", title: "Répondre d’un geste", body: "Quand l’assistant commercial pose une question, les réponses prévues par l’équipe s’affichent en boutons sous son message. Un clic les envoie ; vous pouvez toujours écrire librement." },
+      { emoji: "🎯", title: "Un but pour chaque accueil", body: "Le propriétaire choisit le but de l’assistant : obtenir le premier paiement, ou recueillir un contact qualifié et l’orienter. L’assistant termine chaque réponse par une seule prochaine étape vers ce but." },
+      { emoji: "📇", title: "Vos coordonnées gardées dans le dossier", body: "Le nom et le numéro que vous donnez dans la conversation sont enregistrés dans votre dossier, tels que vous les avez écrits." },
+      { emoji: "📊", title: "Le bilan de chaque accueil", body: "Dans la console, chaque accueil public indique ses conversations, les contacts recueillis, les propositions et les paiements." },
+      { emoji: "💬", title: "Un message clair en cas d’affluence", body: "Si plusieurs conversations viennent d’être ouvertes depuis la même connexion, la page le dit et invite à reprendre la conversation en cours." },
+    ],
+  },
+  {
     version: "6.27.590", date: "2026-11-18", headline: "Un diagnostic gratuit plus clair, une conversation plus vive",
     highlights: [
       { emoji: "💬", title: "Votre message s’affiche aussitôt", body: "Dans la conversation avec l’assistant commercial, le message envoyé apparaît tout de suite. Tant que la réponse se prépare, des points animés le montrent, puis elle s’affiche dès qu’elle est écrite." },

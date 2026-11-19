@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { TRPCError } from "@trpc/server";
 import { ZodError } from "zod";
-import { publicSalesEntry, publicSalesClientIpHash, startPublicSalesConversation } from "@/server/services/crm-engine/public-entry";
+import { publicSalesEntry, publicSalesClientIpHash, startPublicSalesConversation,
+  PUBLIC_SALES_ADDRESS_LIMIT, PUBLIC_SALES_TEAM_FULL } from "@/server/services/crm-engine/public-entry";
 import { resolveClientIp } from "@/server/services/seshat/scan-rate-limit";
 import { getPublicBaseUrl } from "@/server/services/oauth-integrations";
 
@@ -14,7 +15,7 @@ function failure(error: unknown) {
     const status = error.code === "TOO_MANY_REQUESTS" ? 429 : error.code === "NOT_FOUND" ? 404 :
       error.code === "CONFLICT" ? 409 : error.code === "BAD_REQUEST" ? 400 : error.code === "PRECONDITION_FAILED" || error.code === "FORBIDDEN" ? 409 : 503;
     // Authority errors never reveal personnel, private catalogue or financial details.
-    const message = status === 429 ? "Cette équipe a atteint sa capacité de nouvelles conversations. Réessayez plus tard." :
+    const message = status === 429 ? (error.message === PUBLIC_SALES_ADDRESS_LIMIT ? PUBLIC_SALES_ADDRESS_LIMIT : PUBLIC_SALES_TEAM_FULL) :
       error.code === "BAD_REQUEST" ? error.message : unavailable;
     return NextResponse.json({ error: message }, { status, headers });
   }

@@ -146,4 +146,27 @@ describe("the brand chooses what its public team may do", () => {
     expect(collection).not.toHaveProperty("providerAccountHash"); expect(collection).not.toHaveProperty("attestedBy");
     expect(container.textContent).not.toContain("clé API");
   });
+
+  it("shows the seller's goal and the entry's results, and keeps the goal when closing new admissions", async () => {
+    calls.query.mockReturnValue({ data: { entry: { ...questionEntry, objective: "QUALIFIED_CONTACT" }, available: true,
+      stats: { conversations: 12, contacts: 5, proposals: 0, payments: 0 } }, isLoading: false, error: null });
+    calls.fetch.mockResolvedValue({ entry: { ...questionEntry, objective: "QUALIFIED_CONTACT" } });
+    render(React.createElement(CrmSalesPublicEntry, props));
+    expect(screen.getByText("But du vendeur : recueillir un contact qualifié et l’orienter")).toBeTruthy();
+    expect(screen.getByText("Depuis l’ouverture : 12 conversations · 5 contacts recueillis · 0 proposition · 0 paiement")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Fermer aux nouveaux visiteurs" }));
+    await waitFor(() => expect(calls.save).toHaveBeenCalledOnce());
+    expect(calls.save.mock.calls[0]![0]).toMatchObject({ enabled: false, objective: "QUALIFIED_CONTACT" });
+  });
+
+  it("lets a selling entry aim at a qualified contact instead of the first payment", async () => {
+    const { container } = render(React.createElement(CrmSalesPublicEntry, props));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer l’accueil public" }));
+    const goal = screen.getByLabelText("But du vendeur") as HTMLSelectElement;
+    expect(goal.value).toBe("FIRST_PAYMENT");
+    fireEvent.change(goal, { target: { value: "QUALIFIED_CONTACT" } });
+    fireEvent.click(screen.getByLabelText("Répondre aux questions"));
+    expect((screen.getByLabelText("But du vendeur") as HTMLSelectElement).disabled).toBe(true);
+    expect(container.textContent).toContain("Le vendeur recueille le nom, le numéro et le profil du visiteur");
+  });
 });

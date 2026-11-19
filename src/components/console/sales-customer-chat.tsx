@@ -21,6 +21,8 @@ type Conversation = {
   proposal?: (SalesProposal & { documentUrl: string }) | null;
   offer: null | { name: string; terms: string; amount: number; currency: string; paymentInstructions: string };
   messages: Array<{ id: string; role: "customer" | "seller"; body: string; at: string }>;
+  /** Owner-written answers to the seller's current question; free text stays available. */
+  suggestedReplies?: string[];
   stopped: boolean;
   closed?: boolean;
 };
@@ -262,6 +264,12 @@ export function SalesCustomerChat({ token }: { token: string }) {
             <p className="mt-3 text-sm leading-relaxed text-foreground-muted">{replyStatusText[data.replyStatus as "QUEUED" | "PROCESSING"]}</p>
           </div>}
         </section>
+        {data && !data.stopped && !replyInPreparation && !busy && !pending && !echoShown && (data.suggestedReplies?.length ?? 0) > 0 &&
+          <div role="group" aria-label="Réponses proposées" className="flex flex-wrap gap-2">
+            {data.suggestedReplies!.map(label => <button key={label} type="button" data-suggested-reply=""
+              onClick={() => void send({ body: label, requestId: crypto.randomUUID() })}
+              className="inline-flex min-h-11 items-center rounded-full border border-primary/60 px-4 py-2 text-left text-sm font-medium text-foreground hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{label}</button>)}
+          </div>}
         {!data?.stopped && !replyInPreparation && data?.replyStatus && data.replyStatus !== "UP_TO_DATE" && <p role="status" className="text-sm leading-relaxed text-foreground-muted">{replyStatusText[data.replyStatus]}</p>}
         <div ref={latest} className="scroll-mb-64" aria-hidden />
       </div>

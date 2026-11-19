@@ -1,3 +1,14 @@
+## v6.27.591 — feat(vendeur): un but par accueil, des réponses en boutons, le contact dans l’affaire (2026-11-19)
+
+**Lot 2 du plan « expérience client » : le vendeur IA sait où il mène le client, et le client répond d’un geste.**
+
+- But du vendeur : `objective` (`FIRST_PAYMENT` ou `QUALIFIED_CONTACT`) dans la configuration de l’entrée publique, choisi par le propriétaire (« But du vendeur ») et recopié dans le mandat de chaque nouvelle conversation. Les entrées existantes sans valeur gardent un défaut explicite : premier paiement pour une vente, contact qualifié pour une entrée d’information ; une entrée d’information ne peut pas viser un paiement. Le moteur galahad 0.1.21 lit ce but dans le mandat.
+- Réponses en boutons : chaque choix de l’arbre peut porter `customerLabel` (80 caractères), texte écrit par le propriétaire dans l’éditeur des questions. La conversation du client renvoie `suggestedReplies` (choix de l’étape courante, quatre au plus) seulement quand le vendeur a parlé en dernier, hors arrêt et après accord ; la page les affiche sous la dernière réponse, un clic envoie ce texte comme message. `label` reste l’observation du vendeur et n’est jamais montré au client.
+- Contact dans l’affaire : nouvelle décision `CONTACT` (nom, numéro international, profil) qui renseigne `contactName`/`contactPhone` et `commercial.contact` sans changer l’étape de vente, permise aussi en entrée d’information. Un agent doit citer un message reçu de ce client dans cette affaire ; les 8 derniers chiffres du numéro et le nom (sans accents ni casse) doivent y figurer.
+- Bilan par entrée dans la console : conversations, contacts recueillis (numéro enregistré), propositions, paiements, comptés depuis les conversations de l’entrée.
+- Limite par connexion inchangée (3 nouvelles conversations par heure), avec son propre message : la page ne dit plus que l’équipe est complète.
+- Le bouton « Fermer / Rouvrir » de l’accueil conserve le but. Aucun schéma Prisma, migration, fournisseur ou rôle ajouté.
+
 ## v6.27.590 — fix(vendeur, intake): réponse du vendeur en quelques secondes, diagnostic gratuit resserré (2026-11-18)
 
 **Demande d’Alexandre : la conversation du vendeur IA semblait figée ; un client attendait 32 s sans signe de vie (18 s avant prise du message, 14 s de modèle).**
