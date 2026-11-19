@@ -100,6 +100,13 @@ export async function resolveSalesDeliveryDocument(client:Pick<Prisma.Transactio
   const url=canonicalSalesArtifactUrl((activity.metadata as {artifact?:unknown}|null)?.artifact,baseUrl);
   return url?{activityId:activity.id,url}:null;
 }
+/** Buttons offered to the customer: only the owner-written customer wording of the current
+ * step, and only once the seller has answered. A click sends that wording as a message. */
+export function customerSuggestedReplies(state:SalesState,context:{sellerSpokeLast:boolean}):string[] {
+  if(!context.sellerSpokeLast||state.contactStopped||['STOPPED','ACCEPTED','PAID','DELIVERED'].includes(state.node))return [];
+  const node=state.mandate?.conversationTree?.nodes.find(item=>item.id===state.treeNodeId);
+  return [...new Set((node?.choices??[]).map(choice=>choice.customerLabel?.trim()).filter((label):label is string=>Boolean(label)))].slice(0,4);
+}
 export async function customerConversation(token:string,baseUrl?:string) {
   const deal=await resolveCustomerDeal(token);
   const state=salesStateSchema.parse(deal.commercial??{});
@@ -122,7 +129,8 @@ export async function customerConversation(token:string,baseUrl?:string) {
   const visibleOffer=state.mandate&&!informationOnly&&(!state.mandate.pricingRule||proposal)&&(!state.proposal||proposal)
     ?{name:proposal?.offerName??state.mandate.offerName,terms:proposal?.terms??state.mandate.terms,amount:proposal?.amount??state.mandate.amount,currency:proposal?.currency??state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null;
   const deliveryDocument=await resolveSalesDeliveryDocument(db,deal,state,baseUrl);
-  return {informationOnly,payment:customerPayment,checkout,diagnostic,brand,humanContact,sellerMode:state.mandate?.sellerId.startsWith('mcp:')?'AI' as const:'HUMAN' as const,replyStatus,state:state.node,
+  const suggestedReplies=customerSuggestedReplies(state,{sellerSpokeLast:Boolean(outbound[0])&&replyStatus==='UP_TO_DATE'});
+  return {informationOnly,payment:customerPayment,checkout,diagnostic,brand,humanContact,sellerMode:state.mandate?.sellerId.startsWith('mcp:')?'AI' as const:'HUMAN' as const,replyStatus,state:state.node,suggestedReplies,
     deliveryDocument,offer:visibleOffer,proposal:proposal?{...proposal,documentUrl:`/api/sales/${token}/proposal`}:null,
     stopped:!!state.contactStopped,messages:[...inbound.map(m=>({id:m.id,role:'customer' as const,body:m.body,at:m.createdAt})),...outbound.map(m=>({id:m.id,role:'seller' as const,body:String((m.metadata as {body?:string}|null)?.body??''),at:m.performedAt}))].sort((a,b)=>a.at.getTime()-b.at.getTime())};
 }

@@ -79,6 +79,33 @@ describe("the private dossier continues the public sales conversation", () => {
     expect(document.querySelector("[data-reply-indicator]")).toBeTruthy();
   });
 
+  it("offers the seller's suggested answers as buttons and sends the exact wording on click", async () => {
+    const seller = { id: "reply", role: "seller", body: "Pour qui souhaitez-vous ce rapport ?", at: "2026-11-04T10:00:10Z" };
+    const suggested = ["J’achète pour mon entreprise", "Je propose un partenariat"];
+    const posted: unknown[] = [];
+    const fetcher = vi.fn(async (_url: string, options?: RequestInit) => {
+      if (options?.method === "POST") { posted.push(JSON.parse(String(options.body))); return { ok: true, json: async () => ({ received: true }) }; }
+      return { ok: true, json: async () => posted.length
+        ? { ...conversation, replyStatus: "QUEUED", suggestedReplies: [], messages: [...conversation.messages, seller, { id: "sent", role: "customer", body: suggested[0], at: new Date().toISOString() }] }
+        : { ...conversation, replyStatus: "UP_TO_DATE", suggestedReplies: suggested, messages: [...conversation.messages, seller] } };
+    });
+    vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token: "d6".padEnd(64, "6") }));
+    const group = await screen.findByRole("group", { name: "Réponses proposées" });
+    expect(within(group).getAllByRole("button").map(button => button.textContent)).toEqual(suggested);
+    fireEvent.click(within(group).getByRole("button", { name: suggested[0] }));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ body: suggested[0] });
+    await screen.findByText("Votre message est reçu et attend une réponse.");
+    expect(screen.queryByRole("group", { name: "Réponses proposées" })).toBeNull();
+  });
+
+  it("shows no suggested answer while the seller is still writing", async () => {
+    serve({ ...conversation, replyStatus: "PROCESSING", suggestedReplies: ["J’achète pour mon entreprise"] });
+    render(React.createElement(SalesCustomerChat, { token: "d7".padEnd(64, "7") }));
+    await screen.findByText("Votre interlocuteur prépare sa réponse.");
+    expect(screen.queryByRole("group", { name: "Réponses proposées" })).toBeNull();
+  });
+
   it("reads the conversation again within 1.5 s while a reply is prepared", async () => {
     const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ ...conversation, replyStatus: "QUEUED" }) }));
     vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token: "d4".padEnd(64, "4") }));

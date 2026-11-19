@@ -1,6 +1,6 @@
 /** A public door delegates only inbound WEB conversations to the existing sales desk. */
 import { z } from "zod";
-import { collectionSchema, mandateSchema } from "./commercial";
+import { collectionSchema, mandateSchema, salesObjectiveSchema } from "./commercial";
 
 const label = z.string().trim().min(1).max(200);
 /** Explicit per-brand contact; never inherited from platform/payment defaults. */
@@ -31,6 +31,8 @@ export const saveSalesPublicEntryInput = z.object({
   representativeId: label,
   enabled: z.boolean(),
   informationOnly: z.boolean().default(false),
+  /** Absent on older entries: an enquiry aims at a qualified contact, a sale at the first payment. */
+  objective: salesObjectiveSchema.optional(),
   publicBrandName: z.string().trim().min(1).max(120),
   welcome: z.string().trim().min(1).max(600),
   humanContact: publicSalesHumanContactSchema.optional(),
@@ -46,6 +48,9 @@ export const saveSalesPublicEntryInput = z.object({
   if (value.maxConversationsPerHour > value.maxConversationsPerDay) {
     ctx.addIssue({ code: "custom", path: ["maxConversationsPerHour"], message: "La limite horaire ne peut dépasser la limite quotidienne." });
   }
+  if (value.informationOnly && value.objective === "FIRST_PAYMENT") {
+    ctx.addIssue({ code: "custom", path: ["objective"], message: "Une entrée qui répond aux questions ne peut pas viser un paiement." });
+  }
   if (value.offers.some(offer => offer.collection) && !value.collectionAttested) {
     ctx.addIssue({ code: "custom", path: ["collectionAttested"], message: "Confirmez où recevoir les paiements avant de l’autoriser." });
   }
@@ -57,6 +62,10 @@ export const saveSalesPublicEntryInput = z.object({
   });
 });
 export type SaveSalesPublicEntryInput = z.input<typeof saveSalesPublicEntryInput>;
+export type SalesObjective = z.infer<typeof salesObjectiveSchema>;
+export function publicSalesObjective(config: { objective?: SalesObjective; informationOnly?: boolean }): SalesObjective {
+  return config.objective ?? (config.informationOnly ? "QUALIFIED_CONTACT" : "FIRST_PAYMENT");
+}
 
 export const startPublicSalesConversationInput = z.object({
   requestId: z.string().uuid(),

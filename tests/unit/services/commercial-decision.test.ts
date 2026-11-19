@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceSale, conversationTreeSchema, outreachPolicySchema, salesStateSchema, type SalesStep } from "@/server/services/crm-engine/commercial";
+import { advanceSale, conversationTreeSchema, outreachPolicySchema, salesStateSchema, salesStepSchema, type SalesStep } from "@/server/services/crm-engine/commercial";
 import { firstContactSalesPlan } from "@/server/services/crm-engine/scheduling";
 
 const now = new Date("2026-11-02T12:00:00Z");
@@ -88,5 +88,25 @@ describe("commercial decision boundaries", () => {
     const delivered = advanceSale({ ...accepted, node: "PAID" }, step({ type: "DELIVER", evidence: "Réception indépendante", nextAction: "Revue de valeur", nextDeadline: "2026-11-10T12:00:00.000Z" }), { id: "delivery", admin: false }, now);
     expect(delivered.nextPlan?.purpose).toBe("VALUE_REVIEW");
     expect(delivered.node).toBe("DELIVERED");
+  });
+  it("records a contact without moving the sale, in an enquiry and under an approved tree, but not after a refusal", () => {
+    const conversationTree = conversationTreeSchema.parse({ version: "contact-1", start: "hello", nodes: [
+      { id: "hello", prompt: "Qui êtes-vous ?", choices: [{ id: "resto", label: "Restaurant", customerLabel: "Je tiens un restaurant", next: "hello" }] },
+    ] });
+    const enquiry = salesStateSchema.parse({ mandate: { ...mandate, informationOnly: true, objective: "QUALIFIED_CONTACT", conversationTree }, treeNodeId: "hello" });
+    const recorded = advanceSale(enquiry, step({ type: "CONTACT", name: "Awa", phone: "2250708091011", profile: "Restaurant", customerMessageId: "m1" }), actor, now);
+    expect(recorded.node).toBe("DISCOVERY"); expect(recorded.treeNodeId).toBe("hello");
+    expect(recorded.contact).toEqual({ capturedAt: now.toISOString(), customerMessageId: "m1", profile: "Restaurant" });
+    expect(recorded.mandate?.objective).toBe("QUALIFIED_CONTACT");
+    const stopped = advanceSale(recorded, step({ type: "STOP", evidence: "Ne plus me contacter." }), actor, now);
+    expect(() => advanceSale(stopped, step({ type: "CONTACT", phone: "2250708091011" }), actor, now)).toThrow();
+  });
+  it("requires a usable contact and keeps customer button wording short", () => {
+    expect(salesStepSchema.safeParse(step({ type: "CONTACT", profile: "Restaurant" } as SalesStep["command"])).success).toBe(false);
+    expect(salesStepSchema.safeParse(step({ type: "CONTACT", phone: "+225 07 08" } as SalesStep["command"])).success).toBe(false);
+    expect(salesStepSchema.safeParse(step({ type: "CONTACT", phone: "2250708091011" })).success).toBe(true);
+    const tree = (customerLabel: string) => ({ version: "1", start: "a", nodes: [{ id: "a", prompt: "Question", choices: [{ id: "c", label: "Observation", customerLabel, next: "a" }] }] });
+    expect(conversationTreeSchema.safeParse(tree("J’achète pour mon entreprise")).success).toBe(true);
+    expect(conversationTreeSchema.safeParse(tree("x".repeat(81))).success).toBe(false);
   });
 });
