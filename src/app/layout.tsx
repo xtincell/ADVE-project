@@ -39,11 +39,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://lafusee-app.vercel
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "La Fusée — Industry OS du marché créatif africain",
+    default: "La Fusée — La plateforme des marques d'Afrique francophone",
     template: "%s · La Fusée",
   },
   description:
-    "L'infrastructure méthodologique qui transforme les marques en icônes culturelles — méthode ADVE/RTIS, Oracle stratégique, pilotage de marque. Par UPgraders.",
+    "La plateforme d'UPgraders qui fait d'une marque la référence de son marché : diagnostic gratuit, stratégie, pilotage. Méthode ADVE/RTIS.",
   applicationName: "La Fusée",
   manifest: "/manifest.webmanifest",
   keywords: [
@@ -62,14 +62,14 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     alternateLocale: ["en_US", "zh_CN"],
     url: SITE_URL,
-    title: "La Fusée — Industry OS du marché créatif africain",
+    title: "La Fusée — La plateforme des marques d'Afrique francophone",
     description:
-      "L'infrastructure méthodologique qui transforme les marques en icônes culturelles.",
+      "Diagnostic gratuit en 4 minutes environ, stratégie et pilotage de marque. Par UPgraders.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "La Fusée — Industry OS",
-    description: "L'infrastructure méthodologique du marché créatif africain.",
+    title: "La Fusée — par UPgraders",
+    description: "La plateforme des marques d'Afrique francophone.",
   },
   appleWebApp: {
     capable: true,
@@ -98,7 +98,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         "@id": `${SITE_URL}#org`,
         name: "UPgraders",
         url: SITE_URL,
-        description: "Agence et Industry OS du marché créatif africain — méthode ADVE/RTIS.",
+        description: "Cabinet de conseil et plateforme de marque, Afrique francophone — méthode ADVE/RTIS.",
         brand: { "@type": "Brand", name: "La Fusée" },
       },
       {

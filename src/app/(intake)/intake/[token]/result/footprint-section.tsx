@@ -150,7 +150,7 @@ function buildDeclaredVsObserved(
     rows.push({
       label: "Recommandation",
       declared: `Bouche-à-oreille : ${advocates.toLowerCase()}`,
-      observed: `${fp.maps.rating}/5 · ${nf.format(fp.maps.reviewCount ?? 0)} avis Google publics`,
+      observed: `${fp.maps.rating} ★ · ${nf.format(fp.maps.reviewCount ?? 0)} avis Google publics`,
     });
   }
 
@@ -320,7 +320,7 @@ export function FootprintSection({
           {fp.maps?.status === "LIVE" && fp.maps.rating !== null && (
             <FactCard icon={<Star className="h-3 w-3" />} title="Avis Google">
               <p className="font-semibold">
-                {fp.maps.rating}/5 · {nf.format(fp.maps.reviewCount ?? 0)} avis
+                {fp.maps.rating} ★ · {nf.format(fp.maps.reviewCount ?? 0)} avis
               </p>
               {fp.maps.placeName && <p className="mt-0.5 text-foreground-muted">{fp.maps.placeName}</p>}
               {(fp.maps.topReviews ?? []).slice(0, 1).map((r, i) => (

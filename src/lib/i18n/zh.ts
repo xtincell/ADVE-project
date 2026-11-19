@@ -277,7 +277,7 @@ export const zh = {
   "landing.nav.championnat": "品牌锦标赛",
   "landing.nav.paris": "公开承诺",
   "landing.nav.login": "登录",
-  "landing.nav.cta": "免费诊断 — 15分钟",
+  "landing.nav.cta": "免费诊断 — 4分钟",
   "landing.nav.space": "我的空间",
 
   // ── Settings — language (international toggle) ────────────────────────

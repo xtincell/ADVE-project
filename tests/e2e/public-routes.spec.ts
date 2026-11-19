@@ -5,7 +5,7 @@ test.describe("Public Routes", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
     // Should have the main heading or brand name
-    await expect(page.locator("text=Industry OS").first()).toBeVisible({ timeout: 30000 });
+    await expect(page.locator("text=Faire le diagnostic gratuit").first()).toBeVisible({ timeout: 30000 });
   });
 
   test("Login page renders form", async ({ page }) => {

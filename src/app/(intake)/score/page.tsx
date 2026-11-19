@@ -134,8 +134,8 @@ export default function PublicScorePage() {
         <div className="mt-12 rounded-2xl border border-border bg-card p-6 sm:p-8">
           <h2 className="mb-6 text-center text-xl font-bold text-foreground">Les 8 piliers</h2>
           <p className="mx-auto mb-8 max-w-lg text-center text-sm text-foreground-muted">
-            Chaque pilier est note sur 25 points. Les 4 premiers (ADVE) definissent l'ADN de votre marque.
-            Les 4 suivants (R, T, I, S) mesurent sa capacite d'execution.
+            Chaque pilier est noté sur 25 points. Les 4 premiers (ADVE) définissent l'ADN de votre marque.
+            Les 4 suivants (R, T, I, S) mesurent sa capacité d'exécution.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {PILLARS.map((p) => {
@@ -185,12 +185,12 @@ export default function PublicScorePage() {
             Diagnostiquer ma marque — gratuit
           </a>
           <p className="mt-3 text-xs text-foreground-muted">
-            Questionnaire ~10 min (indicatif) · Gratuit · Confidentiel · Rapport généré à la fin, parfois en plusieurs minutes
+            4 minutes environ · Gratuit · Confidentiel · Une note sur 100 et trois constats dès la fin
           </p>
           <p className="mt-2 text-xs text-foreground-muted">
             Pressé ?{" "}
             <a href="/scorer" className="text-primary underline-offset-2 hover:underline">
-              Scorez votre empreinte publique en ~1 min, sans email
+              Scorez seulement votre présence en ligne, sans e-mail
             </a>
             .
           </p>

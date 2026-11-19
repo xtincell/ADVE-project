@@ -151,7 +151,7 @@ export function MarketingDiagnostic() {
         </div>
 
         <p className="mt-6 font-mono text-xs text-center" style={{ color: "var(--color-foreground-secondary)" }}>
-          ⌖ Diagnostic : questionnaire d&rsquo;environ 10 min ou import de documents (durées indicatives), puis génération du rapport, qui peut prendre plusieurs minutes. Production : délais convenus à la mission, livrables relus avant validation. Trajectoire complète = APOGEE.
+          ⌖ Diagnostic : 4 min environ, questionnaire ou import de documents (durée médiane, pas une garantie). Production : délais convenus à la mission, livrables relus avant validation. Trajectoire complète = APOGEE.
         </p>
       </div>
     </section>

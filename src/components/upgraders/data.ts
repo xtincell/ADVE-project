@@ -221,9 +221,9 @@ export const SERVICES: Service[] = [
   {
     mark: "02",
     title: "Mandat",
-    emphasis: "RTIS",
+    emphasis: "de croissance",
     duration: "6 à 24 mois",
-    desc: "Le cycle complet : ADVE en entrée, propulseur RTIS en exécution. Roadmap dynamique, cellule sur mesure, obligation d'effet.",
+    desc: "Le cycle complet : l'identité de la marque en entrée, sa mise en mouvement en exécution. Feuille de route vivante, cellule sur mesure, obligation d'effet.",
     tag: "Marques cultes — formule reine",
     featured: true,
   },
@@ -261,7 +261,7 @@ export type ProductCategory =
   | "Le cadre";
 
 export const PRODUCT_CATEGORIES: { name: ProductCategory; intro: string }[] = [
-  { name: "Le produit", intro: "L'Industry OS en libre-service — la seule offre sans intermédiaire, avec son propre univers de prix." },
+  { name: "Le produit", intro: "La plateforme en ligne, en autonomie — la seule offre sans intermédiaire, avec son propre univers de prix." },
   { name: "Conseil & stratégie", intro: "Le cerveau : extraction d'ADN, roadmap, marché et finance. Le socle ADVE/RTIS, accompagné." },
   { name: "Production · marque blanche", intro: "Les mains : design, image, son. Une cellule sur mesure convoquée à la mission via La Guilde, sous votre marque." },
   { name: "Le cadre", intro: "La couverture : on porte la méthode, le contrat, l'escrow et l'admin ; vous portez la relation et le métier." },
@@ -295,7 +295,7 @@ export const PRODUCTS: ProductOffer[] = [
     name: "La",
     emphasis: "Fusée",
     kind: "Produit",
-    tagline: "L'Industry OS en libre-service — le produit-phare d'UPgraders, avec son propre univers de prix.",
+    tagline: "La plateforme en ligne, en autonomie — le produit-phare d'UPgraders, avec son propre univers de prix.",
     priceLabel: "Gratuit, puis prix fixe",
     priceNote: "Diagnostic gratuit, puis un prix clair par palier (à l'acte ou abonnement), résolu selon votre zone. Détail chiffré ci-dessous.",
     inclusions: [
@@ -337,7 +337,7 @@ export const PRODUCTS: ProductOffer[] = [
     kind: "Prestation",
     tagline: "Trois ateliers pour extraire l'ADN. Livrable Oracle — une boussole pour 18 mois minimum.",
     priceLabel: "Sur devis",
-    priceNote: "Prestation cadrée, 2 à 4 semaines. Version self-serve : l'Oracle La Fusée, à prix fixe.",
+    priceNote: "Prestation cadrée, 2 à 4 semaines. Version en ligne : l'Oracle La Fusée, à prix fixe.",
     inclusions: [
       "3 ateliers de cadrage accompagnés",
       "Extraction ADVE pilotée par un opérateur",
@@ -345,7 +345,7 @@ export const PRODUCTS: ProductOffer[] = [
       "Restitution + plan d'action 90 jours",
     ],
     primaryCta: { label: "Demander un devis", href: "/contact?offre=audit-adve" },
-    secondaryCta: { label: "Ou : Oracle self-serve", href: "/pricing" },
+    secondaryCta: { label: "Ou : l'Oracle en ligne", href: "/pricing" },
   },
   {
     category: "Conseil & stratégie",
@@ -380,7 +380,7 @@ export const PRODUCTS: ProductOffer[] = [
       "Rapport livré, actionnable",
     ],
     primaryCta: { label: "Demander un devis", href: "/contact?offre=etudes-rapports" },
-    secondaryCta: { label: "Ou : rapport self-serve", href: "/pricing" },
+    secondaryCta: { label: "Ou : le rapport en ligne", href: "/pricing" },
   },
 
   /* ── Production · marque blanche ────────────────────────────────────── */

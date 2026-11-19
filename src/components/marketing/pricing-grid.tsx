@@ -105,7 +105,7 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
           tout accès. Chaque demande d&apos;abonnement et chaque paiement sont enregistrés.
         </p>
         <p className="mt-3 text-sm" style={{ color: "var(--color-foreground-secondary)" }}>
-          La Fusée est le produit self-serve d&apos;UPgraders. Pour les prestations agence
+          La Fusée est le produit en ligne d&apos;UPgraders. Pour les prestations agence
           (audit, mandat, marque blanche),{" "}
           <a href="/tarifs" className="underline hover:text-accent">voir les offres UPgraders →</a>
         </p>

@@ -61,7 +61,7 @@ export function MarketingFooter() {
           <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-8 w-auto shrink-0" />
           <div>
             <div className="font-semibold tracking-tight text-lg">La Fusée<span className="text-accent">.</span></div>
-            <div className="font-mono text-2xs text-foreground-muted">Industry OS — marché créatif africain.</div>
+            <div className="font-mono text-2xs text-foreground-muted">La plateforme des marques d&apos;Afrique francophone.</div>
             <NewsletterBox />
           </div>
         </div>

@@ -33,7 +33,7 @@ export function MarketingFinale() {
         </div>
         <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · sans engagement</p>
         <div className="flex gap-4 items-center mt-8 pt-6 border-t border-border font-mono text-2xs text-foreground-muted flex-wrap justify-center">
-          <span>UPgraders · Industry OS</span>
+          <span>UPgraders · La Fusée</span>
           <span aria-hidden="true" className="text-accent">●</span>
           <span>Abidjan · Douala · Dakar · Lagos</span>
         </div>

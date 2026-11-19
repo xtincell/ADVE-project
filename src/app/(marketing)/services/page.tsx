@@ -6,9 +6,9 @@ import { Section, Eyebrow, SectionHeading, Lede, PrimaryCta, GhostCta, PageHeade
 import { SERVICES, PILLARS } from "@/components/upgraders/data";
 
 export const metadata: Metadata = {
-  title: "Services — UPgraders · Audit ADVE, Mandat RTIS, Marque blanche",
+  title: "Services — UPgraders · Audit ADVE, Mandat de croissance, Marque blanche",
   description:
-    "Trois portes d'entrée chez UPgraders : Audit ADVE (2-4 semaines), Mandat RTIS (6-24 mois), Marque blanche pour agences. Cinq piliers — Impulsion, Pilotis, Source Insights, La Guilde, Sérénité — orchestrés par La Fusée.",
+    "Trois portes d'entrée chez UPgraders : Audit ADVE (2-4 semaines), Mandat de croissance (6-24 mois), Marque blanche pour agences. Cinq piliers — Impulsion, Pilotis, Source Insights, La Guilde, Sérénité — orchestrés par La Fusée.",
 };
 
 export default function ServicesPage() {
@@ -19,7 +19,7 @@ export default function ServicesPage() {
         eyebrow="Travailler avec nous"
         title="Trois portes,"
         emphasis="une mécanique."
-        lede="On entre par un audit, un mandat complet ou une collaboration en marque blanche. Derrière chaque porte, la même mécanique : cinq piliers orchestrés par l'Industry OS La Fusée."
+        lede="On entre par un audit, un mandat complet ou une collaboration en marque blanche. Derrière chaque porte, la même mécanique : cinq piliers orchestrés par notre plateforme, La Fusée."
       >
         <PrimaryCta href="/contact">Démarrer un projet</PrimaryCta>
         <GhostCta href="/tarifs">Voir les tarifs</GhostCta>
@@ -87,13 +87,13 @@ export default function ServicesPage() {
             <Eyebrow num="03">La plateforme</Eyebrow>
             <SectionHeading emphasis="Fusée.">La</SectionHeading>
             <Lede className="mt-4">
-              Les cinq piliers ne tiennent pas par magie : ils sont orchestrés par La Fusée, notre Industry OS. C&apos;est
-              lui qui structure votre brief en fiche ADVE, dérive le SWOT et la carte des actions, et recalcule la
-              roadmap quand vous le demandez. Côté client, vous le pilotez depuis le Cockpit.
+              Les cinq piliers ne tiennent pas par magie : ils sont orchestrés par La Fusée, notre plateforme. C&apos;est
+              elle qui structure votre brief en fiche ADVE, dérive le SWOT et la carte des actions, et recalcule la
+              feuille de route quand vous le demandez. Côté client, vous la pilotez depuis le Cockpit.
             </Lede>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/lafusee" className="inline-flex items-center gap-2 border border-border-strong px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated">
-                Découvrir l&apos;OS
+                Découvrir La Fusée
               </Link>
               <Link href="/cockpit" className="inline-flex items-center gap-2 border border-border-subtle px-5 py-3.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border-strong hover:text-foreground">
                 Accéder au Cockpit
@@ -104,15 +104,14 @@ export default function ServicesPage() {
             <Eyebrow>La Fusée — notre produit</Eyebrow>
             <div className="font-display text-xl font-semibold tracking-tight">Pas (encore) prêt pour un mandat ?</div>
             <p className="mt-3 text-sm leading-relaxed text-foreground-secondary">
-              Essayez La Fusée en libre-service : le diagnostic est gratuit — la complétude de votre
-              socle ADVE sur 100, un radar de ses 4 piliers, votre force publique sur 200 quand une mesure existe et un
-              aperçu des recommandations. Sans engagement, c&apos;est la façon de voir la
-              mécanique avant de parler mandat.
+              Essayez La Fusée en ligne : le diagnostic est gratuit et prend 4 minutes environ — une note sur 100,
+              le palier de votre marque, trois constats et un aperçu des recommandations. Sans engagement, c&apos;est la
+              façon de voir la mécanique avant de parler mandat.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <PrimaryCta href="/intake">Diagnostic gratuit</PrimaryCta>
               <Link href="/lafusee" className="inline-flex items-center gap-2 border border-border-subtle px-5 py-3.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border-strong hover:text-foreground">
-                Découvrir l&apos;OS
+                Découvrir La Fusée
               </Link>
             </div>
           </div>

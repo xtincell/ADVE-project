@@ -79,3 +79,19 @@ export const CINETPAY_COUNTRIES: readonly string[] = [
 export function isCinetPayCountry(country: string | null | undefined): boolean {
   return !!country && CINETPAY_COUNTRIES.includes(country);
 }
+
+/**
+ * Pays retenu pour le prix du diagnostic quand la fiche n'en déclare aucun.
+ * Le pays est facultatif dans le formulaire : sans lui, la page de résultat
+ * et le paiement retombaient sur la France (« Débloquer le PDF — 49,00 € »),
+ * alors que le marché d'UPgraders est la zone FCFA. Le siège est à Douala :
+ * le prix par défaut est donc celui du Cameroun, réglé par CinetPay.
+ * L'affichage (page de résultat) et l'encaissement (payment.initIntakeReport)
+ * lisent cette même règle, pour que le prix affiché soit le prix demandé.
+ */
+export const INTAKE_DEFAULT_PRICING_COUNTRY = "CM";
+
+export function intakePricingCountry(country: string | null | undefined): string {
+  const declared = typeof country === "string" ? country.trim() : "";
+  return declared.length > 0 ? declared : INTAKE_DEFAULT_PRICING_COUNTRY;
+}
