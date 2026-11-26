@@ -246,6 +246,29 @@ describe("the entrance shows a person the way in, data keeps its plain refusal",
     vi.stubEnv("PORTFOLIO_BARRE_CONTACT", `"${"N".repeat(80)}" <studio@agence.example>`);
     expect(barreAccessContact()).toEqual({ name: "N".repeat(80), email: "studio@agence.example" });
   });
+  it("prints the address beside a name, and only once for a contact set without a name", async () => {
+    const pages = async () => {
+      mocks.auth.mockResolvedValue(null);
+      const signIn = await (await GET(new Request(index, { headers: { accept: "text/html", "sec-fetch-mode": "cors" } }), context(["index.html"]))).text();
+      mocks.auth.mockResolvedValue({ user: { id: "actor-b", email: "personne.b@agence.example" } });
+      mocks.actor.mockResolvedValue({ userId: "actor-b", role: "OPERATOR", operatorId: "agency-b" });
+      const team = await (await GET(new Request(index, { headers: { "sec-fetch-mode": "navigate", accept: browser } }), context(["index.html"]))).text();
+      return [signIn, team] as const;
+    };
+    // Shown to the reader, mail links aside.
+    const shown = (html: string) => html.replace(/href="[^"]*"/g, "").split("studio@agence.example").length - 1;
+    const [namedSignIn, namedTeam] = await pages();
+    expect(namedSignIn).toContain("Demander l’accès à Responsable du studio</a> (studio@agence.example).</p>");
+    expect(namedTeam).toContain("<p>Adresse : studio@agence.example. Une fois le compte rattaché, rouvrez simplement ce lien.</p>");
+    for (const setting of ["<studio@agence.example>", "studio@agence.example"]) {
+      vi.stubEnv("PORTFOLIO_BARRE_CONTACT", setting);
+      const [signIn, team] = await pages();
+      expect(signIn).toContain("Demander l’accès à studio@agence.example</a>.</p>");
+      expect(team).toContain("Demander l’accès à&nbsp;studio@agence.example</a>");
+      expect(team).toContain("<p>Une fois le compte rattaché, rouvrez simplement ce lien.</p>");
+      expect([shown(signIn), shown(team)]).toEqual([1, 1]);
+    }
+  });
   it("escapes the contact and the account it prints", async () => {
     vi.stubEnv("PORTFOLIO_BARRE_CONTACT", '"<b>Studio</b>" <studio@agence.example>');
     mocks.auth.mockResolvedValue({ user: { id: "actor-b", email: "<img src=x onerror=1>@agence.example" } });

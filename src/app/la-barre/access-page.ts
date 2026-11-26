@@ -118,13 +118,15 @@ export function barreAccessPage(reason: "sign-in" | "team", input: { login: stri
   const name = escapeHtml(contact.name);
   const email = escapeHtml(contact.email);
   const login = escapeHtml(input.login);
+  // A contact set without a name already reads as its address: print it once.
+  const named = contact.name !== contact.email;
   if (reason === "sign-in") {
     const ask = escapeHtml(mailto(contact.email, "Accès à La Barre",
       "Bonjour,\n\nJe souhaite ouvrir La Barre. Pouvez-vous me donner un accès ?\n\nMerci."));
     return pageDocument("Connexion · La Barre", `<h1>Connectez-vous pour ouvrir La Barre.</h1>
 <p>La Barre est l’outil de l’agence pour suivre les pièces, leurs versions, les validations et les livraisons. Elle s’ouvre avec votre compte La Fusée.</p>
 <p><a class="action" href="${login}">${label("Se connecter avec La Fusée")}</a></p>
-<p class="suite">Pas encore de compte ? <a href="${ask}">Demander l’accès à ${name}</a> (${email}).</p>`);
+<p class="suite">Pas encore de compte ? <a href="${ask}">Demander l’accès à ${name}</a>${named ? ` (${email})` : ""}.</p>`);
   }
   const account = input.account?.trim() || null;
   const ask = escapeHtml(mailto(contact.email, "Accès à La Barre",
@@ -132,7 +134,7 @@ export function barreAccessPage(reason: "sign-in" | "team", input: { login: stri
   return pageDocument("Accès à demander · La Barre", `<h1>La Barre n’est pas reliée à votre équipe.</h1>
 <p>${account ? `Compte connecté : <strong>${escapeHtml(account)}</strong>. Pour ouvrir La Barre, ce compte` : "Pour ouvrir La Barre, votre compte"} doit être rattaché à l’équipe de l’agence.</p>
 <p><a class="action" href="${ask}">${label(`Demander l’accès à ${name}`)}</a></p>
-<p>Adresse : ${email}. Une fois le compte rattaché, rouvrez simplement ce lien.</p>
+<p>${named ? `Adresse : ${email}. ` : ""}Une fois le compte rattaché, rouvrez simplement ce lien.</p>
 <ul class="autres">
 <li><a href="${login}">Se connecter avec un autre compte</a></li>
 <li><a href="/portals">Ouvrir mes espaces La Fusée</a></li>
