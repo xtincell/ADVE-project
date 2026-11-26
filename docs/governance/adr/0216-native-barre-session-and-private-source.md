@@ -22,3 +22,13 @@ Sous-système : Ground / Console-Admin, INFRASTRUCTURE. Justification : les camp
 ## Conséquences
 
 Tests comportementaux : refus anonyme et autre entreprise, révocation relue, conservation des octets/ETag/conflit, origine étrangère, absence de propagation de secrets, chemins locaux refusés, plage vidéo et noms Unicode. Réception HTTP et native réelle exigée avant livraison ; tests seuls ne prouvent pas le déploiement, la continuité ou l’isolation de toute la flotte. Le périmètre fin par campagne et les droits des autres IP restent ouverts.
+
+## Amendement du 2026-11-26 — un refus lisible par une personne
+
+L’audit d’adoption de La Barre (constats historique-processus-9, friction-parcours-3, fond-metier-1) relève qu’un lien direct sans session aboutissait à un 401 en texte brut, sans lien ni contact. La décision ci-dessus ne change pas : mêmes contrôles, même ordre, aucune permission, aucun compte ni modèle créé. Seule la forme du refus suit le lecteur.
+
+- Navigation sans session : Fetch Metadata `navigate`, ou, sans Fetch Metadata (navigateurs intégrés), un GET qui nomme le HTML avec une qualité non nulle. Redirection vers la connexion existante ; l’adresse nue du montage revient à `/la-barre/index.html`.
+- Lecteur qui accepte le HTML sans être redirigé (script qui déclare un autre mode, autre méthode) : page 401 autonome, sans script ni formulaire, « Se connecter avec La Fusée » et à qui demander l’accès.
+- Session dont l’équipe n’est pas raccordée : page 403 qui nomme le compte connecté et la personne à contacter, sans relayer la source.
+- Données (`Accept: */*`, JSON, sans Accept) : refus en texte inchangé, que le poste natif lit et que les reçus de livraison attendent (401).
+- La personne à contacter est une configuration d’installation, `PORTFOLIO_BARRE_CONTACT`, jamais un compte lu en base, puisque la page est lisible sans session. À défaut, le contact public de La Fusée déjà donné par la page de mot de passe ; un réglage non vide mais invalide est signalé une fois dans le journal du serveur, sans sa valeur.

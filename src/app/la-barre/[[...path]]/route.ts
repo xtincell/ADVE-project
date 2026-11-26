@@ -5,6 +5,7 @@ import { getBarreBrandContext } from "@/server/services/brand-node/barre-context
 import { barrePublicationInput, publishBarreDocument } from "@/server/services/brand-node/barre-document";
 import { barreReviewInput, receiveBarreCampaignReview } from "@/server/services/brand-node/barre-review";
 import { barreActorDeclaration, saveBarreBase } from "@/server/services/brand-node/barre-attestation";
+import { ACCESS_PAGE_HEADERS, barreAccessPage, barreRequestKind } from "../access-page";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,27 +15,34 @@ const PRIVATE = { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex
 const READ_HEADERS = ["content-type", "content-length", "content-range", "accept-ranges", "etag", "last-modified"];
 const REQUEST_HEADERS = ["content-type", "range", "if-match", "if-none-match", "if-modified-since", "x-base"];
 const message = (text: string, status: number) => new Response(text, { status, headers: PRIVATE });
+const page = (html: string, status: number) => new Response(html, { status, headers: { ...PRIVATE, ...ACCESS_PAGE_HEADERS } });
 
 async function serve(request: Request, context: Context) {
   // Next's internal Request URL can use localhost behind a TLS-terminating proxy.
   // Reuse the installation's Auth.js origin, never a caller-supplied forwarding header.
   const publicOrigin = new URL(process.env.AUTH_URL || process.env.NEXTAUTH_URL || request.url).origin;
+  const { path = [] } = await context.params;
+  // A person reading a refusal gets a way in; a data request keeps its plain refusal.
+  // The bare mount returns to the application itself, whose hash route the login keeps.
+  const kind = barreRequestKind(request);
+  const current = new URL(request.url);
+  const login = new URL("/login", publicOrigin);
+  login.searchParams.set("callbackUrl", path.length ? current.pathname + current.search : "/la-barre/index.html");
   const session = await auth();
   if (!session?.user?.id) {
-    // Navigation uses the existing login. Data requests must not receive a login page as JSON.
-    if (request.method === "GET" && request.headers.get("sec-fetch-mode") === "navigate") {
-      const login = new URL("/login", publicOrigin);
-      const current = new URL(request.url);
-      login.searchParams.set("callbackUrl", current.pathname + current.search);
-      return new Response(null, { status: 307, headers: { ...PRIVATE, Location: login.href } });
-    }
+    // Data requests must not receive a login page as JSON. curl and the delivery
+    // receipts (any type, or no Accept at all) keep this plain 401.
+    if (kind === "navigation") return new Response(null, { status: 307, headers: { ...PRIVATE, Location: login.href } });
+    if (kind === "page") return page(barreAccessPage("sign-in", { login: login.href }), 401);
     return message("Connectez-vous pour ouvrir La Barre.", 401);
   }
   // Re-read the current assignment; a JWT, link or supplied operator ID is never a grant.
   const actor = await getOperatorContext(session.user.id);
-  if (!canAccessBarre(actor)) return message("La Barre n’est pas reliée à votre équipe.", 403);
+  if (!canAccessBarre(actor)) {
+    if (kind === "data") return message("La Barre n’est pas reliée à votre équipe.", 403);
+    return page(barreAccessPage("team", { login: login.href, account: session.user.email }), 403);
+  }
 
-  const { path = [] } = await context.params;
   if (!path.length) return new Response(null, { status: 307, headers: { ...PRIVATE, Location: "/la-barre/index.html" } });
   const rel = path.join("/");
   const readOnly = request.method === "GET" || request.method === "HEAD";
