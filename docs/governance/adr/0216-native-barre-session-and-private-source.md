@@ -31,4 +31,4 @@ L’audit d’adoption de La Barre (constats historique-processus-9, friction-pa
 - Lecteur qui accepte le HTML sans être redirigé (script qui déclare un autre mode, autre méthode) : page 401 autonome, sans script ni formulaire, « Se connecter avec La Fusée » et à qui demander l’accès.
 - Session dont l’équipe n’est pas raccordée : page 403 qui nomme le compte connecté et la personne à contacter, sans relayer la source.
 - Données (`Accept: */*`, JSON, sans Accept) : refus en texte inchangé, que le poste natif lit et que les reçus de livraison attendent (401).
-- La personne à contacter est une configuration d’installation, `PORTFOLIO_BARRE_CONTACT`, jamais un compte lu en base, puisque la page est lisible sans session. À défaut, le contact public de La Fusée déjà donné par la page de mot de passe.
+- La personne à contacter est une configuration d’installation, `PORTFOLIO_BARRE_CONTACT`, jamais un compte lu en base, puisque la page est lisible sans session. À défaut, le contact public de La Fusée déjà donné par la page de mot de passe ; un réglage non vide mais invalide est signalé une fois dans le journal du serveur, sans sa valeur.

@@ -219,13 +219,32 @@ describe("the entrance shows a person the way in, data keeps its plain refusal",
     expect(response.status).toBe(403); expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
     expect(await response.text()).toBe("La Barre n’est pas reliée à votre équipe.");
   });
-  it("falls back to La Fusée's public contact and escapes what it prints", async () => {
-    for (const setting of ["", "pas une adresse", "Nom <pas-une-adresse>"]) {
-      vi.stubEnv("PORTFOLIO_BARRE_CONTACT", setting);
+  it("falls back to La Fusée's public contact and reports an invalid setting once, without its value", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      vi.stubEnv("PORTFOLIO_BARRE_CONTACT", "");
       expect(barreAccessContact()).toEqual({ name: "l’équipe La Fusée", email: CONTACT.email });
-    }
+      expect(warn).not.toHaveBeenCalled();
+      const invalid = ["pas une adresse", "Nom <pas-une-adresse>", `${"N".repeat(81)} <studio@agence.example>`, "Studio <studio@agence.example?cc=autre@agence.example>"];
+      for (const setting of invalid) {
+        vi.stubEnv("PORTFOLIO_BARRE_CONTACT", setting);
+        expect(barreAccessContact()).toEqual({ name: "l’équipe La Fusée", email: CONTACT.email });
+        expect(barreAccessContact()).toEqual({ name: "l’équipe La Fusée", email: CONTACT.email });
+      }
+      expect(warn).toHaveBeenCalledTimes(invalid.length);
+      expect(String(warn.mock.calls[0]![0])).toContain("PORTFOLIO_BARRE_CONTACT ignoré");
+      expect(warn.mock.calls.flat().join(" ")).not.toContain("studio@agence.example");
+    } finally { warn.mockRestore(); }
+  });
+  it("accepts an address alone, in brackets or not, and a name of 80 characters", () => {
     vi.stubEnv("PORTFOLIO_BARRE_CONTACT", "studio@agence.example");
     expect(barreAccessContact()).toEqual({ name: "studio@agence.example", email: "studio@agence.example" });
+    vi.stubEnv("PORTFOLIO_BARRE_CONTACT", " <studio@agence.example> ");
+    expect(barreAccessContact()).toEqual({ name: "studio@agence.example", email: "studio@agence.example" });
+    vi.stubEnv("PORTFOLIO_BARRE_CONTACT", `"${"N".repeat(80)}" <studio@agence.example>`);
+    expect(barreAccessContact()).toEqual({ name: "N".repeat(80), email: "studio@agence.example" });
+  });
+  it("escapes the contact and the account it prints", async () => {
     vi.stubEnv("PORTFOLIO_BARRE_CONTACT", '"<b>Studio</b>" <studio@agence.example>');
     mocks.auth.mockResolvedValue({ user: { id: "actor-b", email: "<img src=x onerror=1>@agence.example" } });
     mocks.actor.mockResolvedValue({ userId: "actor-b", role: "USER", operatorId: null });

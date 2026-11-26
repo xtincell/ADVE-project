@@ -33,19 +33,27 @@ export function barreRequestKind(request: Request): "navigation" | "page" | "dat
 }
 
 const ADDRESS = /^[^\s@<>()"',;:?&#/\\]+@[^\s@<>()"',;:?&#/\\]+\.[^\s@<>()"',;:?&#/\\]+$/;
+const NAME_LIMIT = 80;
+let reportedSetting: string | undefined;
 
 /**
  * Who opens La Barre to a person: installation setting `PORTFOLIO_BARRE_CONTACT`,
- * « Nom <adresse> » or an address alone. Without a valid setting, La Fusée's public
- * contact, already given for access on the password page. Never an account read
- * from the base: an anonymous visitor reads this page.
+ * « Nom <adresse> », « <adresse> » or an address alone, a name of 80 characters at
+ * most. Without a valid setting, La Fusée's public contact, already given for access
+ * on the password page; a non-empty invalid setting is reported once in the server
+ * log, without its value. Never an account read from the base: an anonymous visitor
+ * reads this page.
  */
 export function barreAccessContact(): { name: string; email: string } {
   const configured = (process.env.PORTFOLIO_BARRE_CONTACT ?? "").trim();
-  const named = configured.match(/^(.{1,80}?)\s*<([^<>]+)>$/);
-  const name = named?.[1]?.replace(/^"(.*)"$/, "$1").replace(/[\u0000-\u001f\u007f]/g, "").trim();
+  const named = configured.match(/^(.*?)\s*<([^<>]+)>$/);
+  const name = (named?.[1] ?? "").replace(/^"(.*)"$/, "$1").replace(/[\u0000-\u001f\u007f]/g, "").trim();
   const email = (named?.[2] ?? configured).trim();
-  if (ADDRESS.test(email)) return { name: name || email, email };
+  if (ADDRESS.test(email) && name.length <= NAME_LIMIT) return { name: name || email, email };
+  if (configured && reportedSetting !== configured) {
+    reportedSetting = configured;
+    console.warn(`[la-barre] PORTFOLIO_BARRE_CONTACT ignoré : attendu « Nom <adresse> », « <adresse> » ou une adresse seule, nom de ${NAME_LIMIT} caractères au plus. La page d’entrée affiche le contact public de La Fusée.`);
+  }
   return { name: "l’équipe La Fusée", email: CONTACT.email };
 }
 
