@@ -60,6 +60,8 @@ export function barreAccessContact(): { name: string; email: string } {
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const mailto = (email: string, subject: string, body: string) =>
   `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+/** A button label keeps its last two words together: no « Fusée » alone on a phone line. */
+const label = (html: string) => html.replace(/ (\S+)$/, "&nbsp;$1");
 
 /** Self-contained page: no script, no form, its own styles and the La Fusée mark only. */
 export const ACCESS_PAGE_HEADERS = {
@@ -79,9 +81,12 @@ const STYLE = [
   "p{margin:0 0 16px;color:var(--doux);overflow-wrap:anywhere}",
   "strong{color:var(--texte)}",
   "a{color:var(--texte)}",
-  ".action{display:block;text-align:center;padding:12px 16px;border-radius:8px;background:var(--accent);color:var(--sur-accent);font-weight:600;text-decoration:none}",
+  ".action{display:block;text-align:center;text-wrap:balance;padding:12px 16px;border-radius:8px;background:var(--accent);color:var(--sur-accent);font-weight:600;text-decoration:none}",
   "a:focus-visible{outline:2px solid var(--texte);outline-offset:2px}",
   ".suite{font-size:.875rem;margin:20px 0 0}",
+  // Secondary ways out, one under the other, each at least 44 px high for a finger.
+  ".autres{list-style:none;margin:12px 0 0;padding:0;font-size:.875rem}",
+  ".autres a{display:flex;align-items:center;min-height:44px}",
 ].join("\n");
 
 function pageDocument(title: string, body: string) {
@@ -118,7 +123,7 @@ export function barreAccessPage(reason: "sign-in" | "team", input: { login: stri
       "Bonjour,\n\nJe souhaite ouvrir La Barre. Pouvez-vous me donner un accès ?\n\nMerci."));
     return pageDocument("Connexion · La Barre", `<h1>Connectez-vous pour ouvrir La Barre.</h1>
 <p>La Barre est l’outil de l’agence pour suivre les pièces, leurs versions, les validations et les livraisons. Elle s’ouvre avec votre compte La Fusée.</p>
-<p><a class="action" href="${login}">Se connecter avec La Fusée</a></p>
+<p><a class="action" href="${login}">${label("Se connecter avec La Fusée")}</a></p>
 <p class="suite">Pas encore de compte ? <a href="${ask}">Demander l’accès à ${name}</a> (${email}).</p>`);
   }
   const account = input.account?.trim() || null;
@@ -126,7 +131,10 @@ export function barreAccessPage(reason: "sign-in" | "team", input: { login: stri
     `Bonjour,\n\nPouvez-vous rattacher mon compte ${account ?? "La Fusée"} à l’équipe de La Barre ?\n\nMerci.`));
   return pageDocument("Accès à demander · La Barre", `<h1>La Barre n’est pas reliée à votre équipe.</h1>
 <p>${account ? `Compte connecté : <strong>${escapeHtml(account)}</strong>. Pour ouvrir La Barre, ce compte` : "Pour ouvrir La Barre, votre compte"} doit être rattaché à l’équipe de l’agence.</p>
-<p><a class="action" href="${ask}">Demander l’accès à ${name}</a></p>
+<p><a class="action" href="${ask}">${label(`Demander l’accès à ${name}`)}</a></p>
 <p>Adresse : ${email}. Une fois le compte rattaché, rouvrez simplement ce lien.</p>
-<p class="suite"><a href="${login}">Se connecter avec un autre compte</a> · <a href="/portals">Ouvrir mes espaces La Fusée</a></p>`);
+<ul class="autres">
+<li><a href="${login}">Se connecter avec un autre compte</a></li>
+<li><a href="/portals">Ouvrir mes espaces La Fusée</a></li>
+</ul>`);
 }

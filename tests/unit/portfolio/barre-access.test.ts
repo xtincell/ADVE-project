@@ -194,7 +194,7 @@ describe("the entrance shows a person the way in, data keeps its plain refusal",
     expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
     const html = await response.text();
     expect(html).toContain("<h1>Connectez-vous pour ouvrir La Barre.</h1>");
-    expect(html).toContain('href="https://workspace.example/login?callbackUrl=%2Fla-barre%2Findex.html">Se connecter avec La Fusée</a>');
+    expect(html).toContain('<a class="action" href="https://workspace.example/login?callbackUrl=%2Fla-barre%2Findex.html">Se connecter avec La&nbsp;Fusée</a>');
     expect(html).toContain('href="mailto:studio@agence.example?subject=Acc%C3%A8s%20%C3%A0%20La%20Barre&#38;body=');
     expect(html).toContain("Demander l’accès à Responsable du studio</a>");
     expect(html).not.toMatch(/<script|<form/i);
@@ -208,9 +208,11 @@ describe("the entrance shows a person the way in, data keeps its plain refusal",
     const html = await response.text();
     expect(html).toContain("<h1>La Barre n’est pas reliée à votre équipe.</h1>");
     expect(html).toContain("Compte connecté : <strong>personne.b@agence.example</strong>");
-    expect(html).toContain("Demander l’accès à Responsable du studio</a>");
+    expect(html).toContain("Demander l’accès à Responsable du&nbsp;studio</a>");
     expect(html).toContain(encodeURIComponent("rattacher mon compte personne.b@agence.example"));
-    expect(html).toContain('href="https://workspace.example/login?callbackUrl=%2Fla-barre%2Findex.html">Se connecter avec un autre compte</a>');
+    // The other ways out are a list, one link per line, each tall enough for a finger.
+    expect(html).toContain('<ul class="autres">\n<li><a href="https://workspace.example/login?callbackUrl=%2Fla-barre%2Findex.html">Se connecter avec un autre compte</a></li>\n<li><a href="/portals">Ouvrir mes espaces La Fusée</a></li>\n</ul>');
+    expect(html).toContain(".autres a{display:flex;align-items:center;min-height:44px}");
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
   it("keeps the plain 403 for the native application's data requests", async () => {
@@ -249,7 +251,7 @@ describe("the entrance shows a person the way in, data keeps its plain refusal",
     mocks.auth.mockResolvedValue({ user: { id: "actor-b", email: "<img src=x onerror=1>@agence.example" } });
     mocks.actor.mockResolvedValue({ userId: "actor-b", role: "USER", operatorId: null });
     const html = await (await GET(new Request(index, { headers: { accept: browser } }), context(["index.html"]))).text();
-    expect(html).toContain("Demander l’accès à &#60;b&#62;Studio&#60;/b&#62;</a>");
+    expect(html).toContain("Demander l’accès à&nbsp;&#60;b&#62;Studio&#60;/b&#62;</a>");
     expect(html).not.toContain("<b>"); expect(html).not.toContain("<img src=x");
   });
 });
