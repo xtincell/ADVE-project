@@ -227,6 +227,11 @@ describe("the entrance shows a person the way in, data keeps its plain refusal",
       vi.stubEnv("PORTFOLIO_BARRE_CONTACT", "");
       expect(barreAccessContact()).toEqual({ name: "l’équipe La Fusée", email: CONTACT.email });
       expect(warn).not.toHaveBeenCalled();
+      // The module reports each new invalid setting once per process. Start from a setting
+      // of this test only, so an earlier test or a retry cannot absorb the first report.
+      vi.stubEnv("PORTFOLIO_BARRE_CONTACT", "réglage préalable propre à ce test");
+      barreAccessContact();
+      warn.mockClear();
       const invalid = ["pas une adresse", "Nom <pas-une-adresse>", `${"N".repeat(81)} <studio@agence.example>`, "Studio <studio@agence.example?cc=autre@agence.example>"];
       for (const setting of invalid) {
         vi.stubEnv("PORTFOLIO_BARRE_CONTACT", setting);
