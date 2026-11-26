@@ -158,12 +158,32 @@ describe("the entrance shows a person the way in, data keeps its plain refusal",
     const response = await GET(new Request("https://workspace.example/la-barre", { headers: { "sec-fetch-mode": "navigate", accept: browser } }), { params: Promise.resolve({}) });
     expect(response.headers.get("location")).toBe("https://workspace.example/login?callbackUrl=%2Fla-barre%2Findex.html");
   });
+  it.each(["application/xhtml+xml", "text/html;q=0.5", "TEXT/HTML", "application/json, Text/Html ; Q=0.5"])("reads HTML in any spelling of Accept as a navigation (%s)", async (accept) => {
+    mocks.auth.mockResolvedValue(null);
+    const response = await GET(new Request(index, { headers: { accept } }), context(["index.html"]));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://workspace.example/login?callbackUrl=%2Fla-barre%2Findex.html");
+  });
   it.each([undefined, "*/*", "application/json", "text/html;q=0, */*"])("keeps the plain 401 of curl and the delivery receipts (Accept %s)", async (accept) => {
     mocks.auth.mockResolvedValue(null);
     const response = await GET(new Request(index, { headers: accept ? { accept } : {} }), context(["index.html"]));
     expect(response.status).toBe(401); expect(response.headers.get("location")).toBeNull();
     expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
     expect(await response.text()).toBe("Connectez-vous pour ouvrir La Barre.");
+  });
+  it("keeps the plain 401 for a HEAD that accepts anything", async () => {
+    mocks.auth.mockResolvedValue(null);
+    const response = await HEAD(new Request(index, { method: "HEAD", headers: { accept: "*/*" } }), context(["index.html"]));
+    expect(response.status).toBe(401); expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
+  });
+  it.each([["POST", POST], ["HEAD", HEAD]] as const)("gives a %s navigation without session the 401 page, never a redirect", async (method, handler) => {
+    mocks.auth.mockResolvedValue(null);
+    const response = await handler(new Request(index, { method, headers: { "sec-fetch-mode": "navigate", accept: browser } }), context(["index.html"]));
+    expect(response.status).toBe(401); expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    if (method === "POST") expect(await response.text()).toContain("<h1>Connectez-vous pour ouvrir La Barre.</h1>");
+    expect(mocks.actor).not.toHaveBeenCalled(); expect(mocks.fetch).not.toHaveBeenCalled();
   });
   it("gives a script asking for HTML a readable page, never a redirect to sign in", async () => {
     mocks.auth.mockResolvedValue(null);

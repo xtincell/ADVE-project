@@ -7,7 +7,7 @@
 - « La Barre n’est pas reliée à votre équipe. » devient, pour une personne, une page 403 qui nomme le compte connecté et la personne à contacter (courriel prérempli), avec « Se connecter avec un autre compte ». La source n’est pas relayée.
 - Requêtes de données (`Accept: */*`, JSON ou sans Accept) : refus en texte inchangé. Le poste natif les lit, et les reçus de livraison (`http_attendu: 401`, urllib sans Accept, curl) restent valables.
 - Personne à contacter : variable d’installation `PORTFOLIO_BARRE_CONTACT` (« Nom <adresse> »), jamais un compte lu en base puisque la page se lit sans session ; à défaut, le contact public de La Fusée déjà donné par la page de mot de passe. Amendement daté d’ADR-0216, `.env.example` et `docs/deploy/LA-BARRE-SESSION.md` à jour ; la page est sous le verrou de vocabulaire client.
-- Tests : navigateur intégré, adresse nue, quatre formes d’Accept qui gardent le 401 texte, page 401 pour un script, page 403 qui nomme le contact, 403 texte pour les données, contact par défaut et échappement. Aucun modèle, migration, Intent, rôle ni permission.
+- Tests : navigateur intégré, adresse nue, quatre écritures d’Accept qui demandent le HTML (`application/xhtml+xml` seul, `q=0.5`, majuscules) et partent vers la connexion, quatre formes d’Accept qui gardent le 401 texte, HEAD `*/*` en 401 texte, POST et HEAD `navigate` en page 401 sans redirection, page 401 pour un script, page 403 qui nomme le contact, 403 texte pour les données, contact par défaut et échappement. Aucun modèle, migration, Intent, rôle ni permission.
 
 ## v6.27.590 — fix(vendeur, intake): réponse du vendeur en quelques secondes, diagnostic gratuit resserré (2026-11-18)
 
