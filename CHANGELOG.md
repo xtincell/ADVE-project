@@ -1,3 +1,14 @@
+## v6.27.591 — fix(la-barre): dire où se connecter et à qui demander l’accès à La Barre (2026-11-26)
+
+**Audit d’adoption de La Barre du 26 novembre, gain rapide QW-F (constats historique-processus-9, friction-parcours-3 et, en partie, fond-metier-1) : un lien direct sans session aboutissait à un 401 en texte brut, « Connectez-vous pour ouvrir La Barre. », sans lien, sans marque ni contact.**
+
+- Navigation : en plus de Fetch Metadata `navigate`, un GET qui demande du HTML sans Fetch Metadata (navigateurs intégrés aux messageries, anciens navigateurs) part vers la connexion existante, qui garde la route après `#`. L’adresse nue `/la-barre`, où arrive l’ancien domaine, revient à `/la-barre/index.html` après la connexion.
+- Page 401 autonome, sans script ni formulaire, pour un lecteur qui accepte le HTML sans être redirigé (script qui déclare un autre mode, autre méthode) : ce qu’est La Barre en une phrase, « Se connecter avec La Fusée » et « Demander l’accès à … ».
+- « La Barre n’est pas reliée à votre équipe. » devient, pour une personne, une page 403 qui nomme le compte connecté et la personne à contacter (courriel prérempli), avec « Se connecter avec un autre compte ». La source n’est pas relayée.
+- Requêtes de données (`Accept: */*`, JSON ou sans Accept) : refus en texte inchangé. Le poste natif les lit, et les reçus de livraison (`http_attendu: 401`, urllib sans Accept, curl) restent valables.
+- Personne à contacter : variable d’installation `PORTFOLIO_BARRE_CONTACT` (« Nom <adresse> »), jamais un compte lu en base puisque la page se lit sans session ; à défaut, le contact public de La Fusée déjà donné par la page de mot de passe. Amendement daté d’ADR-0216, `.env.example` et `docs/deploy/LA-BARRE-SESSION.md` à jour ; la page est sous le verrou de vocabulaire client.
+- Tests : navigateur intégré, adresse nue, quatre formes d’Accept qui gardent le 401 texte, page 401 pour un script, page 403 qui nomme le contact, 403 texte pour les données, contact par défaut et échappement. Aucun modèle, migration, Intent, rôle ni permission.
+
 ## v6.27.590 — fix(vendeur, intake): réponse du vendeur en quelques secondes, diagnostic gratuit resserré (2026-11-18)
 
 **Demande d’Alexandre : la conversation du vendeur IA semblait figée ; un client attendait 32 s sans signe de vie (18 s avant prise du message, 14 s de modèle).**

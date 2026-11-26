@@ -54,6 +54,8 @@ const EXTRA_FILES = [
   join(ROOT, "src/lib/i18n/pages/intake-result.ts"),
   join(ROOT, "src/app/api/intake/[token]/pdf/route.ts"),
   join(ROOT, "src/app/la-barre/[[...path]]/route.ts"),
+  // Page d'entrée de La Barre, lue sans être connecté (refus de connexion et d'équipe).
+  join(ROOT, "src/app/la-barre/access-page.ts"),
   join(ROOT, "src/app/la-barre/partage/[token]/[[...path]]/route.ts"),
   join(ROOT, "src/server/services/brand-node/barre-context.ts"),
   join(ROOT, "src/server/services/brand-node/barre-document.ts"),
